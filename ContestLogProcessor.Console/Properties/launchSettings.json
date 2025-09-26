@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ContestLogProcessor.Console": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
