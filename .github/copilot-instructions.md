@@ -17,41 +17,22 @@ When it is time to create additional projects in this Solution:
 ## Coding Standards 
 
 - Use C# 13
-- Use object-oriented, type-safe coding standards
 - Name variables, methods, classes (etc) with PascalCase
-- Use descriptive names that are easy to read and convey the purpose of the variable, method, class (etc)
+- Use descriptive naming conventions that simply describe purpose of variables, methods, classes (etc)
 - Code should be modular
 - Prefer to use LINQ for filter, sort, and selection of data
 - Use Collections with CRUD-like operations so data can be manipulated
 - Prefer to use Interfaces over Abstract classes
 - Library and functional code should be written so it is easy to unittest
 - Web and Desktop UI Code should be written so it is easy to test with a Framework like Playwright
-- Write and store classes each in their own code files
-- Interfaces should be written in their own code files
-- Namespace declarations should end with a semicolon rather than enclose the code in braces
-- Use object initializer syntax with data: `var Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };`
+- Classes, Interfaces, and Structs shall be written in their own code files
+- Prefer file-scoped namespaces: `namespace ContestLogProcessor.Lib;`
+- Use object initializer syntax with data: `Student Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };`
 - Use empty initialization syntax when no initialization data is needed: `Car Subaru = new();`
-- Use collection expression syntax like `List<string> MyStrings = [];` and `List<int> Numbers = [1, 2, 3];`
-- If-else statements should use braces around their code block
-- Use explicit types instead of var, in particular when assigning from a query or expression that might return null: `Backpack EmptyGenericBackpack = new()` and `Student? FoundStudent = _entries.Find(match);`
-- Be specific with type declarations: `Backpack EmptyGenericBackpack = new()` is preferred to keep the code line concise, and `var Student1 = new Student {...}` is acceptable because the type is identified during instantiation and would not be set to null
-- Always include a blank line before and after for() and foreach() iterator blocks, to improve code readability
-
-### Code Style Examples
-
-FOR iterator: include blank line before and after.
-
-```c#
-string result = string.Empty;
-List<string> Items = ["alpha", "bravo", "charlie"];
-
-for(int idx = 0; idx <= items.Count; idx++)
-{
-    // code...
-}
-
-return result;
-```
+- Use collection expression syntax
+- If-then-else statements always use braces around their code block
+- Use explicit types instead of var: `Backpack EmptyGenericBackpack = new();` and `Student? FoundStudent = _entries.Find(match);`
+- Always include a blank line before and after for() and foreach() iterator blocks to improve readability in dense files
 
 ## Libraries and Frameworks
 
@@ -133,11 +114,11 @@ Mode:
 
 Date:
 
-- UTC date in yyyy-mm-dd format
+- UTC date in yyyy-MM-dd format
 
 Time:
 
-- UTC time in hhmm format
+- UTC time in HHmm format
 
 Call:
 
