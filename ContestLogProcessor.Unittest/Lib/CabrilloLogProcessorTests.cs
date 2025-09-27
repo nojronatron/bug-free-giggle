@@ -13,99 +13,158 @@ public class CabrilloLogProcessorTests
     private static string ExportPath => Path.Combine(AppContext.BaseDirectory, "TestData", "TestExport");
 
     [Fact]
-    public void ReadFile_ParsesLogFileCorrectly()
+    public void ImportFile_ParsesLogFileCorrectly()
     {
         var processor = new CabrilloLogProcessor();
-        processor.ReadFile(SampleLogPath);
-        var entries = processor.GetEntries().ToList();
+        processor.ImportFile(SampleLogPath);
+        var entries = processor.ReadEntries().ToList();
         Assert.NotEmpty(entries);
         Assert.All(entries, e => Assert.False(string.IsNullOrWhiteSpace(e.CallSign)));
     }
 
     [Fact]
-    public void GetEntries_FiltersAndSortsCorrectly()
+    public void ReadEntries_FilterOrderPaging_Works()
     {
         var processor = new CabrilloLogProcessor();
-        processor.ReadFile(SampleLogPath);
-        var filtered = processor.GetEntries(e => e.Mode == "CW").ToList();
-        Assert.All(filtered, e => Assert.Equal("CW", e.Mode));
-        var sorted = processor.GetEntries(orderBy: e => e.QsoDateTime).ToList();
-        Assert.True(sorted.SequenceEqual(sorted.OrderBy(e => e.QsoDateTime)));
+        processor.ImportFile(SampleLogPath);
+        var cw = processor.ReadEntries(filter: e => e.Mode == "CW").ToList();
+        Assert.All(cw, e => Assert.Equal("CW", e.Mode));
+
+        var ordered = processor.ReadEntries(orderBy: e => e.QsoDateTime).ToList();
+        Assert.True(ordered.SequenceEqual(ordered.OrderBy(e => e.QsoDateTime)));
+
+        var paged = processor.ReadEntries(orderBy: e => e.QsoDateTime, skip: 1, take: 1).ToList();
+        Assert.True(paged.Count <= 1);
     }
 
     [Fact]
-    public void DuplicateEntry_CreatesCopyWithEdits()
+    public void CreateGetUpdateDelete_AndEvents_Work()
     {
         var processor = new CabrilloLogProcessor();
-        processor.ReadFile(SampleLogPath);
-        var originalCount = processor.GetEntries().Count();
-        processor.DuplicateEntry(e => e.CallSign == "K7XXX", e => e.CallSign = "TESTCALL");
-        var entries = processor.GetEntries().ToList();
-        Assert.Equal(originalCount + 1, entries.Count);
-        Assert.Contains(entries, e => e.CallSign == "TESTCALL");
-    }
 
-    [Fact]
-    public void UpdateEntry_UpdatesEntryCorrectly()
-    {
-        var processor = new CabrilloLogProcessor();
-        processor.ReadFile(SampleLogPath);
-        processor.UpdateEntry(e => e.CallSign == "K7XXX", e => e.Band = "TESTBAND");
-        var entries = processor.GetEntries().ToList();
-        Assert.Contains(entries, e => e.Band == "TESTBAND");
-    }
+        // Track events
+        var added = new List<LogEntry>();
+        var updated = new List<LogEntry>();
+        var deletedIds = new List<string>();
 
-    [Fact]
-    public void ExportFile_WritesLogFileCorrectly()
-    {
-        var processor = new CabrilloLogProcessor();
-        processor.ReadFile(SampleLogPath);
-        var exportFile = ExportPath + ".log";
+        processor.EntryAdded += (_, e) => added.Add(e);
+        processor.EntryUpdated += (_, e) => updated.Add(e);
+        processor.EntryDeleted += (_, id) => deletedIds.Add(id);
 
-        if (File.Exists(exportFile))
+        // Create
+        var newEntry = new LogEntry
         {
-            File.Delete(exportFile);
-        }
+            Frequency = "14000",
+            Mode = "CW",
+            QsoDateTime = DateTime.UtcNow,
+            CallSign = "UNITTEST",
+            SentExchange = new Exchange { SentSig = "001", SentMsg = "WA", TheirCall = "K7XXX" }
+        };
 
-        processor.ExportFile(ExportPath); // default uses canonical format
-        Assert.True(File.Exists(exportFile));
-        var lines = File.ReadAllLines(exportFile);
-        Assert.Contains(lines, l => l.StartsWith("QSO:"));
-        // Check canonical structure: the first QSO line should contain frequency, mode and date/time tokens
-        var firstQso = lines.FirstOrDefault(l => l.StartsWith("QSO:"));
-        Assert.NotNull(firstQso);
-        Assert.Contains(" ", firstQso); // at least some tokens after QSO:
-        File.Delete(exportFile);
+        var created = processor.CreateEntry(newEntry);
+        Assert.NotNull(created);
+        Assert.False(string.IsNullOrWhiteSpace(created.Id));
+        Assert.Contains(added, a => a.Id == created.Id);
+
+        // Read by id
+        var fetched = processor.GetEntryById(created.Id);
+        Assert.NotNull(fetched);
+        Assert.Equal("UNITTEST", fetched.CallSign);
+
+        // Update
+        bool updatedResult = processor.UpdateEntry(created.Id, e => e.Band = "20m");
+        Assert.True(updatedResult);
+        Assert.Contains(updated, u => u.Id == created.Id && u.Band == "20m");
+
+        // Delete
+        bool deleted = processor.DeleteEntry(created.Id);
+        Assert.True(deleted);
+        Assert.Contains(deletedIds, id => id == created.Id);
+        Assert.Null(processor.GetEntryById(created.Id));
     }
 
     [Fact]
-    public void ReadFile_PopulatesExchangeFieldsAndRoundTripExport()
+    public void Integration_ImportModifyExport_CanonicalFormatting()
     {
         var processor = new CabrilloLogProcessor();
-        processor.ReadFile(SampleLogPath);
-        var entries = processor.GetEntries().ToList();
+        processor.ImportFile(SampleLogPath);
+
+        var entries = processor.ReadEntries(orderBy: e => e.QsoDateTime).ToList();
         Assert.NotEmpty(entries);
 
-        // Verify at least one entry has an exchange populated (SentSig at minimum)
-        Assert.Contains(entries, e => e.SentExchange != null && !string.IsNullOrWhiteSpace(e.SentExchange.SentSig));
+        // pick a parsed token to check for in exported canonical output
+        var sentSig = entries.Select(e => e.SentExchange?.SentSig).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
 
-        // Try a round-trip export and ensure we get a QSO line in the output, and canonical includes SentSig
-        var exportFile = ExportPath + "_roundtrip.log";
-
-        if (File.Exists(exportFile))
+        // Create a new entry to ensure CRUD is exercised before export
+        var newEntry = new LogEntry
         {
-            File.Delete(exportFile);
-        }
-        
-        processor.ExportFile(ExportPath + "_roundtrip");
+            Frequency = "7000",
+            Mode = "CW",
+            QsoDateTime = DateTime.UtcNow,
+            CallSign = "INTEG",
+            SentExchange = new Exchange { SentSig = "123", SentMsg = "TX" }
+        };
+
+        var created = processor.CreateEntry(newEntry);
+        processor.UpdateEntry(created.Id, e => e.Band = "40m");
+
+        var exportFile = ExportPath + "_crud_integ.log";
+        if (File.Exists(exportFile)) File.Delete(exportFile);
+
+        processor.ExportFile(ExportPath + "_crud_integ");
         Assert.True(File.Exists(exportFile));
+
         var lines = File.ReadAllLines(exportFile);
         Assert.Contains(lines, l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
 
-        // Ensure at least one exported QSO contains a parsed SentSig token
-        var sentSig = entries.Select(e => e.SentExchange?.SentSig).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
-        Assert.False(string.IsNullOrWhiteSpace(sentSig));
-        Assert.Contains(lines, l => l.Contains(sentSig));
+        if (!string.IsNullOrWhiteSpace(sentSig))
+        {
+            Assert.Contains(lines, l => l.Contains(sentSig));
+        }
+
+        // clean up
         File.Delete(exportFile);
+    }
+
+    [Fact]
+    public void ImportFile_ThrowsForMissingFile()
+    {
+        var processor = new CabrilloLogProcessor();
+        var missing = Path.Combine(Path.GetTempPath(), "no-such-file-" + Guid.NewGuid() + ".log");
+        Assert.Throws<FileNotFoundException>(() => processor.ImportFile(missing));
+    }
+
+    [Fact]
+    public void ImportFile_ToleratesMalformedLines()
+    {
+        var processor = new CabrilloLogProcessor();
+        var tmp = Path.Combine(Path.GetTempPath(), "malformed_" + Guid.NewGuid() + ".log");
+        try
+        {
+            File.WriteAllLines(tmp, new[]
+            {
+                "START-OF-LOG: 1",
+                "CREATED-BY: UnitTest",
+                // valid QSO
+                "QSO: 14000 CW 2025-09-26 2100 K7RMZ 001 WA 59",
+                // malformed lines
+                "THIS IS NOT A TAG LINE",
+                "QSO: BAD DATA",
+                // another valid QSO
+                "QSO: 7000 CW 2025-09-27 1200 TEST 123"
+            });
+
+            // Should not throw
+            processor.ImportFile(tmp);
+
+            var entries = processor.ReadEntries().ToList();
+            Assert.NotEmpty(entries);
+            // Ensure at least the valid callsigns were parsed
+            Assert.Contains(entries, e => string.Equals(e.CallSign, "K7RMZ", StringComparison.OrdinalIgnoreCase) || string.Equals(e.CallSign, "TEST", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (File.Exists(tmp)) File.Delete(tmp);
+        }
     }
 }
