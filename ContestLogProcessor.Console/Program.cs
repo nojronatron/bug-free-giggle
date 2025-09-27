@@ -6,6 +6,9 @@ using System.IO;
 using System.Threading.Tasks;
 using ContestLogProcessor.Lib;
 
+// Default page size for interactive view paging. Adjust here to change default across the program.
+const int DefaultPageSize = 10;
+
 var debugOption = new Option<bool>("--debug", description: "Enable debug output");
 var importOption = new Option<string?>(new[] {"-i","--import"}, description: "Import a Cabrillo .log file");
 var exportOption = new Option<string?>(new[] {"-e","--export"}, description: "Export current data to a .log file");
@@ -117,25 +120,122 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
 		{ "view", async parts => {
 			try
 			{
-				var entries = processor.ReadEntries();
-				int i = 0;
-				foreach (var e in entries)
+				// Optional page size: `view 50` sets page size to 50
+				int pageSize = DefaultPageSize;
+				if (parts.Length >= 2 && int.TryParse(parts[1], out var parsed))
 				{
-					i++;
-					try
-					{
-						// Prefer canonical Cabrillo line when available
-						var line = e.ToCabrilloLine();
-						Console.WriteLine(line);
-					}
-					catch
-					{
-						Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
-					}
+					pageSize = Math.Max(1, parsed);
 				}
-				if (i == 0)
+
+				var entries = processor.ReadEntries().ToList();
+				var total = entries.Count;
+				if (total == 0)
 				{
 					Console.WriteLine("(no entries loaded)");
+					return;
+				}
+
+				int totalPages = (int)Math.Ceiling(total / (double)pageSize);
+				int currentPage = 1;
+
+				void PrintPage(int page)
+				{
+					Console.WriteLine($"Showing page {page} of {totalPages} (page size {pageSize}) - total entries: {total}");
+					int start = (page - 1) * pageSize;
+					int end = Math.Min(start + pageSize, total);
+					for (int idx = start; idx < end; idx++)
+					{
+						var e = entries[idx];
+						try
+						{
+							Console.WriteLine(e.ToCabrilloLine());
+						}
+						catch
+						{
+							Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
+						}
+					}
+				}
+
+				PrintPage(currentPage);
+
+				while (true)
+				{
+					Console.Write("[n]ext, [p]rev, [#] goto page, [a]ll, [q]uit > ");
+					var nav = Console.ReadLine();
+					if (string.IsNullOrWhiteSpace(nav))
+					{
+						continue;
+					}
+					nav = nav.Trim();
+
+					if (nav.Equals("n", StringComparison.OrdinalIgnoreCase) || nav.Equals("next", StringComparison.OrdinalIgnoreCase))
+					{
+						if (currentPage < totalPages)
+						{
+							currentPage++;
+							PrintPage(currentPage);
+						}
+						else
+						{
+							Console.WriteLine("Already at last page.");
+						}
+						continue;
+					}
+
+					if (nav.Equals("p", StringComparison.OrdinalIgnoreCase) || nav.Equals("prev", StringComparison.OrdinalIgnoreCase))
+					{
+						if (currentPage > 1)
+						{
+							currentPage--;
+							PrintPage(currentPage);
+						}
+						else
+						{
+							Console.WriteLine("Already at first page.");
+						}
+						continue;
+					}
+
+					if (nav.Equals("a", StringComparison.OrdinalIgnoreCase) || nav.Equals("all", StringComparison.OrdinalIgnoreCase))
+					{
+						// Print all entries after current page
+						for (int idx = 0; idx < total; idx++)
+						{
+							var e = entries[idx];
+							try
+							{
+								Console.WriteLine(e.ToCabrilloLine());
+							}
+							catch
+							{
+								Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
+							}
+						}
+						continue;
+					}
+
+					if (nav.Equals("q", StringComparison.OrdinalIgnoreCase) || nav.Equals("quit", StringComparison.OrdinalIgnoreCase))
+					{
+						break;
+					}
+
+					// Try to parse a page number
+					if (int.TryParse(nav, out var gotoPage))
+					{
+						if (gotoPage >= 1 && gotoPage <= totalPages)
+						{
+							currentPage = gotoPage;
+							PrintPage(currentPage);
+						}
+						else
+						{
+							Console.WriteLine($"Page out of range (1-{totalPages}).");
+						}
+						continue;
+					}
+
+					Console.WriteLine("Unknown navigation command. Use n/p/#/a/q or 'help'.");
 				}
 			}
 			catch (Exception ex)
