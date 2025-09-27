@@ -29,11 +29,29 @@ When it is time to create additional projects in this Solution:
 - Write and store classes each in their own code files
 - Interfaces should be written in their own code files
 - Namespace declarations should end with a semicolon rather than enclose the code in braces
-- Use object initializer syntax with data: `Student Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };`
+- Use object initializer syntax with data: `var Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };`
 - Use empty initialization syntax when no initialization data is needed: `Car Subaru = new();`
 - Use collection expression syntax like `List<string> MyStrings = [];` and `List<int> Numbers = [1, 2, 3];`
 - If-else statements should use braces around their code block
-- Avoid using Var unless it is absolutely necessary
+- Use explicit types instead of var, in particular when assigning from a query or expression that might return null: `Backpack EmptyGenericBackpack = new()` and `Student? FoundStudent = _entries.Find(match);`
+- Be specific with type declarations: `Backpack EmptyGenericBackpack = new()` is preferred to keep the code line concise, and `var Student1 = new Student {...}` is acceptable because the type is identified during instantiation and would not be set to null
+- Always include a blank line before and after for() and foreach() iterator blocks, to improve code readability
+
+### Code Style Examples
+
+FOR iterator: include blank line before and after.
+
+```c#
+string result = string.Empty;
+List<string> Items = ["alpha", "bravo", "charlie"];
+
+for(int idx = 0; idx <= items.Count; idx++)
+{
+    // code...
+}
+
+return result;
+```
 
 ## Libraries and Frameworks
 
@@ -53,16 +71,22 @@ When it is time to create additional projects in this Solution:
 - Each project should have a Docker container, except for ContestingProcessor.Lib which is a dependency to each of the other projects
 - The Unittest Project should NOT be Dockerized
 
+### Exception Handling
+
+- The Console should catch and handle Exceptions, returning a message to the user with information on what went wrong and how to fix it with altered user input
+- Design Classes so that Exceptions can be avoided
+- Use try-catch-finally blocks to recover from Exceptions, including Cancellation/Asynchronous Exceptions
+- Exceptions that must be returned to the caller should be done using `throw` keyword so that the Stack Track is maintained
+- Use Finally block to clean-up resources
+
 ### ContestingProcessor.Console
 
 - Should NOT output logging information unless a debug argument is included on the command line
 - Should output logging information to the standard output (console screen) when a debug argument is included
 - Should accept input in a human readable and concise format such as: `-debug` to add logging, `-add`, `-update`, `-remove` to perform operations on the data in memory, `-export` to dump data in memory to a file, etc
-- Exceptions thrown by ContestLogProcessor.Lib must be caught and handled gracefully, reporting back to the Console what happened
 
 ### ContestLogProcessor.Lib
 
-- Exceptions should be caught and a custom Exception with information about what went wrong and why should be passed back to the calling function to be handled
 - Prefer synchronous functions over asynchronous
 - Methods that provide API access to the Library should be public
 - Methods that support functionality and processing should not be publicly accessible by dependant projects
@@ -76,3 +100,65 @@ When it is time to create additional projects in this Solution:
 - Focus unittests on specific, basic functional goal
 - Avoid writing extensing edge-case unittests
 - Use data in `./LogExamples` directory to derive realistic test case data but do not copy the data exactly
+
+### Cabrillo Log File Standards
+
+- A Tag is surrounded by `<` and `>:` with a following space and then the data associated with the tag
+- Each line must start with a Tag, followed by data, and ends with a newline character (LF or CRLF)
+- Tags other than QSO and END-OF-LOG can be in any order
+- Required Tags: START-OF-LOG, END-OF-LOG
+- Common Tags: CALLSIGN, CONTEST:{string}, CATEGORY-{string}, CERTIFICATE, CLAIMED-SCORE, CLUB, CREATED-BY, EMAIL, GRID-LOCATOR, LOCATION, NAME, ADDRESS, ADDRESS-{string}, OPERATORS, OFFTIME, SOAPBOX, and X-{string}
+- Special Tag `END-OF-LOG` followed by a newline character (LF or CRLF) indicating the end of the log and no more reading or parsing is necessary
+- Special Tab `X-QSO` indicates the following qso data will be ignored by an upstream log processor
+- Tag QSO indicates the following line is an ILogEntry type
+- Once QSO Tags are encountered there will only be QSO Tags until Tag END-OF-LOG is encountered
+- Each QSO Tag contains data separated by at least one whitespace character
+
+#### Cabrillo Log QSO Tag Standards
+
+QSO data format is made up of Frequency, Mode, Date, Time, Call, and Exchange. Definitions of each are below.
+
+Frequency:
+
+- Frequency in whole numbers, numbers with a decimal point and the letter `G`, whole numbers and the letter `G`, or the word `LIGHT`
+- Max length: 7 characters
+- No leading zeros
+- Right-aligned
+- Whole Numbers
+
+Mode:
+
+- Max length: 2 characters
+- `PH`, `CW`, `FM`, `RY`, `DG`
+
+Date:
+
+- UTC date in yyyy-mm-dd format
+
+Time:
+
+- UTC time in hhmm format
+
+Call:
+
+- A string of alpha-numeric characters and an optional `/` up to 15 characters long
+
+Exch:
+
+- 5 elements
+- 1st element: up to 3 whole numbers
+- 2nd element: up to 5 alpha characters
+- 3rd element: a string of up to 15 alpha-numeric characters including an optional `/`
+- 4th element: up to 3 whole numbers
+- 5th element: up to 5 alpha characters
+
+## User Interactions
+
+### ContestingProcessor.Console
+
+- Executable run without any arguments returns text explaining how to use the app arguments
+- Executable run with -?, -h, or --help returns text explaining how to use the app arguments
+- Executable run with -i or --import and a relative or absolute filepath will try to load the file into memory using CabrilloLogProcessor
+- Executable run with -e or --export and a relative or absolute filepath will try to export stored log data to the filepath argument using CabrilloLogProcessor
+- Executable run with -l or --list will try to display stored log data to the Console
+

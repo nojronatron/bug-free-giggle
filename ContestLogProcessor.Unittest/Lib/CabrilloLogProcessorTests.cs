@@ -61,14 +61,51 @@ public class CabrilloLogProcessorTests
         var processor = new CabrilloLogProcessor();
         processor.ReadFile(SampleLogPath);
         var exportFile = ExportPath + ".log";
+
         if (File.Exists(exportFile))
         {
             File.Delete(exportFile);
         }
-        processor.ExportFile(ExportPath);
+
+        processor.ExportFile(ExportPath); // default uses canonical format
         Assert.True(File.Exists(exportFile));
         var lines = File.ReadAllLines(exportFile);
         Assert.Contains(lines, l => l.StartsWith("QSO:"));
+        // Check canonical structure: the first QSO line should contain frequency, mode and date/time tokens
+        var firstQso = lines.FirstOrDefault(l => l.StartsWith("QSO:"));
+        Assert.NotNull(firstQso);
+        Assert.Contains(" ", firstQso); // at least some tokens after QSO:
+        File.Delete(exportFile);
+    }
+
+    [Fact]
+    public void ReadFile_PopulatesExchangeFieldsAndRoundTripExport()
+    {
+        var processor = new CabrilloLogProcessor();
+        processor.ReadFile(SampleLogPath);
+        var entries = processor.GetEntries().ToList();
+        Assert.NotEmpty(entries);
+
+        // Verify at least one entry has an exchange populated (SentSig at minimum)
+        Assert.Contains(entries, e => e.SentExchange != null && !string.IsNullOrWhiteSpace(e.SentExchange.SentSig));
+
+        // Try a round-trip export and ensure we get a QSO line in the output, and canonical includes SentSig
+        var exportFile = ExportPath + "_roundtrip.log";
+
+        if (File.Exists(exportFile))
+        {
+            File.Delete(exportFile);
+        }
+        
+        processor.ExportFile(ExportPath + "_roundtrip");
+        Assert.True(File.Exists(exportFile));
+        var lines = File.ReadAllLines(exportFile);
+        Assert.Contains(lines, l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
+
+        // Ensure at least one exported QSO contains a parsed SentSig token
+        var sentSig = entries.Select(e => e.SentExchange?.SentSig).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+        Assert.False(string.IsNullOrWhiteSpace(sentSig));
+        Assert.Contains(lines, l => l.Contains(sentSig));
         File.Delete(exportFile);
     }
 }

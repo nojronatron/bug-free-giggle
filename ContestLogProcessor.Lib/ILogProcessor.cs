@@ -12,5 +12,5 @@ public interface ILogProcessor
     IEnumerable<LogEntry> GetEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null);
     void DuplicateEntry(Predicate<LogEntry> match, Action<LogEntry>? editAction);
     void UpdateEntry(Predicate<LogEntry> match, Action<LogEntry>? editAction);
-    void ExportFile(string filePath);
+    void ExportFile(string filePath, bool useCanonicalFormat = true);
 }
