@@ -13,13 +13,17 @@ public class CabrilloLogProcessor : ILogProcessor
     private readonly List<LogEntry> _entries = [];
     private CabrilloLogFile? _logFile;
 
-    public void ReadFile(string filePath)
+    // Events for CRUD operations
+    public event EventHandler<LogEntry>? EntryAdded;
+    public event EventHandler<LogEntry>? EntryUpdated;
+    public event EventHandler<string>? EntryDeleted;
+
+    public void ImportFile(string filePath)
     {
         if (!File.Exists(filePath))
         {
             throw new FileNotFoundException($"File not found: {filePath}");
         }
-
         string[] lines = File.ReadAllLines(filePath);
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         List<LogEntry> entries = [];
@@ -33,9 +37,7 @@ public class CabrilloLogProcessor : ILogProcessor
                 var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length >= 6)
                 {
-                    // Basic parsing: parts indices reflect the common Cabrillo layout:
-                    // QSO: <frequency> <mode> <date> <time> <call> <sent-exch...> <their-call> <recv-exch...>
-                    // This implementation conservatively populates the most common tokens and preserves the raw line.
+                    // Basic parsing: parts indices reflect the common Cabrillo layout
                     var entry = new LogEntry
                     {
                         RawLine = line,
@@ -50,6 +52,8 @@ public class CabrilloLogProcessor : ILogProcessor
                     entry.SentExchange = sentExch;
                     entry.ReceivedExchange = recvExch;
                     entry.TheirCall = theirCall;
+
+                    if (string.IsNullOrWhiteSpace(entry.Id)) entry.Id = Guid.NewGuid().ToString();
 
                     entries.Add(entry);
                 }
@@ -155,67 +159,89 @@ public class CabrilloLogProcessor : ILogProcessor
         return hasLetter;
     }
 
-    public IEnumerable<LogEntry> GetEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null)
+    public IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null)
     {
         IEnumerable<LogEntry> result = _entries;
         if (filter != null)
-            result = _entries.FindAll(new Predicate<LogEntry>(filter));
+            result = result.Where(filter);
         if (orderBy != null)
-            result = new List<LogEntry>(result).OrderBy(orderBy);
+            result = result.OrderBy(orderBy);
+        if (skip.HasValue) result = result.Skip(skip.Value);
+        if (take.HasValue) result = result.Take(take.Value);
         return result;
     }
 
-    public void DuplicateEntry(Predicate<LogEntry> match, Action<LogEntry>? editAction)
+    public LogEntry CreateEntry(LogEntry entry)
     {
-        var entry = _entries.Find(match);
-        if (entry != null)
-        {
-            var copy = new LogEntry
-            {
-                QsoDateTime = entry.QsoDateTime,
-                CallSign = entry.CallSign,
-                Band = entry.Band,
-                Mode = entry.Mode,
-                Frequency = entry.Frequency,
-                RawLine = entry.RawLine,
-                IsXQso = entry.IsXQso
-            };
+        if (entry == null) throw new ArgumentNullException(nameof(entry));
+        if (string.IsNullOrWhiteSpace(entry.Id)) entry.Id = Guid.NewGuid().ToString();
 
-            if (entry.SentExchange != null)
+        var copy = new LogEntry
+        {
+            Id = entry.Id,
+            RawLine = entry.RawLine,
+            Frequency = entry.Frequency,
+            Mode = entry.Mode,
+            QsoDateTime = entry.QsoDateTime,
+            CallSign = entry.CallSign,
+            Band = entry.Band,
+            IsXQso = entry.IsXQso,
+            TheirCall = entry.TheirCall
+        };
+
+        if (entry.SentExchange != null)
+        {
+            copy.SentExchange = new Exchange
             {
-                copy.SentExchange = new Exchange
-                {
-                    SentSig = entry.SentExchange.SentSig,
-                    SentMsg = entry.SentExchange.SentMsg,
-                    TheirCall = entry.SentExchange.TheirCall,
-                    ReceivedSig = entry.SentExchange.ReceivedSig,
-                    ReceivedMsg = entry.SentExchange.ReceivedMsg
-                };
-            }
-            if (entry.ReceivedExchange != null)
-            {
-                copy.ReceivedExchange = new Exchange
-                {
-                    SentSig = entry.ReceivedExchange.SentSig,
-                    SentMsg = entry.ReceivedExchange.SentMsg,
-                    TheirCall = entry.ReceivedExchange.TheirCall,
-                    ReceivedSig = entry.ReceivedExchange.ReceivedSig,
-                    ReceivedMsg = entry.ReceivedExchange.ReceivedMsg
-                };
-            }
-            editAction?.Invoke(copy);
-            _entries.Add(copy);
+                SentSig = entry.SentExchange.SentSig,
+                SentMsg = entry.SentExchange.SentMsg,
+                TheirCall = entry.SentExchange.TheirCall,
+                ReceivedSig = entry.SentExchange.ReceivedSig,
+                ReceivedMsg = entry.SentExchange.ReceivedMsg
+            };
         }
+
+        if (entry.ReceivedExchange != null)
+        {
+            copy.ReceivedExchange = new Exchange
+            {
+                SentSig = entry.ReceivedExchange.SentSig,
+                SentMsg = entry.ReceivedExchange.SentMsg,
+                TheirCall = entry.ReceivedExchange.TheirCall,
+                ReceivedSig = entry.ReceivedExchange.ReceivedSig,
+                ReceivedMsg = entry.ReceivedExchange.ReceivedMsg
+            };
+        }
+
+        _entries.Add(copy);
+        EntryAdded?.Invoke(this, copy);
+        return copy;
     }
 
-    public void UpdateEntry(Predicate<LogEntry> match, Action<LogEntry>? editAction)
+    public LogEntry? GetEntryById(string id)
     {
-        LogEntry? entry = _entries.Find(match);
+        if (string.IsNullOrWhiteSpace(id)) return null;
+        return _entries.FirstOrDefault(x => x.Id == id);
+    }
 
-        if (entry != null)
-        {
-            editAction?.Invoke(entry);
-        }
+    public bool UpdateEntry(string id, Action<LogEntry> editAction)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return false;
+        var entry = _entries.FirstOrDefault(x => x.Id == id);
+        if (entry == null) return false;
+        editAction?.Invoke(entry);
+        EntryUpdated?.Invoke(this, entry);
+        return true;
+    }
+
+    public bool DeleteEntry(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return false;
+        var entry = _entries.FirstOrDefault(x => x.Id == id);
+        if (entry == null) return false;
+        _entries.Remove(entry);
+        EntryDeleted?.Invoke(this, id);
+        return true;
     }
 
     public void ExportFile(string filePath, bool useCanonicalFormat = true)
@@ -244,7 +270,7 @@ public class CabrilloLogProcessor : ILogProcessor
         }
 
         // Write log entries in forward-time order
-        foreach (var entry in _logFile.Entries.OrderBy(e => e.QsoDateTime))
+    foreach (var entry in _logFile.Entries.OrderBy(e => e.QsoDateTime))
         {
             if (useCanonicalFormat)
             {

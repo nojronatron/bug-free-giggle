@@ -11,6 +11,15 @@ namespace ContestLogProcessor.Lib;
 /// </summary>
 public class LogEntry
 {
+    public LogEntry()
+    {
+        Id = Guid.NewGuid().ToString("D");
+    }
+
+    /// <summary>
+    /// Unique identifier for this LogEntry (GUID string).
+    /// </summary>
+    public string Id { get; set; }
     /// <summary>
     /// Raw original QSO line from the file (preserved for fidelity when exporting if desired).
     /// </summary>

@@ -8,9 +8,14 @@ namespace ContestLogProcessor.Lib;
 /// </summary>
 public interface ILogProcessor
 {
-    void ReadFile(string filePath);
-    IEnumerable<LogEntry> GetEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null);
-    void DuplicateEntry(Predicate<LogEntry> match, Action<LogEntry>? editAction);
-    void UpdateEntry(Predicate<LogEntry> match, Action<LogEntry>? editAction);
+    // File operations
+    void ImportFile(string filePath);
     void ExportFile(string filePath, bool useCanonicalFormat = true);
+
+    // CRUD operations
+    LogEntry CreateEntry(LogEntry entry);
+    IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
+    LogEntry? GetEntryById(string id);
+    bool UpdateEntry(string id, Action<LogEntry> editAction);
+    bool DeleteEntry(string id);
 }

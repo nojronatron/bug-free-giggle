@@ -23,13 +23,13 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list) =>
 	{
 		if (!string.IsNullOrWhiteSpace(import))
 		{
-			processor.ReadFile(import);
+			processor.ImportFile(import);
 			Console.WriteLine($"Imported: {import}");
 		}
 
 		if (list)
 		{
-			foreach (var e in processor.GetEntries())
+			foreach (var e in processor.ReadEntries())
 			{
 				Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
 			}
