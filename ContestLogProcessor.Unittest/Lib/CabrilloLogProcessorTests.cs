@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Xunit;
+using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
 public class CabrilloLogProcessorTests
 {
-    private const string SampleLogPath = "..\\..\\..\\..\\TestData\\K7XXX_Test.log";
-    private const string ExportPath = "..\\..\\..\\..\\TestData\\TestExport";
+    private static string SampleLogPath => Path.Combine(AppContext.BaseDirectory, "TestData", "K7XXX_Test.log");
+    private static string ExportPath => Path.Combine(AppContext.BaseDirectory, "TestData", "TestExport");
 
     [Fact]
     public void ReadFile_ParsesLogFileCorrectly()

@@ -15,7 +15,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <ProjectReference Include="..\ContestLogProcessor.Lib\ContestLogProcessor.Lib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Lib\TestData\K7XXX_Test.log">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>TestData\K7XXX_Test.log</Link>
+    </None>
   </ItemGroup>
 
 </Project>
