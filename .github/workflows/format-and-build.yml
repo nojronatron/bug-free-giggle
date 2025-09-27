@@ -1,0 +1,35 @@
+name: Format and Build
+
+on:
+  pull_request:
+    branches: [ 'main' ]
+  push:
+    branches: [ 'main' ]
+
+jobs:
+  format-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-format
+        run: |
+          dotnet tool install --global dotnet-format --version 9.* || true
+          echo "##[endgroup]"
+        env:
+          DOTNET_ROOT: ${{ runner.temp }}
+
+      - name: Add dotnet tools to PATH
+        run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Verify formatting (dotnet format)
+        run: dotnet format --verify-no-changes
+
+      - name: Build solution
+        run: dotnet build "ContestLogProcessor.sln" --configuration Release
