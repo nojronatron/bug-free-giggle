@@ -16,7 +16,7 @@ Option<string?> exportOption = new Option<string?>(new[] { "-e", "--export" }, d
 Option<bool> listOption = new Option<bool>(new[] { "-l", "--list" }, description: "List loaded entries (raw lines)");
 Option<bool> interactiveOption = new Option<bool>("--interactive", description: "Start an interactive session");
 
-RootCommand root = new RootCommand("ContestLogProcessor CLI")
+RootCommand root = new RootCommand("ContestLogProcessor CLI - parse, edit and export Cabrillo v3 ham contest logs")
 {
     debugOption,
     importOption,
@@ -84,9 +84,81 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
             Console.WriteLine("  import <path>   - Import a Cabrillo .log file into memory");
             Console.WriteLine("  add             - Add a new log entry interactively");
             Console.WriteLine("  view            - View all loaded log entries (canonical format)");
+            Console.WriteLine("  filter <text>   - Show entries matching text. After listing you can choose one to duplicate.");
+            Console.WriteLine("  duplicate       - Duplicate an existing entry (usage: duplicate <entryId> | --index <n> | --filter \"text\" [newSentMsg])");
             Console.WriteLine("  export <path>   - Export current in-memory log to a Cabrillo .log file");
             Console.WriteLine("  exit            - Exit interactive session");
             Console.WriteLine("  help            - Show this help message");
+            await Task.CompletedTask;
+        }},
+
+        { "filter", async parts => {
+            if (parts.Length < 2)
+            {
+                Console.WriteLine("Usage: filter <text>");
+                return;
+            }
+
+            string filter = string.Join(' ', parts, 1, parts.Length - 1);
+
+            System.Collections.Generic.List<LogEntry> matches = processor.ReadEntries().Where(e =>
+                (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                e.ToCabrilloLine().IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
+            ).ToList();
+
+            if (matches.Count == 0)
+            {
+                Console.WriteLine("No matches found for filter.");
+                return;
+            }
+
+            Console.WriteLine($"Found {matches.Count} matches. List:");
+            for (int i = 0; i < matches.Count; i++)
+            {
+                Console.WriteLine($"[{i}] {matches[i].ToCabrilloLine()}");
+            }
+
+            Console.Write("Enter index to duplicate, 'all' to duplicate all matches, or 'cancel': ");
+            string? choice = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(choice))
+            {
+                Console.WriteLine("Cancelled.");
+                return;
+            }
+
+            if (choice.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                for (int i = 0; i < matches.Count; i++)
+                {
+                    try
+                    {
+                        LogEntry duplicated = processor.DuplicateEntry(matches[i].Id, null);
+                        Console.WriteLine($"Duplicated entry {matches[i].Id} -> new Id: {duplicated.Id}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Duplicate failed: {ex.Message}");
+                    }
+                }
+                return;
+            }
+
+            if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
+            {
+                try
+                {
+                    LogEntry duplicated = processor.DuplicateEntry(matches[chosen].Id, null);
+                    Console.WriteLine($"Duplicated entry {matches[chosen].Id} -> new Id: {duplicated.Id}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Duplicate failed: {ex.Message}");
+                }
+                return;
+            }
+
+            Console.WriteLine("Unknown selection. Cancelled.");
             await Task.CompletedTask;
         }},
 
