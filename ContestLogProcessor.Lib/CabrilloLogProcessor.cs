@@ -25,7 +25,7 @@ public class CabrilloLogProcessor : ILogProcessor
             throw new FileNotFoundException($"File not found: {filePath}");
         }
         string[] lines = File.ReadAllLines(filePath);
-        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         List<LogEntry> entries = [];
 
         foreach (var line in lines)
@@ -34,11 +34,11 @@ public class CabrilloLogProcessor : ILogProcessor
             {
                 // Cabrillo QSO line format: QSO: <freq> <mode> <date> <time> <mycall> ...
                 // Example: QSO: 14000 CW 2025-09-26 2100 K7RMZ ...
-                var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length >= 6)
                 {
                     // Basic parsing: parts indices reflect the common Cabrillo layout
-                    var entry = new LogEntry
+                    LogEntry entry = new LogEntry
                     {
                         RawLine = line,
                         Frequency = parts.Length > 1 ? parts[1] : null,
@@ -48,23 +48,26 @@ public class CabrilloLogProcessor : ILogProcessor
                     };
 
                     // Attempt to parse up to five exchange tokens per side.
-                    var (sentExch, theirCall, recvExch) = ParseExchanges(parts, 6);
+                    (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6);
                     entry.SentExchange = sentExch;
                     entry.ReceivedExchange = recvExch;
                     entry.TheirCall = theirCall;
 
-                    if (string.IsNullOrWhiteSpace(entry.Id)) entry.Id = Guid.NewGuid().ToString();
+                    if (string.IsNullOrWhiteSpace(entry.Id))
+                    {
+                        entry.Id = Guid.NewGuid().ToString();
+                    }
 
                     entries.Add(entry);
                 }
             }
             else if (!string.IsNullOrWhiteSpace(line))
             {
-                var idx = line.IndexOf(':');
+                int idx = line.IndexOf(':');
                 if (idx > 0)
                 {
-                    var key = line.Substring(0, idx).Trim();
-                    var value = line.Substring(idx + 1).Trim();
+                    string key = line.Substring(0, idx).Trim();
+                    string value = line.Substring(idx + 1).Trim();
                     headers[key] = value;
                 }
             }
@@ -88,27 +91,31 @@ public class CabrilloLogProcessor : ILogProcessor
     /// </summary>
     private static (Exchange? sent, string? theirCall, Exchange? recv) ParseExchanges(string[] parts, int startIndex)
     {
-        if (parts == null) return (null, null, null);
-        int i = startIndex;
-        var sent = new Exchange();
+        if (parts == null)
+        {
+            return (null, null, null);
+        }
+
+        int idx = startIndex;
+        Exchange sent = new();
 
         // Fill sent parts up to 5 tokens or until we run out or encounter probable their-call (heuristic)
         int sentFilled = 0;
-        while (i < parts.Length && sentFilled < 5)
+        while (idx < parts.Length && sentFilled < 5)
         {
             // If the part looks like a date/time or a frequency indicator it's unlikely to be part of the exchange;
             // but for now accept most tokens. We'll map tokens sequentially.
             switch (sentFilled)
             {
-                case 0: sent.SentSig = parts[i]; break;
-                case 1: sent.SentMsg = parts[i]; break;
-                case 2: sent.TheirCall = parts[i]; break;
-                case 3: sent.ReceivedSig = parts[i]; break;
-                case 4: sent.ReceivedMsg = parts[i]; break;
+                case 0: sent.SentSig = parts[idx]; break;
+                case 1: sent.SentMsg = parts[idx]; break;
+                case 2: sent.TheirCall = parts[idx]; break;
+                case 3: sent.ReceivedSig = parts[idx]; break;
+                case 4: sent.ReceivedMsg = parts[idx]; break;
             }
-            i++; sentFilled++;
+            idx++; sentFilled++;
             // Break early if next token looks like a callsign (contains a digit or '/'), heuristically treat that as theirCall
-            if (i < parts.Length && IsLikelyCallsign(parts[i]))
+            if (idx < parts.Length && IsLikelyCallsign(parts[idx]))
             {
                 break;
             }
@@ -116,40 +123,44 @@ public class CabrilloLogProcessor : ILogProcessor
 
         // Next token may be their call
         string? theirCall = null;
-        if (i < parts.Length && IsLikelyCallsign(parts[i]))
+        if (idx < parts.Length && IsLikelyCallsign(parts[idx]))
         {
-            theirCall = parts[i];
-            i++;
+            theirCall = parts[idx];
+            idx++;
         }
 
         // Remaining tokens up to 5 form the received exchange
         var recv = new Exchange();
         int recvFilled = 0;
-        while (i < parts.Length && recvFilled < 5)
+        while (idx < parts.Length && recvFilled < 5)
         {
+            // todo: consider adding a default case
             switch (recvFilled)
             {
-                case 0: recv.SentSig = parts[i]; break;
-                case 1: recv.SentMsg = parts[i]; break;
-                case 2: recv.TheirCall = parts[i]; break;
-                case 3: recv.ReceivedSig = parts[i]; break;
-                case 4: recv.ReceivedMsg = parts[i]; break;
+                case 0: recv.SentSig = parts[idx]; break;
+                case 1: recv.SentMsg = parts[idx]; break;
+                case 2: recv.TheirCall = parts[idx]; break;
+                case 3: recv.ReceivedSig = parts[idx]; break;
+                case 4: recv.ReceivedMsg = parts[idx]; break;
             }
-            i++; recvFilled++;
+            idx++; recvFilled++;
         }
 
         // If we didn't populate any part, return nulls to indicate absence
-        var sentAny = !string.IsNullOrWhiteSpace(sent.SentSig) || !string.IsNullOrWhiteSpace(sent.SentMsg) || !string.IsNullOrWhiteSpace(sent.TheirCall) || !string.IsNullOrWhiteSpace(sent.ReceivedSig) || !string.IsNullOrWhiteSpace(sent.ReceivedMsg);
-        var recvAny = !string.IsNullOrWhiteSpace(recv.SentSig) || !string.IsNullOrWhiteSpace(recv.SentMsg) || !string.IsNullOrWhiteSpace(recv.TheirCall) || !string.IsNullOrWhiteSpace(recv.ReceivedSig) || !string.IsNullOrWhiteSpace(recv.ReceivedMsg);
+        bool sentAny = !string.IsNullOrWhiteSpace(sent.SentSig) || !string.IsNullOrWhiteSpace(sent.SentMsg) || !string.IsNullOrWhiteSpace(sent.TheirCall) || !string.IsNullOrWhiteSpace(sent.ReceivedSig) || !string.IsNullOrWhiteSpace(sent.ReceivedMsg);
+        bool recvAny = !string.IsNullOrWhiteSpace(recv.SentSig) || !string.IsNullOrWhiteSpace(recv.SentMsg) || !string.IsNullOrWhiteSpace(recv.TheirCall) || !string.IsNullOrWhiteSpace(recv.ReceivedSig) || !string.IsNullOrWhiteSpace(recv.ReceivedMsg);
 
         return (sentAny ? sent : null, theirCall, recvAny ? recv : null);
     }
 
     private static bool IsLikelyCallsign(string token)
     {
-        if (string.IsNullOrWhiteSpace(token)) return false;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
         // Heuristic: callsigns are alphanumeric and often contain digits and/or a '/'
-        foreach (var ch in token)
+        foreach (char ch in token)
         {
             if (char.IsLetterOrDigit(ch) || ch == '/') continue;
             return false;
@@ -163,14 +174,39 @@ public class CabrilloLogProcessor : ILogProcessor
     {
         IEnumerable<LogEntry> result = _entries;
         if (filter != null)
+        {
             result = result.Where(filter);
+        }
+
         if (orderBy != null)
+        {
             result = result.OrderBy(orderBy);
-        if (skip.HasValue) result = result.Skip(skip.Value);
-        if (take.HasValue) result = result.Take(take.Value);
+        }
+
+        if (skip.HasValue)
+        {
+            result = result.Skip(skip.Value);
+        }
+
+        if (take.HasValue)
+        {
+            result = result.Take(take.Value);
+        }
         return result;
     }
 
+    /// <summary>
+    /// Create a new log entry in the in-memory collection.
+    /// </summary>
+    /// <remarks>
+    /// The provided <paramref name="entry"/> is copied (deep copy of exchanges) before being stored
+    /// so callers may reuse or modify the original instance without affecting the stored entry.
+    /// If the incoming entry has no <see cref="LogEntry.Id"/>, an Id (GUID) will be assigned.
+    /// After the entry is added the <see cref="EntryAdded"/> event is raised with the stored copy.
+    /// </remarks>
+    /// <param name="entry">The entry to add to the processor. Must not be <c>null</c>.</param>
+    /// <returns>The copy of the entry that was stored.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="entry"/> is <c>null</c>.</exception>
     public LogEntry CreateEntry(LogEntry entry)
     {
         if (entry == null) throw new ArgumentNullException(nameof(entry));
