@@ -38,12 +38,28 @@ public class CabrilloLogProcessor : ILogProcessor
                 if (parts.Length >= 6)
                 {
                     // Basic parsing: parts indices reflect the common Cabrillo layout
+                    // Parse the QSO date/time more robustly using known formats
+                    DateTime qsoDt = DateTime.MinValue;
+                    if (parts.Length > 4)
+                    {
+                        string datePart = parts[3];
+                        string timePart = parts[4];
+                        string combined = datePart + " " + timePart;
+                        string[] formats = new[] { "yyyy-MM-dd HHmm", "yyyy-MM-dd HH:mm", "yyyy-MM-dd H:mm", "yyyy-MM-dd Hm", "yyyyMMdd HHmm" };
+                        if (!DateTime.TryParseExact(combined, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out DateTime parsed))
+                        {
+                            // Fallback to a permissive parse if exact formats fail
+                            DateTime.TryParse(combined, out parsed);
+                        }
+                        if (parsed != default) qsoDt = parsed;
+                    }
+
                     LogEntry entry = new LogEntry
                     {
                         RawLine = line,
                         Frequency = parts.Length > 1 ? parts[1] : null,
                         Mode = parts.Length > 2 ? parts[2] : null,
-                        QsoDateTime = (parts.Length > 4 && DateTime.TryParse(parts[3] + " " + parts[4], out DateTime dt)) ? dt : DateTime.MinValue,
+                        QsoDateTime = qsoDt,
                         CallSign = parts.Length > 5 ? parts[5] : null
                     };
 
