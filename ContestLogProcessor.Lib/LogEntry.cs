@@ -43,7 +43,7 @@ public class LogEntry
     public DateTime QsoDateTime { get; set; }
 
     /// <summary>
-    /// Callsign worked in the QSO.
+    /// Callsign of the logging operator (CALLSIGN element in the log header).
     /// </summary>
     public string? CallSign { get; set; }
 
