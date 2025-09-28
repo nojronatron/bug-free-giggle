@@ -136,11 +136,28 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
             Console.Write("Time (HHmm): ");
             string? timeStr = Console.ReadLine();
 
-            Console.Write("CallSign: ");
-            string? call = Console.ReadLine();
+            // If a log file is loaded and contains a CALLSIGN header, use it as the default my-call.
+            string? call = null;
+            if (processor.TryGetHeader("CALLSIGN", out string? headerCall) && !string.IsNullOrWhiteSpace(headerCall))
+            {
+                call = headerCall;
+                Console.WriteLine($"Using CALLSIGN from loaded log headers: {call}");
+            }
+            else
+            {
+                Console.Write("CallSign: ");
+                call = Console.ReadLine();
+            }
 
-            Console.Write("TheirCall: ");
-            string? theirCallInput = Console.ReadLine();
+            // TheirCall is required for interactive adds — prompt until a non-empty value is provided.
+            string? theirCallInput = null;
+            while (true)
+            {
+                Console.Write("TheirCall: ");
+                theirCallInput = Console.ReadLine();
+                if (!string.IsNullOrWhiteSpace(theirCallInput)) break;
+                Console.WriteLine("TheirCall is required for added entries. Please enter the other station's callsign.");
+            }
 
             DateTime qsoDateTime = DateTime.MinValue;
             if (!string.IsNullOrWhiteSpace(dateStr) && !string.IsNullOrWhiteSpace(timeStr))
