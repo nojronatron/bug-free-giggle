@@ -58,7 +58,8 @@ public class CabrilloLogProcessorTests
             Mode = "CW",
             QsoDateTime = DateTime.UtcNow,
             CallSign = "UNITTEST",
-            SentExchange = new Exchange { SentSig = "001", SentMsg = "WA", TheirCall = "K7XXX" }
+            SentExchange = new Exchange { SentSig = "001", SentMsg = "WA", TheirCall = "K7XXX" },
+            TheirCall = "K7XXX"
         };
 
         var created = processor.CreateEntry(newEntry);
@@ -102,7 +103,8 @@ public class CabrilloLogProcessorTests
             Mode = "CW",
             QsoDateTime = DateTime.UtcNow,
             CallSign = "INTEG",
-            SentExchange = new Exchange { SentSig = "123", SentMsg = "TX" }
+            SentExchange = new Exchange { SentSig = "123", SentMsg = "TX" },
+            TheirCall = "INTEG"
         };
 
         var created = processor.CreateEntry(newEntry);

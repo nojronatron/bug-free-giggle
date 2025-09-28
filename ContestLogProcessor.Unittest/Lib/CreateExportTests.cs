@@ -23,7 +23,8 @@ public class CreateExportTests
             Mode = "CW",
             QsoDateTime = DateTime.UtcNow,
             CallSign = uniqueCall,
-            SentExchange = new Exchange { SentSig = "001" }
+            SentExchange = new Exchange { SentSig = "001" },
+            TheirCall = "TEST"
         };
 
         var created = processor.CreateEntry(newEntry);
@@ -31,6 +32,32 @@ public class CreateExportTests
 
         var found = processor.ReadEntries().Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
         Assert.True(found, "Created entry should be visible via ReadEntries after import.");
+    }
+
+    [Fact]
+    public void DuplicateEntry_CopiesAndAllowsSentMsgOverride()
+    {
+        var processor = new CabrilloLogProcessor();
+        processor.ImportFile(SampleLogPath);
+
+        var original = processor.ReadEntries().FirstOrDefault();
+        Assert.NotNull(original);
+
+        string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
+        var dup = processor.DuplicateEntry(original.Id, newMsg);
+
+        Assert.NotNull(dup);
+        Assert.NotEqual(original.Id, dup.Id);
+        Assert.Equal(original.Frequency, dup.Frequency);
+        Assert.Equal(original.Mode, dup.Mode);
+        Assert.Equal(original.QsoDateTime, dup.QsoDateTime);
+        Assert.Equal(original.TheirCall, dup.TheirCall);
+
+        // SentMsg should be replaced in the duplicated entry's SentExchange when provided
+        if (dup.SentExchange != null)
+        {
+            Assert.Equal(newMsg, dup.SentExchange.SentMsg);
+        }
     }
 
     [Fact]
@@ -46,7 +73,8 @@ public class CreateExportTests
             Mode = "CW",
             QsoDateTime = DateTime.UtcNow,
             CallSign = uniqueCall,
-            SentExchange = new Exchange { SentSig = "999" }
+            SentExchange = new Exchange { SentSig = "999" },
+            TheirCall = "TEST"
         };
 
         var created = processor.CreateEntry(newEntry);
