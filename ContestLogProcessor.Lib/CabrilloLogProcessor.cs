@@ -196,6 +196,22 @@ public class CabrilloLogProcessor : ILogProcessor
     }
 
     /// <summary>
+    /// Try to read a header value from the currently loaded Cabrillo file (if any).
+    /// Returns false when no file is loaded or the header is not present.
+    /// </summary>
+    public bool TryGetHeader(string key, out string? value)
+    {
+        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentNullException(nameof(key));
+        if (_logFile == null)
+        {
+            value = null;
+            return false;
+        }
+
+        return _logFile.TryGetHeader(key, out value);
+    }
+
+    /// <summary>
     /// Create a new log entry in the in-memory collection.
     /// </summary>
     /// <remarks>
