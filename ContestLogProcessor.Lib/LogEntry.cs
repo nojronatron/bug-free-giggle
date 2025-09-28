@@ -43,7 +43,8 @@ public class LogEntry
     public DateTime QsoDateTime { get; set; }
 
     /// <summary>
-    /// Callsign of the other station contacted.
+    /// The operator that is logging these QSO entries, usually CALLSIGN in the Cabrillo Log Header.
+    /// This is optional on individual QSO lines because many logs supply a single CALLSIGN header for the whole file.
     /// </summary>
     public string? CallSign { get; set; }
 
@@ -96,8 +97,8 @@ public class LogEntry
     public string ToCabrilloLine()
     {
         // Date/time formatting per spec: yyyy-MM-dd and HHmm in UTC.
-        var datePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("yyyy-MM-dd");
-        var timePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("HHmm");
+    string datePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("yyyy-MM-dd");
+    string timePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("HHmm");
 
         string freq = Frequency ?? string.Empty;
         string mode = Mode ?? string.Empty;
@@ -108,7 +109,7 @@ public class LogEntry
 
         // Compose with single spaces and trim end. We don't include "theirCall" separately because the
         // parser does not currently store it as a separate field; if it is needed later we can add it.
-        var tokens = new List<string> { "QSO:", freq, mode, datePart, timePart, call };
+    List<string> tokens = new List<string> { "QSO:", freq, mode, datePart, timePart, call };
 
         if (!string.IsNullOrEmpty(sent)) tokens.Add(sent);
         if (!string.IsNullOrEmpty(TheirCall)) tokens.Add(TheirCall);

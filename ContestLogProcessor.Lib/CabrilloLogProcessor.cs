@@ -228,6 +228,12 @@ public class CabrilloLogProcessor : ILogProcessor
         if (entry == null) throw new ArgumentNullException(nameof(entry));
         if (string.IsNullOrWhiteSpace(entry.Id)) entry.Id = Guid.NewGuid().ToString();
 
+        // TheirCall is required for a valid QSO entry
+        if (string.IsNullOrWhiteSpace(entry.TheirCall))
+        {
+            throw new ArgumentException("TheirCall (the other station's callsign) is required for a log entry.", nameof(entry));
+        }
+
     LogEntry copy = new LogEntry
         {
             Id = entry.Id,
