@@ -82,6 +82,7 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
         { "help", async parts => {
             Console.WriteLine("Available commands:");
             Console.WriteLine("  import <path>   - Import a Cabrillo .log file into memory");
+            Console.WriteLine("  add             - Add a new log entry interactively");
             Console.WriteLine("  view            - View all loaded log entries (canonical format)");
             Console.WriteLine("  export <path>   - Export current in-memory log to a Cabrillo .log file");
             Console.WriteLine("  exit            - Exit interactive session");
@@ -116,6 +117,75 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
                     Console.WriteLine(ex.ToString());
                 }
             }
+            await Task.CompletedTask;
+        }},
+
+        { "add", async parts => {
+            // Interactive add - prompt user for basic QSO fields
+            Console.WriteLine("Adding a new log entry. Press Enter to skip optional fields.");
+
+            Console.Write("Frequency: ");
+            string? frequency = Console.ReadLine();
+
+            Console.Write("Mode: ");
+            string? mode = Console.ReadLine();
+
+            Console.Write("Date (yyyy-MM-dd): ");
+            string? dateStr = Console.ReadLine();
+
+            Console.Write("Time (HHmm): ");
+            string? timeStr = Console.ReadLine();
+
+            Console.Write("CallSign: ");
+            string? call = Console.ReadLine();
+
+            Console.Write("TheirCall: ");
+            string? theirCallInput = Console.ReadLine();
+
+            DateTime qsoDateTime = DateTime.MinValue;
+            if (!string.IsNullOrWhiteSpace(dateStr) && !string.IsNullOrWhiteSpace(timeStr))
+            {
+                DateTime.TryParse(dateStr + " " + timeStr, out qsoDateTime);
+            }
+
+            // Simple exchanges as single strings — the library can parse them further if needed
+            Console.Write("Sent exchange (space-separated tokens): ");
+            string? sentEx = Console.ReadLine();
+
+            Console.Write("Received exchange (space-separated tokens): ");
+            string? recvEx = Console.ReadLine();
+
+            // Build LogEntry
+            ContestLogProcessor.Lib.LogEntry newEntry = new ContestLogProcessor.Lib.LogEntry
+            {
+                RawLine = null,
+                Frequency = string.IsNullOrWhiteSpace(frequency) ? null : frequency,
+                Mode = string.IsNullOrWhiteSpace(mode) ? null : mode,
+                QsoDateTime = qsoDateTime,
+                CallSign = string.IsNullOrWhiteSpace(call) ? null : call,
+                TheirCall = string.IsNullOrWhiteSpace(theirCallInput) ? null : theirCallInput
+            };
+
+            if (!string.IsNullOrWhiteSpace(sentEx))
+            {
+                newEntry.SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = sentEx };
+            }
+
+            if (!string.IsNullOrWhiteSpace(recvEx))
+            {
+                newEntry.ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedMsg = recvEx };
+            }
+
+            try
+            {
+                ContestLogProcessor.Lib.LogEntry stored = processor.CreateEntry(newEntry);
+                Console.WriteLine($"Added entry with Id: {stored.Id}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to add entry: {ex.Message}");
+            }
+
             await Task.CompletedTask;
         }},
 
@@ -260,6 +330,13 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
 
             string path = string.Join(' ', parts, 1, parts.Length - 1).Trim('"');
 
+            // Normalize filename to ensure .log extension is used for overwrite checks
+            string checkPath = path;
+            if (!checkPath.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
+            {
+                checkPath += ".log";
+            }
+
             try
             {
 				// Ensure directory exists
@@ -269,10 +346,10 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
                     Directory.CreateDirectory(dir);
                 }
 
-				// If file exists, confirm overwrite
-				if (File.Exists(path))
+                // If file exists (after applying .log extension), confirm overwrite
+                if (File.Exists(checkPath))
                 {
-                    Console.Write($"File '{path}' already exists. Overwrite? (y/N): ");
+                    Console.Write($"File '{checkPath}' already exists. Overwrite? (y/N): ");
                     string? ans = Console.ReadLine()?.Trim();
                     if (!string.Equals(ans, "y", StringComparison.OrdinalIgnoreCase) &&
                         !string.Equals(ans, "yes", StringComparison.OrdinalIgnoreCase))
