@@ -281,6 +281,64 @@ public class CabrilloLogProcessor : ILogProcessor
         return copy;
     }
 
+    /// <summary>
+    /// Duplicate an existing entry. Copies all fields and exchanges, assigns a new Id,
+    /// and optionally replaces the SentExchange.SentMsg value with <paramref name="newSentMsg"/>.
+    /// </summary>
+    public LogEntry DuplicateEntry(string id, string? newSentMsg = null)
+    {
+        if (string.IsNullOrWhiteSpace(id)) throw new ArgumentNullException(nameof(id));
+        LogEntry? existing = _entries.FirstOrDefault(x => x.Id == id);
+        if (existing == null) throw new ArgumentException($"No entry found with id {id}", nameof(id));
+
+        // Create a deep copy
+        LogEntry copy = new LogEntry
+        {
+            Id = Guid.NewGuid().ToString(),
+            RawLine = existing.RawLine,
+            Frequency = existing.Frequency,
+            Mode = existing.Mode,
+            QsoDateTime = existing.QsoDateTime,
+            CallSign = existing.CallSign,
+            Band = existing.Band,
+            IsXQso = existing.IsXQso,
+            TheirCall = existing.TheirCall
+        };
+
+        if (existing.SentExchange != null)
+        {
+            copy.SentExchange = new Exchange
+            {
+                SentSig = existing.SentExchange.SentSig,
+                SentMsg = string.IsNullOrWhiteSpace(newSentMsg) ? existing.SentExchange.SentMsg : newSentMsg,
+                TheirCall = existing.SentExchange.TheirCall,
+                ReceivedSig = existing.SentExchange.ReceivedSig,
+                ReceivedMsg = existing.SentExchange.ReceivedMsg
+            };
+        }
+
+        if (existing.ReceivedExchange != null)
+        {
+            copy.ReceivedExchange = new Exchange
+            {
+                SentSig = existing.ReceivedExchange.SentSig,
+                SentMsg = existing.ReceivedExchange.SentMsg,
+                TheirCall = existing.ReceivedExchange.TheirCall,
+                ReceivedSig = existing.ReceivedExchange.ReceivedSig,
+                ReceivedMsg = existing.ReceivedExchange.ReceivedMsg
+            };
+        }
+
+        _entries.Add(copy);
+        if (_logFile != null && _logFile.Entries != null)
+        {
+            _logFile.Entries.Add(copy);
+        }
+
+        EntryAdded?.Invoke(this, copy);
+        return copy;
+    }
+
     public LogEntry? GetEntryById(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;

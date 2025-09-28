@@ -338,6 +338,114 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
             await Task.CompletedTask;
         }},
 
+        { "duplicate", async parts => {
+            // Modes:
+            // duplicate <id> [newSentMsg]
+            // duplicate --index <n> [newSentMsg]
+            // duplicate --filter "text" [newSentMsg]
+
+            if (parts.Length < 2)
+            {
+                Console.WriteLine("Usage: duplicate <entryId> | --index <n> | --filter \"text\" [newSentMsg]");
+                return;
+            }
+
+            string? newMsg = null;
+
+            // Helper to perform duplication and print result
+            void DoDuplicationById(string entryId, string? msg)
+            {
+                try
+                {
+                    LogEntry duplicated = processor.DuplicateEntry(entryId, msg);
+                    Console.WriteLine($"Duplicated entry {entryId} -> new Id: {duplicated.Id}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Duplicate failed: {ex.Message}");
+                }
+            }
+
+            if (parts[1].Equals("--index", StringComparison.OrdinalIgnoreCase) && parts.Length >= 3)
+            {
+                if (!int.TryParse(parts[2], out int idx))
+                {
+                    Console.WriteLine("Invalid index.");
+                    return;
+                }
+
+                if (parts.Length >= 4) newMsg = parts[3];
+
+                // Use current ordering from ReadEntries
+                System.Collections.Generic.List<LogEntry> all = processor.ReadEntries(orderBy: e => e.QsoDateTime).ToList();
+                if (idx < 0 || idx >= all.Count)
+                {
+                    Console.WriteLine($"Index out of range (0-{all.Count - 1}).");
+                    return;
+                }
+                DoDuplicationById(all[idx].Id, newMsg);
+                await Task.CompletedTask;
+                return;
+            }
+
+            if (parts[1].Equals("--filter", StringComparison.OrdinalIgnoreCase) && parts.Length >= 3)
+            {
+                string filter = parts[2];
+                if (parts.Length >= 4) newMsg = parts[3];
+
+                System.Collections.Generic.List<LogEntry> matches = processor.ReadEntries().Where(e =>
+                    (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    e.ToCabrilloLine().IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
+                ).ToList();
+
+                if (matches.Count == 0)
+                {
+                    Console.WriteLine("No matches found for filter.");
+                    return;
+                }
+
+                Console.WriteLine($"Found {matches.Count} matches. List:");
+                for (int i = 0; i < matches.Count; i++)
+                {
+                    Console.WriteLine($"[{i}] {matches[i].ToCabrilloLine()}");
+                }
+
+                Console.Write("Enter index to duplicate, 'all' to duplicate all matches, or 'cancel': ");
+                string? choice = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(choice))
+                {
+                    Console.WriteLine("Cancelled.");
+                    return;
+                }
+
+                if (choice.Equals("all", StringComparison.OrdinalIgnoreCase))
+                {
+                    for (int i = 0; i < matches.Count; i++)
+                    {
+                        DoDuplicationById(matches[i].Id, newMsg);
+                    }
+                    return;
+                }
+
+                if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
+                {
+                    DoDuplicationById(matches[chosen].Id, newMsg);
+                    return;
+                }
+
+                Console.WriteLine("Unknown selection. Cancelled.");
+                await Task.CompletedTask;
+                return;
+            }
+
+            // Default: treat first arg as an id
+            string id = parts[1];
+            if (parts.Length >= 3) newMsg = parts[2];
+            DoDuplicationById(id, newMsg);
+            await Task.CompletedTask;
+        }},
+
         { "export", async parts => {
             if (parts.Length < 2)
             {
