@@ -28,7 +28,7 @@ public class CabrilloLogProcessor : ILogProcessor
         Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         List<LogEntry> entries = [];
 
-        foreach (var line in lines)
+    foreach (string line in lines)
         {
             if (line.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase))
             {
@@ -43,7 +43,7 @@ public class CabrilloLogProcessor : ILogProcessor
                         RawLine = line,
                         Frequency = parts.Length > 1 ? parts[1] : null,
                         Mode = parts.Length > 2 ? parts[2] : null,
-                        QsoDateTime = (parts.Length > 4 && DateTime.TryParse(parts[3] + " " + parts[4], out var dt)) ? dt : DateTime.MinValue,
+                        QsoDateTime = (parts.Length > 4 && DateTime.TryParse(parts[3] + " " + parts[4], out DateTime dt)) ? dt : DateTime.MinValue,
                         CallSign = parts.Length > 5 ? parts[5] : null
                     };
 
@@ -130,7 +130,7 @@ public class CabrilloLogProcessor : ILogProcessor
         }
 
         // Remaining tokens up to 5 form the received exchange
-        var recv = new Exchange();
+    Exchange recv = new Exchange();
         int recvFilled = 0;
         while (idx < parts.Length && recvFilled < 5)
         {
@@ -212,7 +212,7 @@ public class CabrilloLogProcessor : ILogProcessor
         if (entry == null) throw new ArgumentNullException(nameof(entry));
         if (string.IsNullOrWhiteSpace(entry.Id)) entry.Id = Guid.NewGuid().ToString();
 
-        var copy = new LogEntry
+    LogEntry copy = new LogEntry
         {
             Id = entry.Id,
             RawLine = entry.RawLine,
@@ -250,6 +250,11 @@ public class CabrilloLogProcessor : ILogProcessor
         }
 
         _entries.Add(copy);
+        // If a log file has been imported into memory, keep its entry collection in sync
+        if (_logFile != null && _logFile.Entries != null)
+        {
+            _logFile.Entries.Add(copy);
+        }
         EntryAdded?.Invoke(this, copy);
         return copy;
     }
@@ -263,7 +268,7 @@ public class CabrilloLogProcessor : ILogProcessor
     public bool UpdateEntry(string id, Action<LogEntry> editAction)
     {
         if (string.IsNullOrWhiteSpace(id)) return false;
-        var entry = _entries.FirstOrDefault(x => x.Id == id);
+    LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
         if (entry == null) return false;
         editAction?.Invoke(entry);
         EntryUpdated?.Invoke(this, entry);
@@ -273,7 +278,7 @@ public class CabrilloLogProcessor : ILogProcessor
     public bool DeleteEntry(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return false;
-        var entry = _entries.FirstOrDefault(x => x.Id == id);
+    LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
         if (entry == null) return false;
         _entries.Remove(entry);
         EntryDeleted?.Invoke(this, id);
@@ -287,7 +292,7 @@ public class CabrilloLogProcessor : ILogProcessor
             throw new InvalidOperationException("No log data available to export.");
         }
 
-        var directory = Path.GetDirectoryName(filePath);
+    string? directory = Path.GetDirectoryName(filePath);
         if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
         {
             throw new DirectoryNotFoundException($"Directory does not exist: {directory}");
@@ -298,15 +303,15 @@ public class CabrilloLogProcessor : ILogProcessor
             filePath += ".log";
         }
 
-        var lines = new List<string>();
+    List<string> lines = new List<string>();
         // Write headers
-        foreach (var kvp in _logFile.Headers)
+    foreach (KeyValuePair<string, string> kvp in _logFile.Headers)
         {
             lines.Add($"{kvp.Key}: {kvp.Value}");
         }
 
         // Write log entries in forward-time order
-    foreach (var entry in _logFile.Entries.OrderBy(e => e.QsoDateTime))
+    foreach (LogEntry entry in _logFile.Entries.OrderBy(e => e.QsoDateTime))
         {
             if (useCanonicalFormat)
             {
