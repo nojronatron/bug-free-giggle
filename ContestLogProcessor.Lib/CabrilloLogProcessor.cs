@@ -341,7 +341,9 @@ public class CabrilloLogProcessor : ILogProcessor
                     sentMsg = newValue;
                     break;
                 case ILogProcessor.DuplicateField.TheirCall:
+                    // Update the sent exchange's stored their-call (if present) and the top-level TheirCall on the duplicate
                     theirCall = newValue;
+                    copy.TheirCall = newValue;
                     break;
                 case ILogProcessor.DuplicateField.None:
                 default:

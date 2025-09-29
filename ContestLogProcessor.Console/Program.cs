@@ -25,6 +25,143 @@ RootCommand root = new RootCommand("ContestLogProcessor CLI - parse, edit and ex
     interactiveOption
 };
 
+// Non-interactive bulk update command for scripting: update or duplicate all entries from a logfile
+Option<string> bulkFileOption = new Option<string>(new[] { "-f", "--file" }, description: "Input Cabrillo .log file path") { IsRequired = true };
+Option<string> bulkFieldOption = new Option<string>(new[] { "-F", "--field" }, description: "Field to update: SentSig | SentMsg | TheirCall") { IsRequired = true };
+Option<string> bulkValueOption = new Option<string>(new[] { "-v", "--value" }, description: "New value to set for the selected field") { IsRequired = true };
+Option<bool> bulkDuplicateOption = new Option<bool>(new[] { "-d", "--duplicate" }, description: "If set, duplicate every entry and apply the change to the duplicate; otherwise update entries in-place") { IsRequired = false };
+
+Command bulkCmd = new Command("bulk-update", "Perform a non-interactive bulk update or bulk-duplicate of a Cabrillo log file and write the result to a new .log file with timestamp")
+{
+    bulkFileOption,
+    bulkFieldOption,
+    bulkValueOption,
+    bulkDuplicateOption
+};
+
+bulkCmd.SetHandler((string file, string field, string value, bool duplicate, bool debug) =>
+{
+    try
+    {
+        if (!File.Exists(file))
+        {
+            Console.WriteLine($"File not found: {file}");
+            return;
+        }
+
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
+        proc.ImportFile(file);
+
+        // Map field string to enum
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            Console.WriteLine("Field must be specified.");
+            return;
+        }
+            List<LogEntry> entries = proc.ReadEntries().ToList();
+
+            // Map entries to the original input file QSO line numbers so messages avoid exposing internal Ids.
+            string[] allLines = File.ReadAllLines(file);
+            List<int> qsoLineNumbers = new List<int>();
+            for (int i = 0; i < allLines.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(allLines[i]) && allLines[i].TrimStart().StartsWith("QSO:", StringComparison.OrdinalIgnoreCase))
+                {
+                    // store 1-based file line numbers
+                    qsoLineNumbers.Add(i + 1);
+                }
+            }
+
+            // Build mapping of entry id -> src file line number (best-effort, relies on import order matching QSO lines order)
+            Dictionary<string, int> entryLineMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < entries.Count; i++)
+            {
+                int lineNo = (i < qsoLineNumbers.Count) ? qsoLineNumbers[i] : -1;
+                entryLineMap[entries[i].Id] = lineNo;
+            }
+
+        ILogProcessor.DuplicateField df = field.Trim().ToLowerInvariant() switch
+        {
+            "sentsig" => ILogProcessor.DuplicateField.SentSig,
+            "sentmsg" => ILogProcessor.DuplicateField.SentMsg,
+            "theircall" => ILogProcessor.DuplicateField.TheirCall,
+            _ => ILogProcessor.DuplicateField.None
+        };
+
+        if (df == ILogProcessor.DuplicateField.None)
+        {
+            Console.WriteLine($"Unknown field: {field}. Allowed values: SentSig, SentMsg, TheirCall");
+            return;
+        }
+
+        if (!duplicate)
+        {
+            // Update all entries in-place. Abort on any error.
+            foreach (LogEntry e in entries)
+            {
+                bool ok = proc.UpdateEntry(e.Id, entry =>
+                {
+                    switch (df)
+                    {
+                        case ILogProcessor.DuplicateField.SentSig:
+                            if (entry.SentExchange == null) entry.SentExchange = new Exchange();
+                            entry.SentExchange.SentSig = value;
+                            break;
+                        case ILogProcessor.DuplicateField.SentMsg:
+                            if (entry.SentExchange == null) entry.SentExchange = new Exchange();
+                            entry.SentExchange.SentMsg = value;
+                            break;
+                        case ILogProcessor.DuplicateField.TheirCall:
+                            entry.TheirCall = value;
+                            break;
+                    }
+                });
+
+                if (!ok)
+                {
+                        int ln = entryLineMap.ContainsKey(e.Id) ? entryLineMap[e.Id] : -1;
+                        if (ln > 0)
+                        {
+                            Console.WriteLine($"Failed to update entry at input file line {ln}. Aborting.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Failed to update entry (unknown source line). Aborting.");
+                        }
+                    return;
+                }
+            }
+        }
+        else
+        {
+            // Duplicate each existing entry and apply the change to the duplicate
+            foreach (LogEntry e in entries)
+            {
+                proc.DuplicateEntry(e.Id, df, value);
+            }
+        }
+
+        // Build output filename in same directory with timestamp
+        string dir = Path.GetDirectoryName(file) ?? ".";
+        string baseName = Path.GetFileNameWithoutExtension(file);
+        string stamp = DateTime.Now.ToString("ddMMM-HHmm");
+        string outPath = Path.Combine(dir, $"{baseName}-{stamp}.log");
+
+        // Ensure directory exists
+        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+        proc.ExportFile(outPath);
+        Console.WriteLine($"Wrote output file: {outPath}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Bulk update failed: {ex.Message}");
+        if (debug) Console.WriteLine(ex.ToString());
+    }
+}, bulkFileOption, bulkFieldOption, bulkValueOption, bulkDuplicateOption, debugOption);
+
+root.AddCommand(bulkCmd);
+
 root.SetHandler(async (bool debug, string? import, string? export, bool list, bool interactive) =>
 {
     CabrilloLogProcessor processor = new CabrilloLogProcessor();
