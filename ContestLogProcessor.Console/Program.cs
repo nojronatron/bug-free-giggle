@@ -127,38 +127,72 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
                 return;
             }
 
+            // Build targets list of entry Ids to duplicate
+            List<string> targets = new List<string>();
+
             if (choice.Equals("all", StringComparison.OrdinalIgnoreCase))
             {
-                for (int i = 0; i < matches.Count; i++)
-                {
-                        try
-                        {
-                            LogEntry duplicated = processor.DuplicateEntry(matches[i].Id, ILogProcessor.DuplicateField.None);
-                            Console.WriteLine("Duplicated entry.");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Duplicate failed: {ex.Message}");
-                        }
-                }
+                targets.AddRange(matches.Select(m => m.Id));
+            }
+            else if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
+            {
+                targets.Add(matches[chosen].Id);
+            }
+            else
+            {
+                Console.WriteLine("Unknown selection. Cancelled.");
                 return;
             }
 
-                if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
+            if (targets.Count == 0)
+            {
+                Console.WriteLine("No targets selected.");
+                return;
+            }
+
+            // Prompt for field and new value once (match duplicate command behavior)
+            Console.WriteLine("Choose field to change on duplicate (leave blank for no change):");
+            Console.WriteLine("  1) SentSig");
+            Console.WriteLine("  2) SentMsg");
+            Console.WriteLine("  3) TheirCall");
+            Console.Write("Enter 1/2/3 or press Enter to skip: ");
+            string? fld = Console.ReadLine();
+            ILogProcessor.DuplicateField field = ILogProcessor.DuplicateField.None;
+            if (!string.IsNullOrWhiteSpace(fld))
+            {
+                field = fld.Trim() switch
                 {
+                    "1" => ILogProcessor.DuplicateField.SentSig,
+                    "2" => ILogProcessor.DuplicateField.SentMsg,
+                    "3" => ILogProcessor.DuplicateField.TheirCall,
+                    _ => ILogProcessor.DuplicateField.None
+                };
+            }
+
+            string? newValue = null;
+            if (field != ILogProcessor.DuplicateField.None)
+            {
+                Console.Write($"Enter new value for {field}: ");
+                newValue = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(newValue))
+                {
+                    Console.WriteLine("No new value provided. Cancelled.");
+                    return;
+                }
+            }
+
+            foreach (string targetId in targets)
+            {
                 try
                 {
-                    LogEntry duplicated = processor.DuplicateEntry(matches[chosen].Id, ILogProcessor.DuplicateField.None);
+                    processor.DuplicateEntry(targetId, field, newValue);
                     Console.WriteLine("Duplicated entry.");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Duplicate failed: {ex.Message}");
                 }
-                return;
             }
-
-            Console.WriteLine("Unknown selection. Cancelled.");
             await Task.CompletedTask;
         }},
 
