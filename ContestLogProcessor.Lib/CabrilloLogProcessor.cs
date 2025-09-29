@@ -415,7 +415,7 @@ public class CabrilloLogProcessor : ILogProcessor
             throw new InvalidOperationException("No log data available to export.");
         }
 
-    string? directory = Path.GetDirectoryName(filePath);
+        string? directory = Path.GetDirectoryName(filePath);
         if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
         {
             throw new DirectoryNotFoundException($"Directory does not exist: {directory}");
@@ -426,15 +426,18 @@ public class CabrilloLogProcessor : ILogProcessor
             filePath += ".log";
         }
 
-    List<string> lines = new List<string>();
-        // Write headers
-    foreach (KeyValuePair<string, string> kvp in _logFile.Headers)
+        List<string> lines = new List<string>();
+        // Write headers, but never emit an END-OF-LOG header here (we will append a single END-OF-LOG: as the final line)
+        foreach (KeyValuePair<string, string> kvp in _logFile.Headers)
         {
-            lines.Add($"{kvp.Key}: {kvp.Value}");
+            if (!string.Equals(kvp.Key, "END-OF-LOG", StringComparison.OrdinalIgnoreCase))
+            {
+                lines.Add($"{kvp.Key}: {kvp.Value}");
+            }
         }
 
         // Write log entries in forward-time order
-    foreach (LogEntry entry in _logFile.Entries.OrderBy(e => e.QsoDateTime))
+        foreach (LogEntry entry in _logFile.Entries.OrderBy(e => e.QsoDateTime))
         {
             if (useCanonicalFormat)
             {
@@ -442,10 +445,16 @@ public class CabrilloLogProcessor : ILogProcessor
             }
             else
             {
-                lines.Add(entry.RawLine ?? "");
+                lines.Add(entry.RawLine ?? string.Empty);
             }
         }
 
-        File.WriteAllLines(filePath, lines);
+        // Append a single END-OF-LOG: line as the final line and ensure the file ends with CRLF
+        lines.Add("END-OF-LOG:");
+
+        // Force CRLF as the line terminator regardless of platform
+        const string crlf = "\r\n";
+        string content = string.Join(crlf, lines) + crlf;
+        File.WriteAllText(filePath, content);
     }
 }

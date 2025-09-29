@@ -17,8 +17,8 @@ namespace ContestLogProcessor.Unittest.Lib
             {
                 "START-OF-LOG: 3.0",
                 "CALLSIGN: TEST",
-                "QSO: 3930 PH 2025-09-20 1605 K7RMZ 59 OKA AC7DC 59 WHI",
-                "QSO: 7000 PH 2025-09-20 1610 K7RMZ 59 ABC AC7EF 59 WHI",
+                "QSO: 3930 PH 2025-09-20 1605 K7XXX 59 OKA AC7DC 59 WHI",
+                "QSO: 7000 PH 2025-09-20 1610 K7XXX 59 ABC AC7EF 59 WHI",
                 "END-OF-LOG"
             };
             File.WriteAllLines(temp, lines);
@@ -63,6 +63,55 @@ namespace ContestLogProcessor.Unittest.Lib
         }
 
         [Fact]
+        public void Export_WritesEndOfLog_AsFinalLineWithNewlineBytes()
+        {
+            // Arrange: small synthetic log
+            string temp = Path.GetTempFileName() + ".log";
+            string[] lines = new[]
+            {
+                "START-OF-LOG: 3.0",
+                "CALLSIGN: TEST",
+                "QSO: 3930 PH 2025-09-20 1605 K7XXX 59 OKA AC7DC 59 WHI",
+                "END-OF-LOG"
+            };
+            File.WriteAllLines(temp, lines);
+
+            string outFile = Path.Combine(Path.GetTempPath(), "export-endoflog-test.log");
+            try
+            {
+                if (File.Exists(outFile)) File.Delete(outFile);
+
+                CabrilloLogProcessor proc = new CabrilloLogProcessor();
+                proc.ImportFile(temp);
+                proc.ExportFile(outFile);
+
+                byte[] data = File.ReadAllBytes(outFile);
+                // Must end with CRLF on Windows (\r\n)
+                Assert.True(data.Length >= 3, "Export file too small to contain END-OF-LOG and newline");
+
+                byte cr = (byte)'\r';
+                byte lf = (byte)'\n';
+                Assert.Equal(cr, data[data.Length - 2]);
+                Assert.Equal(lf, data[data.Length - 1]);
+
+                // Check that the bytes immediately before CRLF spell "END-OF-LOG:"
+                string tag = "END-OF-LOG:";
+                byte[] tagBytes = System.Text.Encoding.UTF8.GetBytes(tag);
+                int tagStart = data.Length - 2 - tagBytes.Length;
+                Assert.True(tagStart >= 0, "File too short to contain tag before CRLF");
+                for (int i = 0; i < tagBytes.Length; i++)
+                {
+                    Assert.Equal(tagBytes[i], data[tagStart + i]);
+                }
+            }
+            finally
+            {
+                try { File.Delete(temp); } catch { }
+                try { File.Delete(outFile); } catch { }
+            }
+        }
+
+        [Fact]
         public void BulkUpdate_Duplicate_CreatesDuplicatesWithChangedTheirCall()
         {
             // Arrange: small synthetic log
@@ -71,8 +120,8 @@ namespace ContestLogProcessor.Unittest.Lib
             {
                 "START-OF-LOG: 3.0",
                 "CALLSIGN: TEST",
-                "QSO: 3930 PH 2025-09-20 1605 K7RMZ 59 OKA AC7DC 59 WHI",
-                "QSO: 7000 PH 2025-09-20 1610 K7RMZ 59 ABC AC7EF 59 WHI",
+                "QSO: 3930 PH 2025-09-20 1605 K7XXX 59 OKA AC7DC 59 WHI",
+                "QSO: 7000 PH 2025-09-20 1610 K7XXX 59 ABC AC7EF 59 WHI",
                 "END-OF-LOG"
             };
             File.WriteAllLines(temp, lines);
