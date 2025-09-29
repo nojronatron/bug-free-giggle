@@ -81,14 +81,14 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
     {
         { "help", async parts => {
             Console.WriteLine("Available commands:");
-            Console.WriteLine("  import <path>   - Import a Cabrillo .log file into memory");
-            Console.WriteLine("  add             - Add a new log entry interactively");
-            Console.WriteLine("  view            - View all loaded log entries (canonical format)");
-            Console.WriteLine("  filter <text>   - Show entries matching text. After listing you can choose one to duplicate.");
-            Console.WriteLine("  duplicate       - Duplicate an existing entry (usage: duplicate <entryId> | --index <n> | --filter \"text\" [newSentMsg])");
-            Console.WriteLine("  export <path>   - Export current in-memory log to a Cabrillo .log file");
-            Console.WriteLine("  exit            - Exit interactive session");
-            Console.WriteLine("  help            - Show this help message");
+            Console.WriteLine("  import <path>           - Import a Cabrillo .log file into memory");
+            Console.WriteLine("  add                     - Add a new log entry interactively (TheirCall is required)");
+            Console.WriteLine("  view [pageSize]         - View loaded log entries in canonical format; optional page size");
+            Console.WriteLine("  filter <text>           - List entries matching text; you can pick one to duplicate");
+            Console.WriteLine("  duplicate --filter \"text\" - Duplicate selected entry(s). The console will prompt");
+            Console.WriteLine("  export <filepath>       - Export current in-memory log to <filepath>.log");
+            Console.WriteLine("  exit                    - Exit interactive session");
+            Console.WriteLine("  help                    - Show this help message");
             await Task.CompletedTask;
         }},
 
@@ -131,25 +131,25 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
             {
                 for (int i = 0; i < matches.Count; i++)
                 {
-                    try
-                    {
-                        LogEntry duplicated = processor.DuplicateEntry(matches[i].Id, null);
-                        Console.WriteLine($"Duplicated entry {matches[i].Id} -> new Id: {duplicated.Id}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Duplicate failed: {ex.Message}");
-                    }
+                        try
+                        {
+                            LogEntry duplicated = processor.DuplicateEntry(matches[i].Id, ILogProcessor.DuplicateField.None);
+                            Console.WriteLine("Duplicated entry.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Duplicate failed: {ex.Message}");
+                        }
                 }
                 return;
             }
 
-            if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
-            {
+                if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
+                {
                 try
                 {
-                    LogEntry duplicated = processor.DuplicateEntry(matches[chosen].Id, null);
-                    Console.WriteLine($"Duplicated entry {matches[chosen].Id} -> new Id: {duplicated.Id}");
+                    LogEntry duplicated = processor.DuplicateEntry(matches[chosen].Id, ILogProcessor.DuplicateField.None);
+                    Console.WriteLine("Duplicated entry.");
                 }
                 catch (Exception ex)
                 {
@@ -412,31 +412,16 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
 
         { "duplicate", async parts => {
             // Modes:
-            // duplicate <id> [newSentMsg]
-            // duplicate --index <n> [newSentMsg]
-            // duplicate --filter "text" [newSentMsg]
+            // duplicate --index <n>
+            // duplicate --filter "text"
 
             if (parts.Length < 2)
             {
-                Console.WriteLine("Usage: duplicate <entryId> | --index <n> | --filter \"text\" [newSentMsg]");
+                Console.WriteLine("Usage: duplicate --index <n> | --filter \"text\"");
                 return;
             }
 
-            string? newMsg = null;
-
-            // Helper to perform duplication and print result
-            void DoDuplicationById(string entryId, string? msg)
-            {
-                try
-                {
-                    LogEntry duplicated = processor.DuplicateEntry(entryId, msg);
-                    Console.WriteLine($"Duplicated entry {entryId} -> new Id: {duplicated.Id}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Duplicate failed: {ex.Message}");
-                }
-            }
+            List<string> targets = new List<string>();
 
             if (parts[1].Equals("--index", StringComparison.OrdinalIgnoreCase) && parts.Length >= 3)
             {
@@ -446,25 +431,17 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
                     return;
                 }
 
-                if (parts.Length >= 4) newMsg = parts[3];
-
-                // Use current ordering from ReadEntries
                 System.Collections.Generic.List<LogEntry> all = processor.ReadEntries(orderBy: e => e.QsoDateTime).ToList();
                 if (idx < 0 || idx >= all.Count)
                 {
                     Console.WriteLine($"Index out of range (0-{all.Count - 1}).");
                     return;
                 }
-                DoDuplicationById(all[idx].Id, newMsg);
-                await Task.CompletedTask;
-                return;
+                targets.Add(all[idx].Id);
             }
-
-            if (parts[1].Equals("--filter", StringComparison.OrdinalIgnoreCase) && parts.Length >= 3)
+            else if (parts[1].Equals("--filter", StringComparison.OrdinalIgnoreCase) && parts.Length >= 3)
             {
                 string filter = parts[2];
-                if (parts.Length >= 4) newMsg = parts[3];
-
                 System.Collections.Generic.List<LogEntry> matches = processor.ReadEntries().Where(e =>
                     (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
                     (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
@@ -493,28 +470,113 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
 
                 if (choice.Equals("all", StringComparison.OrdinalIgnoreCase))
                 {
-                    for (int i = 0; i < matches.Count; i++)
-                    {
-                        DoDuplicationById(matches[i].Id, newMsg);
-                    }
-                    return;
+                    targets.AddRange(matches.Select(m => m.Id));
                 }
-
-                if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
+                else if (int.TryParse(choice, out int chosen) && chosen >= 0 && chosen < matches.Count)
                 {
-                    DoDuplicationById(matches[chosen].Id, newMsg);
+                    targets.Add(matches[chosen].Id);
+                }
+                else
+                {
+                    Console.WriteLine("Unknown selection. Cancelled.");
                     return;
                 }
-
-                Console.WriteLine("Unknown selection. Cancelled.");
-                await Task.CompletedTask;
+            }
+            else
+            {
+                // raw id selection is not supported — require --index or --filter to pick entries
+                Console.WriteLine("Use --index <n> or --filter \"text\" to select entries to duplicate.");
                 return;
             }
 
-            // Default: treat first arg as an id
-            string id = parts[1];
-            if (parts.Length >= 3) newMsg = parts[2];
-            DoDuplicationById(id, newMsg);
+            if (targets.Count == 0)
+            {
+                Console.WriteLine("No targets selected.");
+                return;
+            }
+
+            // Show a short summary of what will be duplicated (help the user identify targets)
+            if (targets.Count == 1)
+            {
+                try
+                {
+                    LogEntry? original = processor.GetEntryById(targets[0]);
+                    if (original != null)
+                    {
+                        Console.WriteLine("About to duplicate the following entry:");
+                        try { Console.WriteLine(original.ToCabrilloLine()); }
+                        catch { Console.WriteLine(original.RawLine ?? original.CallSign ?? "(no data)"); }
+                    }
+                }
+                catch { /* ignore lookup errors here */ }
+            }
+            else
+            {
+                Console.WriteLine($"About to duplicate {targets.Count} entries.");
+                int listCount = Math.Min(10, targets.Count);
+                for (int i = 0; i < listCount; i++)
+                {
+                    try
+                    {
+                        LogEntry? o = processor.GetEntryById(targets[i]);
+                        if (o != null)
+                        {
+                            try { Console.WriteLine($"[{i}] {o.ToCabrilloLine()}"); }
+                            catch { Console.WriteLine($"[{i}] {o.RawLine ?? o.CallSign ?? "(no data)"}"); }
+                        }
+                    }
+                    catch { }
+                }
+                if (targets.Count > listCount)
+                {
+                    Console.WriteLine($"...and {targets.Count - listCount} more entries (not shown)");
+                }
+            }
+
+            // Prompt for field and new value once
+            Console.WriteLine("Choose field to change on duplicate (leave blank for no change):");
+            Console.WriteLine("  1) SentSig");
+            Console.WriteLine("  2) SentMsg");
+            Console.WriteLine("  3) TheirCall");
+            Console.Write("Enter 1/2/3 or press Enter to skip: ");
+            string? fld = Console.ReadLine();
+            ILogProcessor.DuplicateField field = ILogProcessor.DuplicateField.None;
+            if (!string.IsNullOrWhiteSpace(fld))
+            {
+                field = fld.Trim() switch
+                {
+                    "1" => ILogProcessor.DuplicateField.SentSig,
+                    "2" => ILogProcessor.DuplicateField.SentMsg,
+                    "3" => ILogProcessor.DuplicateField.TheirCall,
+                    _ => ILogProcessor.DuplicateField.None
+                };
+            }
+
+            string? newValue = null;
+            if (field != ILogProcessor.DuplicateField.None)
+            {
+                Console.Write($"Enter new value for {field}: ");
+                newValue = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(newValue))
+                {
+                    Console.WriteLine("No new value provided. Cancelled.");
+                    return;
+                }
+            }
+
+            foreach (string targetId in targets)
+            {
+                try
+                {
+                    processor.DuplicateEntry(targetId, field, newValue);
+                    Console.WriteLine("Duplicated entry.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Duplicate failed: {ex.Message}");
+                }
+            }
+
             await Task.CompletedTask;
         }},
 
