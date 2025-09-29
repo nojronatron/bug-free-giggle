@@ -176,14 +176,19 @@ public class CabrilloLogProcessor : ILogProcessor
             return false;
         }
         // Heuristic: callsigns are alphanumeric and often contain digits and/or a '/'
+        bool hasLetter = false;
+        bool hasDigit = false;
+        bool hasSlash = false;
         foreach (char ch in token)
         {
-            if (char.IsLetterOrDigit(ch) || ch == '/') continue;
-            return false;
+            if (char.IsLetter(ch)) { hasLetter = true; continue; }
+            if (char.IsDigit(ch)) { hasDigit = true; continue; }
+            if (ch == '/') { hasSlash = true; continue; }
+            return false; // other chars make it unlikely to be a callsign
         }
-        // Also reject pure numeric tokens to avoid mixing with serials — consider those not callsigns
-        bool hasLetter = token.Any(char.IsLetter);
-        return hasLetter;
+
+        // Require at least one letter and either a digit or a slash to be confident it's a callsign
+        return hasLetter && (hasDigit || hasSlash);
     }
 
     public IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null)
@@ -299,9 +304,9 @@ public class CabrilloLogProcessor : ILogProcessor
 
     /// <summary>
     /// Duplicate an existing entry. Copies all fields and exchanges, assigns a new Id,
-    /// and optionally replaces the SentExchange.SentMsg value with <paramref name="newSentMsg"/>.
+    /// and optionally replaces a field on the SentExchange with the supplied new value.
     /// </summary>
-    public LogEntry DuplicateEntry(string id, string? newSentMsg = null)
+    public LogEntry DuplicateEntry(string id, ILogProcessor.DuplicateField field = ILogProcessor.DuplicateField.None, string? newValue = null)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentNullException(nameof(id));
         LogEntry? existing = _entries.FirstOrDefault(x => x.Id == id);
@@ -323,11 +328,31 @@ public class CabrilloLogProcessor : ILogProcessor
 
         if (existing.SentExchange != null)
         {
+            string? sentSig = existing.SentExchange.SentSig;
+            string? sentMsg = existing.SentExchange.SentMsg;
+            string? theirCall = existing.SentExchange.TheirCall;
+
+            switch (field)
+            {
+                case ILogProcessor.DuplicateField.SentSig:
+                    sentSig = newValue;
+                    break;
+                case ILogProcessor.DuplicateField.SentMsg:
+                    sentMsg = newValue;
+                    break;
+                case ILogProcessor.DuplicateField.TheirCall:
+                    theirCall = newValue;
+                    break;
+                case ILogProcessor.DuplicateField.None:
+                default:
+                    break;
+            }
+
             copy.SentExchange = new Exchange
             {
-                SentSig = existing.SentExchange.SentSig,
-                SentMsg = string.IsNullOrWhiteSpace(newSentMsg) ? existing.SentExchange.SentMsg : newSentMsg,
-                TheirCall = existing.SentExchange.TheirCall,
+                SentSig = sentSig,
+                SentMsg = sentMsg,
+                TheirCall = theirCall,
                 ReceivedSig = existing.SentExchange.ReceivedSig,
                 ReceivedMsg = existing.SentExchange.ReceivedMsg
             };

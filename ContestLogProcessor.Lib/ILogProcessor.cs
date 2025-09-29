@@ -8,6 +8,16 @@ namespace ContestLogProcessor.Lib;
 /// </summary>
 public interface ILogProcessor
 {
+    /// <summary>
+    /// Fields that may be changed on a duplicated entry's SentExchange.
+    /// </summary>
+    enum DuplicateField
+    {
+        None = 0,
+        SentSig,
+        SentMsg,
+        TheirCall
+    }
     // File operations
     void ImportFile(string filePath);
     void ExportFile(string filePath, bool useCanonicalFormat = true);
@@ -16,10 +26,10 @@ public interface ILogProcessor
     LogEntry CreateEntry(LogEntry entry);
     /// <summary>
     /// Duplicate an existing entry identified by id. The returned entry is a new stored copy.
-    /// The duplicate will copy all fields except for Id (new GUID) and may replace SentExchange.SentMsg
-    /// with the supplied <paramref name="newSentMsg"/> when provided.
+    /// The duplicate will copy all fields except for Id (new GUID) and may replace a SentExchange field
+    /// (SentSig, SentMsg, or TheirCall) when <paramref name="field"/> and <paramref name="newValue"/> are provided.
     /// </summary>
-    LogEntry DuplicateEntry(string id, string? newSentMsg = null);
+    LogEntry DuplicateEntry(string id, DuplicateField field = DuplicateField.None, string? newValue = null);
     IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
     LogEntry? GetEntryById(string id);
     bool UpdateEntry(string id, Action<LogEntry> editAction);
