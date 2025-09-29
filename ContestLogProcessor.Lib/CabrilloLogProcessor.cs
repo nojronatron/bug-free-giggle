@@ -24,21 +24,22 @@ public class CabrilloLogProcessor : ILogProcessor
         {
             throw new FileNotFoundException($"File not found: {filePath}");
         }
+
         string[] lines = File.ReadAllLines(filePath);
         Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         List<LogEntry> entries = [];
 
-    foreach (string line in lines)
+        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            string line = lines[lineIndex];
+
             if (line.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase))
             {
                 // Cabrillo QSO line format: QSO: <freq> <mode> <date> <time> <mycall> ...
-                // Example: QSO: 14000 CW 2025-09-26 2100 K7RMZ ...
                 string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length >= 6)
                 {
                     // Basic parsing: parts indices reflect the common Cabrillo layout
-                    // Parse the QSO date/time more robustly using known formats
                     DateTime qsoDt = DateTime.MinValue;
                     if (parts.Length > 4)
                     {
@@ -62,6 +63,9 @@ public class CabrilloLogProcessor : ILogProcessor
                         QsoDateTime = qsoDt,
                         CallSign = parts.Length > 5 ? parts[5] : null
                     };
+
+                    // Record source line number (1-based)
+                    entry.SourceLineNumber = lineIndex + 1;
 
                     // Attempt to parse up to five exchange tokens per side.
                     (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6);
@@ -292,11 +296,67 @@ public class CabrilloLogProcessor : ILogProcessor
             };
         }
 
-        _entries.Add(copy);
-        // If a log file has been imported into memory, keep its entry collection in sync
+        // Created entries are in-memory items and should not have a source line number
+        copy.SourceLineNumber = null;
+
+        // Insert the new entry into _entries according to QsoDateTime ordering rules:
+        // - Compare DateTimes normalized to UTC and truncated to minute precision
+        // - If entries exist with equal timestamp, insert after the last of them
+        // - If no entries have equal timestamp, insert before the first entry with later timestamp
+        // - If the new entry is earlier than all, insert at index 0
+        DateTime Normalize(DateTime dt)
+        {
+            if (dt == DateTime.MinValue) return DateTime.MinValue;
+            DateTime u = dt.Kind == DateTimeKind.Utc ? dt : dt.ToUniversalTime();
+            return new DateTime(u.Year, u.Month, u.Day, u.Hour, u.Minute, 0, DateTimeKind.Utc);
+        }
+
+        DateTime key = Normalize(copy.QsoDateTime);
+        int insertIndex = _entries.Count; // default append
+        for (int i = 0; i < _entries.Count; i++)
+        {
+            DateTime other = Normalize(_entries[i].QsoDateTime);
+            if (other > key)
+            {
+                insertIndex = i;
+                break;
+            }
+            // otherwise continue; this will cause insertIndex to be set to last equal/less +1
+            insertIndex = i + 1;
+        }
+
+        if (insertIndex >= 0 && insertIndex <= _entries.Count)
+        {
+            _entries.Insert(insertIndex, copy);
+        }
+        else
+        {
+            _entries.Add(copy);
+        }
+
+        // Keep _logFile entries in sync, using the same insertion logic
         if (_logFile != null && _logFile.Entries != null)
         {
-            _logFile.Entries.Add(copy);
+            int insertIndexInLog = _logFile.Entries.Count;
+            for (int i = 0; i < _logFile.Entries.Count; i++)
+            {
+                DateTime other = Normalize(_logFile.Entries[i].QsoDateTime);
+                if (other > key)
+                {
+                    insertIndexInLog = i;
+                    break;
+                }
+                insertIndexInLog = i + 1;
+            }
+
+            if (insertIndexInLog >= 0 && insertIndexInLog <= _logFile.Entries.Count)
+            {
+                _logFile.Entries.Insert(insertIndexInLog, copy);
+            }
+            else
+            {
+                _logFile.Entries.Add(copy);
+            }
         }
         EntryAdded?.Invoke(this, copy);
         return copy;
@@ -326,7 +386,7 @@ public class CabrilloLogProcessor : ILogProcessor
             TheirCall = existing.TheirCall
         };
 
-        if (existing.SentExchange != null)
+    if (existing.SentExchange != null)
         {
             string? sentSig = existing.SentExchange.SentSig;
             string? sentMsg = existing.SentExchange.SentMsg;
@@ -372,10 +432,28 @@ public class CabrilloLogProcessor : ILogProcessor
             };
         }
 
-        _entries.Add(copy);
+        // Insert the duplicate immediately after the existing entry to preserve import/order semantics
+        int existingIndex = _entries.IndexOf(existing);
+        if (existingIndex >= 0 && existingIndex < _entries.Count)
+        {
+            _entries.Insert(existingIndex + 1, copy);
+        }
+        else
+        {
+            _entries.Add(copy);
+        }
+
         if (_logFile != null && _logFile.Entries != null)
         {
-            _logFile.Entries.Add(copy);
+            int existingIndexInLog = _logFile.Entries.IndexOf(existing);
+            if (existingIndexInLog >= 0 && existingIndexInLog < _logFile.Entries.Count)
+            {
+                _logFile.Entries.Insert(existingIndexInLog + 1, copy);
+            }
+            else
+            {
+                _logFile.Entries.Add(copy);
+            }
         }
 
         EntryAdded?.Invoke(this, copy);
@@ -436,8 +514,8 @@ public class CabrilloLogProcessor : ILogProcessor
             }
         }
 
-        // Write log entries in forward-time order
-        foreach (LogEntry entry in _logFile.Entries.OrderBy(e => e.QsoDateTime))
+        // Write log entries in the same order they were imported/added (import order / in-memory order)
+        foreach (LogEntry entry in _logFile.Entries)
         {
             if (useCanonicalFormat)
             {
