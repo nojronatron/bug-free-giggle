@@ -90,6 +90,13 @@ public class LogEntry
     public string? TheirCall { get; set; }
 
     /// <summary>
+    /// The 1-based line number in the original imported file where this QSO was found.
+    /// This is populated by the importer when a file is imported and can be used for
+    /// user-facing messages and to preserve original ordering semantics.
+    /// </summary>
+    public int? SourceLineNumber { get; set; }
+
+    /// <summary>
     /// Produce a canonical Cabrillo QSO line from the structured fields.
     /// If a field is missing, an empty placeholder is used to preserve token positions where possible.
     /// Example: "QSO: 14000 CW 2025-09-26 2100 K7RMZ 001 WA OR 59" (simplified example)
