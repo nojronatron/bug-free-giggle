@@ -115,60 +115,52 @@ public class CabrilloLogProcessor : ILogProcessor
         {
             return (null, null, null);
         }
-
+        // Collect remaining tokens after the fixed-position fields (freq, mode, date, time, mycall)
         int idx = startIndex;
-        Exchange sent = new();
+    string[] tokens = parts.Skip(startIndex).ToArray();
 
-        // Fill sent parts up to 5 tokens or until we run out or encounter probable their-call (heuristic)
-        int sentFilled = 0;
-        while (idx < parts.Length && sentFilled < 5)
-        {
-            // If the part looks like a date/time or a frequency indicator it's unlikely to be part of the exchange;
-            // but for now accept most tokens. We'll map tokens sequentially.
-            switch (sentFilled)
-            {
-                case 0: sent.SentSig = parts[idx]; break;
-                case 1: sent.SentMsg = parts[idx]; break;
-                case 2: sent.TheirCall = parts[idx]; break;
-                case 3: sent.ReceivedSig = parts[idx]; break;
-                case 4: sent.ReceivedMsg = parts[idx]; break;
-            }
-            idx++; sentFilled++;
-            // Break early if next token looks like a callsign (contains a digit or '/'), heuristically treat that as theirCall
-            if (idx < parts.Length && IsLikelyCallsign(parts[idx]))
-            {
-                break;
-            }
-        }
-
-        // Next token may be their call
+        Exchange sent = new Exchange();
+        Exchange recv = new Exchange();
         string? theirCall = null;
-        if (idx < parts.Length && IsLikelyCallsign(parts[idx]))
-        {
-            theirCall = parts[idx];
-            idx++;
-        }
 
-        // Remaining tokens up to 5 form the received exchange
-    Exchange recv = new Exchange();
-        int recvFilled = 0;
-        while (idx < parts.Length && recvFilled < 5)
+        // Common Cabrillo layout after the "mycall" is typically:
+        // <sentSig> <sentMsg> <theirCall> <recvSig> <recvMsg>
+        // We'll handle the common 5-token case first, then fall back to a best-effort mapping for shorter variants.
+        if (tokens.Length >= 5)
         {
-            // todo: consider adding a default case
-            switch (recvFilled)
+            sent.SentSig = tokens[0];
+            sent.SentMsg = tokens[1];
+            theirCall = tokens[2];
+            recv.ReceivedSig = tokens[3];
+            recv.ReceivedMsg = tokens[4];
+        }
+        else
+        {
+            // Best-effort: assign what we can in order.
+            int p = 0;
+            if (p < tokens.Length) sent.SentSig = tokens[p++];
+            if (p < tokens.Length) sent.SentMsg = tokens[p++];
+
+            if (p < tokens.Length)
             {
-                case 0: recv.SentSig = parts[idx]; break;
-                case 1: recv.SentMsg = parts[idx]; break;
-                case 2: recv.TheirCall = parts[idx]; break;
-                case 3: recv.ReceivedSig = parts[idx]; break;
-                case 4: recv.ReceivedMsg = parts[idx]; break;
+                // If the next token looks like a callsign, treat it as theirCall; otherwise try to infer.
+                if (IsLikelyCallsign(tokens[p]))
+                {
+                    theirCall = tokens[p++];
+                }
+                else if (tokens[p].Any(ch => char.IsLetter(ch)))
+                {
+                    // contains letters — likely not a pure numeric signal, treat as theirCall
+                    theirCall = tokens[p++];
+                }
             }
-            idx++; recvFilled++;
+
+            if (p < tokens.Length) recv.ReceivedSig = tokens[p++];
+            if (p < tokens.Length) recv.ReceivedMsg = tokens[p++];
         }
 
-        // If we didn't populate any part, return nulls to indicate absence
-        bool sentAny = !string.IsNullOrWhiteSpace(sent.SentSig) || !string.IsNullOrWhiteSpace(sent.SentMsg) || !string.IsNullOrWhiteSpace(sent.TheirCall) || !string.IsNullOrWhiteSpace(sent.ReceivedSig) || !string.IsNullOrWhiteSpace(sent.ReceivedMsg);
-        bool recvAny = !string.IsNullOrWhiteSpace(recv.SentSig) || !string.IsNullOrWhiteSpace(recv.SentMsg) || !string.IsNullOrWhiteSpace(recv.TheirCall) || !string.IsNullOrWhiteSpace(recv.ReceivedSig) || !string.IsNullOrWhiteSpace(recv.ReceivedMsg);
+        bool sentAny = !string.IsNullOrWhiteSpace(sent.SentSig) || !string.IsNullOrWhiteSpace(sent.SentMsg);
+        bool recvAny = !string.IsNullOrWhiteSpace(recv.ReceivedSig) || !string.IsNullOrWhiteSpace(recv.ReceivedMsg);
 
         return (sentAny ? sent : null, theirCall, recvAny ? recv : null);
     }

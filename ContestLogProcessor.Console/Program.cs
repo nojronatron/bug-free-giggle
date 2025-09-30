@@ -10,19 +10,75 @@ using ContestLogProcessor.Lib;
 // Default page size for interactive view paging. Adjust here to change default across the program.
 const int DefaultPageSize = 10;
 
+// Helper to print a label and comma-separated list wrapped to the ASCII header width.
+static void PrintWrappedList(string label, System.Collections.Generic.ICollection<string> items, int innerWidth = 40, int indent = 2, bool showCountOnLabelRight = true, string? countDisplay = null)
+{
+    // Print the label and count on its own line. By default the count is printed to the right of the label
+    // as " {label} : {count}". Consumers may pass showCountOnLabelRight=false and optionally a custom
+    // countDisplay string to instead render the label as " {label} ({countDisplay}):" per the report style.
+    if (showCountOnLabelRight)
+    {
+        Console.WriteLine($" {label} : {items.Count}");
+    }
+    else
+    {
+        string display = countDisplay ?? items.Count.ToString();
+        Console.WriteLine($" {label} ({display}):");
+    }
+
+    if (items.Count == 0) return;
+
+    string joined = string.Join(", ", items);
+    int available = Math.Max(10, innerWidth - indent); // ensure we have some room
+    string prefix = new string(' ', indent);
+
+    string remaining = joined.Trim();
+    while (!string.IsNullOrEmpty(remaining))
+    {
+        if (remaining.Length <= available)
+        {
+            Console.WriteLine(prefix + remaining);
+            break;
+        }
+
+        // Try to break at the last ", " before the available limit so we don't split tokens
+        int cut = remaining.LastIndexOf(", ", available);
+        int take;
+        if (cut == -1)
+        {
+            // Nothing to split on - force break
+            take = available;
+        }
+        else
+        {
+            take = cut + 2; // include the comma and following space
+        }
+
+        string part = remaining.Substring(0, take).TrimEnd();
+        Console.WriteLine(prefix + part);
+        remaining = remaining.Substring(take).TrimStart();
+    }
+}
+
 Option<bool> debugOption = new Option<bool>("--debug", description: "Enable debug output");
 Option<string?> importOption = new Option<string?>(new[] { "-i", "--import" }, description: "Import a Cabrillo .log file");
+importOption.ArgumentHelpName = "logfile";
+
 Option<string?> exportOption = new Option<string?>(new[] { "-e", "--export" }, description: "Export current data to a .log file");
+exportOption.ArgumentHelpName = "newfile";
 Option<bool> listOption = new Option<bool>(new[] { "-l", "--list" }, description: "List loaded entries (raw lines)");
 Option<bool> interactiveOption = new Option<bool>("--interactive", description: "Start an interactive session");
+Option<string?> scoreOption = new Option<string?>("--score", description: "Score a Cabrillo .log file and print a brief report");
+scoreOption.ArgumentHelpName = "logfile";
 
-RootCommand root = new RootCommand("ContestLogProcessor CLI - parse, edit and export Cabrillo v3 ham contest logs")
+RootCommand root = new RootCommand("ContestLogProcessor CLI - parse, edit and export Cabrillo v3 ham contest logs. Use --score <logfile> to score a Cabrillo .log file non-interactively.")
 {
     debugOption,
     importOption,
     exportOption,
     listOption,
-    interactiveOption
+    interactiveOption,
+    scoreOption
 };
 
 // Non-interactive bulk update command for scripting: update or duplicate all entries from a logfile
@@ -162,7 +218,7 @@ bulkCmd.SetHandler((string file, string field, string value, bool duplicate, boo
 
 root.AddCommand(bulkCmd);
 
-root.SetHandler(async (bool debug, string? import, string? export, bool list, bool interactive) =>
+root.SetHandler(async (bool debug, string? import, string? export, bool list, bool interactive, string? score) =>
 {
     CabrilloLogProcessor processor = new CabrilloLogProcessor();
 
@@ -179,6 +235,82 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
         {
             processor.ImportFile(import);
             Console.WriteLine($"Imported: {import}");
+        }
+
+        // Non-interactive score option: import the given file and print the score report
+        if (!string.IsNullOrWhiteSpace(score))
+        {
+            if (!File.Exists(score))
+            {
+                Console.WriteLine($"File not found: {score}");
+            }
+            else
+            {
+                try
+                {
+                    CabrilloLogProcessor scProc = new CabrilloLogProcessor();
+                    scProc.ImportFile(score);
+
+                    // Build minimal CabrilloLogFile for scoring
+                    CabrilloLogFile log = new CabrilloLogFile();
+                    if (scProc.TryGetHeader("CALLSIGN", out string? call) && !string.IsNullOrWhiteSpace(call))
+                    {
+                        log.Headers["CALLSIGN"] = call!;
+                    }
+                    else
+                    {
+                        string? inferred = scProc.ReadEntries().FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+                        if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
+                    }
+
+                    log.Entries = scProc.ReadEntries().ToList();
+
+                    SalmonRunScoringService svc = new SalmonRunScoringService();
+                    SalmonRunScoreResult res = svc.CalculateScore(log);
+
+                    // Print same formatted report as interactive mode
+                    string headerBorder = "+----------------------------------------+";
+                    string headerTitle = "|          Salmon Run Score Report      |";
+                    Console.WriteLine(headerBorder);
+                    Console.WriteLine(headerTitle);
+                    Console.WriteLine(headerBorder);
+                    Console.WriteLine($" Final score : {res.FinalScore}");
+                    Console.WriteLine($" QSO points  : {res.QsoPoints}");
+                    Console.WriteLine($" Multiplier   : {res.Multiplier}");
+                    Console.WriteLine($" W7DX bonus   : {res.W7DxBonusPoints}");
+                    Console.WriteLine("------------------------------------------");
+
+                    int innerWidth = Math.Max(10, headerBorder.Length - 2); // exclude the border chars
+                    PrintWrappedList("Washington Counties", res.UniqueWashingtonCounties, innerWidth, 2, false, res.UniqueWashingtonCounties.Count.ToString());
+                    PrintWrappedList("US States", res.UniqueUSStates, innerWidth, 2, false, res.UniqueUSStates.Count.ToString());
+                    PrintWrappedList("Canadian Provinces", res.UniqueCanadianProvinces, innerWidth, 2, false, res.UniqueCanadianProvinces.Count.ToString());
+                    PrintWrappedList("DXCC Entities", res.UniqueDxccEntities, innerWidth, 2, false, $"{res.UniqueDxccEntities.Count} / 10");
+
+                    Console.WriteLine("------------------------------------------");
+                    Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
+                    int show = Math.Min(10, res.SkippedEntries.Count);
+                    for (int i = 0; i < show; i++)
+                    {
+                        SkippedEntryInfo s = res.SkippedEntries[i];
+                        Console.WriteLine($"  - Line {s.SourceLineNumber ?? -1}: {s.Reason}");
+                        if (!string.IsNullOrWhiteSpace(s.RawLine))
+                        {
+                            Console.WriteLine("     " + s.RawLine);
+                        }
+                    }
+                    if (res.SkippedEntries.Count > show)
+                    {
+                        Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
+                    }
+
+                    Console.WriteLine(headerBorder);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Scoring failed: {ex.Message}");
+                    if (debug) Console.WriteLine(ex.ToString());
+                }
+            }
         }
 
         if (list)
@@ -205,7 +337,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
         }
     }
     await Task.CompletedTask;
-}, debugOption, importOption, exportOption, listOption, interactiveOption);
+}, debugOption, importOption, exportOption, listOption, interactiveOption, scoreOption);
 
 return await root.InvokeAsync(args);
 
@@ -224,6 +356,7 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
             Console.WriteLine("  filter <text>           - List entries matching text; you can pick one to duplicate");
             Console.WriteLine("  duplicate --filter \"text\" - Duplicate selected entry(s). The console will prompt");
             Console.WriteLine("  export <filepath>       - Export current in-memory log to <filepath>.log");
+            Console.WriteLine("  score                   - Score the currently loaded log and show a brief report");
             Console.WriteLine("  exit                    - Exit interactive session");
             Console.WriteLine("  help                    - Show this help message");
             await Task.CompletedTask;
@@ -578,6 +711,91 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
                     Console.WriteLine(ex.ToString());
                 }
             }
+            await Task.CompletedTask;
+        }},
+
+        { "score", async parts => {
+            // Score the currently loaded log using SalmonRunScoringService
+            try
+            {
+                // Ensure we have entries loaded
+                List<LogEntry> entries = processor.ReadEntries().ToList();
+                if (entries.Count == 0)
+                {
+                    Console.WriteLine("No entries loaded. Import a log first using: import <path>");
+                    return;
+                }
+
+                // Build a minimal CabrilloLogFile with at least the CALLSIGN header (required by the scoring service)
+                CabrilloLogFile log = new CabrilloLogFile();
+                if (processor.TryGetHeader("CALLSIGN", out string? call) && !string.IsNullOrWhiteSpace(call))
+                {
+                    log.Headers["CALLSIGN"] = call!;
+                }
+                else
+                {
+                    // If the loaded file didn't include a CALLSIGN header, try to infer from the first entry's CallSign
+                    string? inferred = entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+                    if (!string.IsNullOrWhiteSpace(inferred))
+                    {
+                        log.Headers["CALLSIGN"] = inferred!;
+                    }
+                }
+
+                log.Entries = entries;
+
+                // Run scoring service
+                SalmonRunScoringService svc = new SalmonRunScoringService();
+                SalmonRunScoreResult res = svc.CalculateScore(log);
+
+                // Nicely format output with minimal ASCII art
+                string headerBorder = "+----------------------------------------+";
+                string headerTitle = "|          Salmon Run Score Report      |";
+                Console.WriteLine(headerBorder);
+                Console.WriteLine(headerTitle);
+                Console.WriteLine(headerBorder);
+                Console.WriteLine($" Final score : {res.FinalScore}");
+                Console.WriteLine($" QSO points  : {res.QsoPoints}");
+                Console.WriteLine($" Multiplier   : {res.Multiplier}");
+                Console.WriteLine($" W7DX bonus   : {res.W7DxBonusPoints}");
+                Console.WriteLine("------------------------------------------");
+
+                // Multiplier breakdown
+                int innerWidth = Math.Max(10, headerBorder.Length - 2);
+                PrintWrappedList("Washington Counties", res.UniqueWashingtonCounties, innerWidth, 2, false, res.UniqueWashingtonCounties.Count.ToString());
+
+                PrintWrappedList("US States", res.UniqueUSStates, innerWidth, 2, false, res.UniqueUSStates.Count.ToString());
+
+                PrintWrappedList("Canadian Provinces", res.UniqueCanadianProvinces, innerWidth, 2, false, res.UniqueCanadianProvinces.Count.ToString());
+
+                PrintWrappedList("DXCC Entities", res.UniqueDxccEntities, innerWidth, 2, false, $"{res.UniqueDxccEntities.Count} / 10");
+
+                // Skipped entries summary (show up to 10)
+                Console.WriteLine("------------------------------------------");
+                Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
+                int show = Math.Min(10, res.SkippedEntries.Count);
+                for (int i = 0; i < show; i++)
+                {
+                    SkippedEntryInfo s = res.SkippedEntries[i];
+                    Console.WriteLine($"  - Line {s.SourceLineNumber ?? -1}: {s.Reason}");
+                    if (!string.IsNullOrWhiteSpace(s.RawLine))
+                    {
+                        Console.WriteLine("     " + s.RawLine);
+                    }
+                }
+                if (res.SkippedEntries.Count > show)
+                {
+                    Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
+                }
+
+                Console.WriteLine(headerBorder);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Scoring failed: {ex.Message}");
+                if (debug) Console.WriteLine(ex.ToString());
+            }
+
             await Task.CompletedTask;
         }},
 
