@@ -89,7 +89,7 @@ When it is time to create additional projects in this Solution:
 - Tags other than QSO and END-OF-LOG can be in any order
 - Required Tags: START-OF-LOG, END-OF-LOG
 - Common Tags: CALLSIGN, CONTEST:{string}, CATEGORY-{string}, CERTIFICATE, CLAIMED-SCORE, CLUB, CREATED-BY, EMAIL, GRID-LOCATOR, LOCATION, NAME, ADDRESS, ADDRESS-{string}, OPERATORS, OFFTIME, SOAPBOX, and X-{string}
-- Special Tag `END-OF-LOG` followed by a newline character (LF or CRLF) indicating the end of the log and no more reading or parsing is necessary
+- Special Tag `END-OF-LOG:` followed by a newline character (LF or CRLF) indicating the end of the log and no more reading or parsing is necessary
 - Special Tab `X-QSO` indicates the following qso data will be ignored by an upstream log processor
 - Tag QSO indicates the following line is an ILogEntry type
 - Once QSO Tags are encountered there will only be QSO Tags until Tag END-OF-LOG is encountered
