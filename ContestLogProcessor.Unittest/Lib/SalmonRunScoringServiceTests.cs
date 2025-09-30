@@ -227,4 +227,50 @@ public class SalmonRunScoringServiceTests
         Assert.Contains(result.SkippedEntries, s => s.Reason != null && s.Reason.Contains("Missing required tokens"));
         Assert.Contains(result.SkippedEntries, s => s.Reason != null && s.Reason.Contains("X-QSO"));
     }
+
+    [Fact]
+    public void CalculateScore_DxccCapOfTen_IsEnforced()
+    {
+        // Arrange - create 12 unique DXCC ReceivedMsg entries; only first 10 should be counted
+        var log = new ContestLogProcessor.Lib.CabrilloLogFile();
+        log.Headers["CALLSIGN"] = "K7XXX";
+
+        string[] dxccs = new[] { "1A","3A","3B6","3B8","3B9","3C","3C0","3D2","3DA","3V","3W","3X" };
+
+        for (int i = 0; i < dxccs.Length; i++)
+        {
+            var e = new ContestLogProcessor.Lib.LogEntry
+            {
+                Frequency = "28000",
+                Mode = "PH",
+                QsoDateTime = new DateTime(2025, 9, 21, 0, i, 0, DateTimeKind.Utc),
+                CallSign = "K7XXX",
+                TheirCall = $"DX{i}",
+                SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
+                ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = dxccs[i] },
+                SourceLineNumber = i + 1,
+            };
+
+            log.Entries.Add(e);
+        }
+
+        var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+
+        // Act
+        var result = svc.CalculateScore(log);
+
+        // Assert: only first 10 DXCC entries were counted
+        Assert.Equal(10, result.UniqueDxccEntities.Count);
+        Assert.Equal(10, result.Multiplier);
+
+        // First 10 should be present
+        for (int i = 0; i < 10; i++)
+        {
+            Assert.Contains(dxccs[i], result.UniqueDxccEntities);
+        }
+
+        // Last two should NOT be present
+        Assert.DoesNotContain(dxccs[10], result.UniqueDxccEntities);
+        Assert.DoesNotContain(dxccs[11], result.UniqueDxccEntities);
+    }
 }
