@@ -352,6 +352,7 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
     InteractiveShell shell = new InteractiveShell(new CommandContext(processor, new SystemConsoleWrapper(), debug));
     shell.RegisterHandler(new FilterCommandHandler());
     shell.RegisterHandler(new FilterDupeCommandHandler());
+    shell.RegisterHandler(new ImportCommandHandler());
     shell.RegisterHandler(new HelpCommandHandler(shell));
 
     Dictionary<string, Func<string[], Task>> commands =
@@ -505,35 +506,7 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
             await Task.CompletedTask;
         }},
 
-        { "import", async parts => {
-            if (parts.Length < 2)
-            {
-                Console.WriteLine("Usage: import <path>");
-                return;
-            }
-
-            string path = string.Join(' ', parts, 1, parts.Length - 1).Trim('"');
-
-            try
-            {
-                if (!File.Exists(path))
-                {
-                    Console.WriteLine($"File not found: {path}");
-                    return;
-                }
-                processor.ImportFile(path);
-                Console.WriteLine($"Imported: {path}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Import failed: {ex.Message}");
-                if (debug)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-            await Task.CompletedTask;
-        }},
+        // `import` is migrated to a handler registered with the InteractiveShell. The shell will handle it.
 
         { "add", async parts => {
             // Interactive add - prompt user for basic QSO fields
