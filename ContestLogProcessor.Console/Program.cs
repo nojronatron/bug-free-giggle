@@ -362,10 +362,10 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
             await Task.CompletedTask;
         }},
 
-        { "filter", async parts => {
+        { "filter-dupe", async parts => {
             if (parts.Length < 2)
             {
-                Console.WriteLine("Usage: filter <text>");
+                Console.WriteLine("Usage: filter-dupe <text>");
                 return;
             }
 
@@ -463,6 +463,36 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
                     Console.WriteLine($"Duplicate failed: {ex.Message}");
                 }
             }
+            await Task.CompletedTask;
+        }},
+
+        { "filter", async parts => {
+            if (parts.Length < 2)
+            {
+                Console.WriteLine("Usage: filter <text>");
+                return;
+            }
+
+            string filter = string.Join(' ', parts, 1, parts.Length - 1);
+
+            System.Collections.Generic.List<LogEntry> matches = processor.ReadEntries().Where(e =>
+                (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                e.ToCabrilloLine().IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
+            ).ToList();
+
+            if (matches.Count == 0)
+            {
+                Console.WriteLine("No matches found for filter.");
+                return;
+            }
+
+            Console.WriteLine($"Found {matches.Count} matches. List:");
+            for (int i = 0; i < matches.Count; i++)
+            {
+                Console.WriteLine($"[{i}] {matches[i].ToCabrilloLine()}");
+            }
+
             await Task.CompletedTask;
         }},
 
