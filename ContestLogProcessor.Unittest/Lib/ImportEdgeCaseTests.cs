@@ -23,7 +23,7 @@ namespace ContestLogProcessor.Unittest.Lib
             {
                 File.WriteAllText(tmp, string.Empty);
                 proc.ImportFile(tmp);
-                Assert.Equal(0, proc.ReadEntries().ToList().Count);
+                Assert.Empty(proc.ReadEntries().ToList());
             }
             finally
             {

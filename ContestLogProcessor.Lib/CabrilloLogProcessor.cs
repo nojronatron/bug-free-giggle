@@ -33,10 +33,28 @@ public class CabrilloLogProcessor : ILogProcessor
         {
             string line = lines[lineIndex];
 
-            if (line.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase))
+            // Stop processing when END-OF-LOG is encountered
+            if (line.StartsWith("END-OF-LOG:", StringComparison.OrdinalIgnoreCase))
+            {
+                headers["END-OF-LOG"] = string.Empty;
+                break;
+            }
+
+            // Mark that we've seen a START-OF-LOG tag
+            if (line.StartsWith("START-OF-LOG:", StringComparison.OrdinalIgnoreCase))
+            {
+                int idx = line.IndexOf(':');
+                string val = idx >= 0 ? line.Substring(idx + 1).Trim() : string.Empty;
+                headers["START-OF-LOG"] = val;
+                continue;
+            }
+
+            // Accept QSO: and X-QSO: lines. X-QSO lines should be parsed but marked as ignored for scoring.
+            bool isXQsoLine = line.StartsWith("X-QSO:", StringComparison.OrdinalIgnoreCase);
+            if (line.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase) || isXQsoLine)
             {
                 // Cabrillo QSO line format: QSO: <freq> <mode> <date> <time> <mycall> ...
-                string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length >= 6)
                 {
                     // Basic parsing: parts indices reflect the common Cabrillo layout
@@ -63,6 +81,12 @@ public class CabrilloLogProcessor : ILogProcessor
                         QsoDateTime = qsoDt,
                         CallSign = parts.Length > 5 ? parts[5] : null
                     };
+
+                    // If this was an X-QSO line, mark it so.
+                    if (isXQsoLine)
+                    {
+                        entry.IsXQso = true;
+                    }
 
                     // Record source line number (1-based)
                     entry.SourceLineNumber = lineIndex + 1;
