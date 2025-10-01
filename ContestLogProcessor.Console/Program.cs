@@ -352,6 +352,7 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
     InteractiveShell shell = new InteractiveShell(new CommandContext(processor, new SystemConsoleWrapper(), debug));
     shell.RegisterHandler(new FilterCommandHandler());
     shell.RegisterHandler(new FilterDupeCommandHandler());
+    shell.RegisterHandler(new AddCommandHandler());
     shell.RegisterHandler(new ImportCommandHandler());
     shell.RegisterHandler(new DuplicateCommandHandler());
     shell.RegisterHandler(new HelpCommandHandler(shell));
