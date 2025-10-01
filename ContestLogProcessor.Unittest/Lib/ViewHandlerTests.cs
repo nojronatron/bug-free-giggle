@@ -15,7 +15,7 @@ public class ViewHandlerTests
         var console = new TestConsole(new string?[] { "q" });
         var proc = new CabrilloLogProcessor();
         // Add a few entries
-        for (int i = 0; i < 5; i++) proc.CreateEntry(new LogEntry { CallSign = "K7" + i });
+    for (int i = 0; i < 5; i++) proc.CreateEntry(new LogEntry { CallSign = "K7" + i, TheirCall = "N0" + i });
 
         var ctx = new CommandContext(proc, console, debug: false);
         var handler = new ViewCommandHandler();

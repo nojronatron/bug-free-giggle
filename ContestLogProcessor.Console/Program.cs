@@ -354,6 +354,7 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
     shell.RegisterHandler(new AddCommandHandler());
     shell.RegisterHandler(new ExportCommandHandler());
     shell.RegisterHandler(new ViewCommandHandler());
+    shell.RegisterHandler(new ScoreCommandHandler());
     shell.RegisterHandler(new ImportCommandHandler());
     shell.RegisterHandler(new DuplicateCommandHandler());
     shell.RegisterHandler(new HelpCommandHandler(shell));

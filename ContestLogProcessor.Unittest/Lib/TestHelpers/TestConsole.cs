@@ -2,7 +2,7 @@ using ContestLogProcessor.Console.Interactive;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace ContestLogProcessor.Unittest.Lib.TestHelpers;
+namespace ContestLogProcessor.Unittest.Lib;
 
 public class TestConsole : IConsole
 {

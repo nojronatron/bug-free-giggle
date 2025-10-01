@@ -251,6 +251,20 @@ public class CabrilloLogProcessor : ILogProcessor
             throw new ArgumentException("TheirCall (the other station's callsign) is required for a log entry.", nameof(entry));
         }
 
+        // Ensure we have an internal CabrilloLogFile structure so ExportFile can operate
+        if (_logFile == null)
+        {
+            _logFile = new CabrilloLogFile
+            {
+                Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                Entries = new List<LogEntry>()
+            };
+        }
+        else if (_logFile.Entries == null)
+        {
+            _logFile.Entries = new List<LogEntry>();
+        }
+
     LogEntry copy = new LogEntry
         {
             Id = entry.Id,

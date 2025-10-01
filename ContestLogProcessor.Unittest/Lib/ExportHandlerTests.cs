@@ -21,7 +21,7 @@ public class ExportHandlerTests
             var console = new TestConsole(new string?[] { });
             var proc = new CabrilloLogProcessor();
             // add a sample entry so export writes something
-            proc.CreateEntry(new LogEntry { CallSign = "K7TEST" });
+            proc.CreateEntry(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
 
             var ctx = new CommandContext(proc, console, debug: false);
             var handler = new ExportCommandHandler();
@@ -49,14 +49,15 @@ public class ExportHandlerTests
         {
             var console = new TestConsole(new string?[] { });
             var proc = new CabrilloLogProcessor();
-            proc.CreateEntry(new LogEntry { CallSign = "K7TEST" });
+            proc.CreateEntry(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
             var ctx = new CommandContext(proc, console, debug: false);
             var handler = new ExportCommandHandler();
 
             await handler.HandleAsync(new[] { "export", outPath }, ctx);
 
-            // The handler calls ExportFile with original path, so file should be created as given
-            Assert.True(File.Exists(outPath));
+            // The processor appends .log when exporting, so the physical file will have .log appended
+            string actualPath = outPath.EndsWith(".log", System.StringComparison.OrdinalIgnoreCase) ? outPath : outPath + ".log";
+            Assert.True(File.Exists(actualPath));
             string output = string.Join('\n', console.Outputs);
             Assert.Contains("Exported:", output);
         }
@@ -78,7 +79,7 @@ public class ExportHandlerTests
         {
             var console = new TestConsole(new string?[] { "n" });
             var proc = new CabrilloLogProcessor();
-            proc.CreateEntry(new LogEntry { CallSign = "K7TEST" });
+            proc.CreateEntry(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
             var ctx = new CommandContext(proc, console, debug: false);
             var handler = new ExportCommandHandler();
 
@@ -105,7 +106,7 @@ public class ExportHandlerTests
         {
             var console = new TestConsole(new string?[] { "y" });
             var proc = new CabrilloLogProcessor();
-            proc.CreateEntry(new LogEntry { CallSign = "K7TEST" });
+            proc.CreateEntry(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
             var ctx = new CommandContext(proc, console, debug: false);
             var handler = new ExportCommandHandler();
 
