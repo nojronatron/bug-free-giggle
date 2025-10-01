@@ -10,7 +10,7 @@ namespace ContestLogProcessor.Lib;
 /// </summary>
 public class CabrilloLogProcessor : ILogProcessor
 {
-    private readonly List<LogEntry> _entries = [];
+    private readonly List<LogEntry> _entries = new List<LogEntry>();
     private CabrilloLogFile? _logFile;
 
     // Events for CRUD operations
@@ -26,8 +26,9 @@ public class CabrilloLogProcessor : ILogProcessor
         }
 
         string[] lines = File.ReadAllLines(filePath);
-        Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        List<LogEntry> entries = [];
+    Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    List<LogEntry> entries = new List<LogEntry>();
+    List<SkippedEntryInfo> skipped = new List<SkippedEntryInfo>();
 
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
@@ -71,6 +72,11 @@ public class CabrilloLogProcessor : ILogProcessor
                             DateTime.TryParse(combined, out parsed);
                         }
                         if (parsed != default) qsoDt = parsed;
+                        else
+                        {
+                            // note the unparseable date/time; keep importing but record for diagnostics
+                            skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex + 1, Reason = "Unparseable date/time", RawLine = line });
+                        }
                     }
 
                     LogEntry entry = new LogEntry
@@ -102,7 +108,18 @@ public class CabrilloLogProcessor : ILogProcessor
                         entry.Id = Guid.NewGuid().ToString();
                     }
 
+                    // If exchange parsing failed to find their call, record a skipped entry for diagnostics
+                    if (string.IsNullOrWhiteSpace(entry.TheirCall))
+                    {
+                        skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex + 1, Reason = "Missing TheirCall token", RawLine = line });
+                    }
+
                     entries.Add(entry);
+                }
+                else
+                {
+                    // Malformed QSO line (not enough tokens)
+                    skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex + 1, Reason = "Malformed QSO line (insufficient tokens)", RawLine = line });
                 }
             }
             else if (!string.IsNullOrWhiteSpace(line))
@@ -117,14 +134,26 @@ public class CabrilloLogProcessor : ILogProcessor
             }
         }
 
+
         _logFile = new CabrilloLogFile
         {
             Headers = headers,
-            Entries = entries
+            Entries = entries,
+            SkippedEntries = skipped
         };
 
         _entries.Clear();
         _entries.AddRange(entries);
+
+        // If there are parsed QSO entries but no CALLSIGN header, record a skipped-header item so callers
+        // can inspect problems. Do not throw here to keep import tolerant for unit tests and tools.
+        if (_logFile.Entries.Count > 0)
+        {
+            if (!_logFile.Headers.ContainsKey("CALLSIGN") || string.IsNullOrWhiteSpace(_logFile.Headers["CALLSIGN"]))
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = null, Reason = "Missing CALLSIGN header", RawLine = null });
+            }
+        }
     }
 
     /// <summary>
@@ -134,7 +163,7 @@ public class CabrilloLogProcessor : ILogProcessor
     /// then the next token may be their call, and then up to 5 tokens for the received exchange.
     /// </summary>
     private static (Exchange? sent, string? theirCall, Exchange? recv) ParseExchanges(string[] parts, int startIndex)
-    {
+        {
         if (parts == null)
         {
             return (null, null, null);

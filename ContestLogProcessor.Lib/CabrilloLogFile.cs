@@ -21,6 +21,12 @@ public class CabrilloLogFile
     public List<LogEntry> Entries { get; set; } = new();
 
     /// <summary>
+    /// List of lines that could not be parsed or were otherwise skipped during import.
+    /// Filled by the importer with reasons and raw line text for diagnostics.
+    /// </summary>
+    public List<SkippedEntryInfo> SkippedEntries { get; set; } = new();
+
+    /// <summary>
     /// Whether the file contained the required START-OF-LOG marker.
     /// </summary>
     public bool HasStartOfLog => Headers.ContainsKey("START-OF-LOG");
