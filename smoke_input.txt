@@ -1,0 +1,13 @@
+add
+2023-09-30
+1200
+20
+PH
+K7SMOKE
+N0SMK
+599
+RRR
+view
+q
+export f:\Projects\Ham Contest Log Processor\ContestLogProcessor\smoke-output.log
+exit

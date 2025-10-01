@@ -53,6 +53,6 @@ public class CabrilloLogFile
             throw new ArgumentNullException(nameof(key));
         }
         
-        return Headers.TryGetValue(key, out var val) ? val : null;
+    return Headers.TryGetValue(key, out string? val) ? val : null;
     }
 }
