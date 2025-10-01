@@ -9,10 +9,18 @@ This project library will examine a supplied Cabrillo formatted amateur radio lo
 - `/ContestLogProcessor.Lib`: The core, shared abstractions and implementations needed by the Console and other Projects (to be added later).
 - `/ContestLogProcessor.Unittest`: XUnit test project. Add a directory to match the Project to be tested for example: `/Lib` for `ContestLogProcessor.Lib` unittests, etc.
 - `/LogExamples`: Folder contains log file examples and should not be directly imported or copied to code nor checked in to git repository.
+- `/Rules`: Additional specifications and descriptions of contest rules, cabrillo specifications, and special handling rules.
 
 When it is time to create additional projects in this Solution:
 
 - Follow the same naming pattern as existing projects, using "Website" for an ASP.NET Core webapp, "WebClient" for WASM, "Server" for an API server, etc
+
+## References
+
+- [Salmon Run Cabrillo Log Standards](../Rules/README_SalmonRunCabrilloLogStandards.md)
+- [Preserve Data Import Order Assertions](../Rules/README_PreserveDataImportOrderAssertions.md)
+- [Salmon Run Scoring Rules](../Rules/README_SalmonRunScoringRules.md)
+- [Salmon Run Scoring](../Rules/README_SalmonRunScoring.md)
 
 ## Coding Standards 
 
@@ -29,10 +37,9 @@ When it is time to create additional projects in this Solution:
 - Prefer file-scoped namespaces: `namespace ContestLogProcessor.Lib;`
 - Use object initializer syntax with data: `Student Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };`
 - Use empty initialization syntax when no initialization data is needed: `Car Subaru = new();`
-- Use collection expression syntax
-- If-then-else statements always use braces around their code block
+- Use collection expression syntax `List<string> = []` (supported in C# 12 and later)
+- If-then-else statements always use braces around their code blocks
 - Use explicit types instead of var: `Backpack EmptyGenericBackpack = new();` and `Student? FoundStudent = _entries.Find(match);`
-- Always include a blank line before and after for() and foreach() iterator blocks to improve readability in dense files
 
 ## Libraries and Frameworks
 
@@ -82,64 +89,34 @@ When it is time to create additional projects in this Solution:
 - Avoid writing extensing edge-case unittests
 - Use data in `./LogExamples` directory to derive realistic test case data but do not copy the data exactly
 
-### Cabrillo Log File Standards
-
-- A Tag is surrounded by `<` and `>:` with a following space and then the data associated with the tag
-- Each line must start with a Tag, followed by data, and ends with a newline character (LF or CRLF)
-- Tags other than QSO and END-OF-LOG can be in any order
-- Required Tags: START-OF-LOG, END-OF-LOG
-- Common Tags: CALLSIGN, CONTEST:{string}, CATEGORY-{string}, CERTIFICATE, CLAIMED-SCORE, CLUB, CREATED-BY, EMAIL, GRID-LOCATOR, LOCATION, NAME, ADDRESS, ADDRESS-{string}, OPERATORS, OFFTIME, SOAPBOX, and X-{string}
-- Special Tag `END-OF-LOG:` followed by a newline character (LF or CRLF) indicating the end of the log and no more reading or parsing is necessary
-- Special Tab `X-QSO` indicates the following qso data will be ignored by an upstream log processor
-- Tag QSO indicates the following line is an ILogEntry type
-- Once QSO Tags are encountered there will only be QSO Tags until Tag END-OF-LOG is encountered
-- Each QSO Tag contains data separated by at least one whitespace character
-
-#### Cabrillo Log QSO Tag Standards
-
-QSO data format is made up of Frequency, Mode, Date, Time, Call, and Exchange. Definitions of each are below.
-
-Frequency:
-
-- Frequency in whole numbers, numbers with a decimal point and the letter `G`, whole numbers and the letter `G`, or the word `LIGHT`
-- Max length: 7 characters
-- No leading zeros
-- Right-aligned
-- Whole Numbers
-
-Mode:
-
-- Max length: 2 characters
-- `PH`, `CW`, `FM`, `RY`, `DG`
-
-Date:
-
-- UTC date in yyyy-MM-dd format
-
-Time:
-
-- UTC time in HHmm format
-
-Call:
-
-- A string of alpha-numeric characters and an optional `/` up to 15 characters long
-
-Exch:
-
-- 5 elements
-- 1st element: up to 3 whole numbers
-- 2nd element: up to 5 alpha characters
-- 3rd element: a string of up to 15 alpha-numeric characters including an optional `/`
-- 4th element: up to 3 whole numbers
-- 5th element: up to 5 alpha characters
-
 ## User Interactions
 
 ### ContestingProcessor.Console
 
-- Executable run without any arguments returns text explaining how to use the app arguments
-- Executable run with -?, -h, or --help returns text explaining how to use the app arguments
-- Executable run with -i or --import and a relative or absolute filepath will try to load the file into memory using CabrilloLogProcessor
-- Executable run with -e or --export and a relative or absolute filepath will try to export stored log data to the filepath argument using CabrilloLogProcessor
-- Executable run with -l or --list will try to display stored log data to the Console
+#### Non-interactive terminal execution
 
+Usage: ContestLogProcessor.Console [options]
+
+Options:
+
+- `--debug`                 Enable debug output
+- `-i, --import <logfile>`  Import a Cabrillo .log file
+- `-e, --export <newfile>`  Export current data to a .log file
+- `-l, --list`              List loaded entries (raw lines)
+- `--interactive`           Start an interactive session
+- `--score <logfile>`       Score a Cabrillo .log file and print a brief report
+- `--version`               Show version information
+- `-?, -h, --help`          Show help and usage information
+
+#### Interactive terminal execution features
+
+- `add`          Add a new log entry interactively (TheirCall required)
+- `import`       Import a Cabrillo .log file into memory
+- `export`       Export current in-memory log to <filepath>.log
+- `duplicate`    Duplicate entries by index or by filter
+- `filter`       Search entries and list matches (read-only)
+- `filter-dupe`  Search entries and optionally duplicate selected/all matches
+- `help`         Show available interactive commands
+- `score`        Score the currently loaded log and show a brief report
+- `view`         View loaded log entries in canonical format; optional page size
+- `exit`         Exit interactive session
