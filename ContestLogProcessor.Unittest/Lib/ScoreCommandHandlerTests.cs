@@ -9,7 +9,7 @@ namespace ContestLogProcessor.Unittest.Lib;
 public class ScoreCommandHandlerTests
 {
     [Fact]
-    public void ScoreHandler_HappyPath_PrintsReport()
+    public async System.Threading.Tasks.Task ScoreHandler_HappyPath_PrintsReport()
     {
         // Arrange
         var proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
@@ -28,8 +28,8 @@ public class ScoreCommandHandlerTests
         var ctx = new CommandContext(proc, testConsole, debug: false);
         var handler = new ScoreCommandHandler();
 
-        // Act
-        handler.HandleAsync(new string[] { "score" }, ctx).Wait();
+    // Act
+    await handler.HandleAsync(new string[] { "score" }, ctx);
 
     // Assert - output contains known fields
     string all = string.Join("\n", testConsole.Outputs);
@@ -38,7 +38,7 @@ public class ScoreCommandHandlerTests
     }
 
     [Fact]
-    public void ScoreHandler_W7DxBonus_CountsPerMode()
+    public async System.Threading.Tasks.Task ScoreHandler_W7DxBonus_CountsPerMode()
     {
         var proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
         string tmp2 = System.IO.Path.GetTempFileName();
@@ -59,7 +59,7 @@ public class ScoreCommandHandlerTests
         var ctx = new CommandContext(proc, testConsole, debug: false);
         var handler = new ScoreCommandHandler();
 
-        handler.HandleAsync(new string[] { "score" }, ctx).Wait();
+    await handler.HandleAsync(new string[] { "score" }, ctx);
 
     string output = string.Join("\n", testConsole.Outputs);
         // Expect W7DX bonus line to show 1000 (two modes counted)
