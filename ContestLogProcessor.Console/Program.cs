@@ -6,6 +6,8 @@ using System.IO;
 using System.Threading.Tasks;
 
 using ContestLogProcessor.Lib;
+using ContestLogProcessor.Console.Interactive;
+using ContestLogProcessor.Console.Interactive.Handlers;
 
 // Default page size for interactive view paging. Adjust here to change default across the program.
 const int DefaultPageSize = 10;
@@ -344,6 +346,13 @@ return await root.InvokeAsync(args);
 static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
 {
     Console.WriteLine("Entering interactive mode. Type 'help' for available commands.");
+
+    // Build an InteractiveShell and register handlers. We'll keep the existing inline commands
+    // but forward unknown commands to the shell, allowing incremental migration to handler classes.
+    InteractiveShell shell = new InteractiveShell(new CommandContext(processor, new SystemConsoleWrapper(), debug));
+    shell.RegisterHandler(new FilterCommandHandler());
+    shell.RegisterHandler(new FilterDupeCommandHandler());
+    shell.RegisterHandler(new HelpCommandHandler(shell));
 
     Dictionary<string, Func<string[], Task>> commands =
         new Dictionary<string, Func<string[], Task>>(StringComparer.OrdinalIgnoreCase)
@@ -1072,7 +1081,12 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
 
         if (!commands.TryGetValue(cmd, out Func<string[], Task>? handler))
         {
-            Console.WriteLine($"Unknown command: {cmd}. Type 'help' to see available commands.");
+            // Forward unknown commands to the InteractiveShell handlers (incremental migration)
+            bool handled = await shell.ExecuteCommandAsync(parts);
+            if (!handled)
+            {
+                Console.WriteLine($"Unknown command: {cmd}. Type 'help' to see available commands.");
+            }
             continue;
         }
 

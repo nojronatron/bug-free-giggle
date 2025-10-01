@@ -20,6 +20,35 @@ public class InteractiveShell
         _handlers[handler.Name] = handler;
     }
 
+    // Execute a single command (by splitting args outside) using the registered handlers.
+    // Returns true if a handler was found and executed, false otherwise.
+    public async System.Threading.Tasks.Task<bool> ExecuteCommandAsync(string[] parts)
+    {
+        if (parts == null || parts.Length == 0) return false;
+        string cmd = parts[0];
+        if (_handlers.TryGetValue(cmd, out ICommandHandler? handler))
+        {
+            try
+            {
+                await handler.HandleAsync(parts, _ctx);
+            }
+            catch (Exception ex)
+            {
+                _ctx.Console.WriteLine($"Error: {ex.Message}");
+                if (_ctx.Debug) _ctx.Console.WriteLine(ex.ToString());
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    // Expose registered handlers for helpers such as help command
+    public System.Collections.Generic.IReadOnlyCollection<ICommandHandler> GetRegisteredHandlers()
+    {
+        return _handlers.Values;
+    }
+
     public async Task RunAsync()
     {
         _ctx.Console.WriteLine("Entering interactive mode. Type 'help' for available commands.");
@@ -60,8 +89,8 @@ public class InteractiveShell
     private static string[] SplitArgs(string line)
     {
         // Very small splitter: split on spaces, respecting double quotes
-        var parts = new List<string>();
-        var sb = new System.Text.StringBuilder();
+    System.Collections.Generic.List<string> parts = new System.Collections.Generic.List<string>();
+    System.Text.StringBuilder sb = new System.Text.StringBuilder();
         bool inQuote = false;
         foreach (char c in line)
         {
