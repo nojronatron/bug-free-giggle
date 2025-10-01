@@ -9,8 +9,7 @@ using ContestLogProcessor.Lib;
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 
-// Default page size for interactive view paging. Adjust here to change default across the program.
-const int DefaultPageSize = 10;
+// Default page size for interactive view paging was removed; handlers define their own defaults.
 
 // Helper to print a label and comma-separated list wrapped to the ASCII header width.
 static void PrintWrappedList(string label, System.Collections.Generic.ICollection<string> items, int innerWidth = 40, int indent = 2, bool showCountOnLabelRight = true, string? countDisplay = null)
