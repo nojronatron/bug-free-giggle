@@ -100,11 +100,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
                     for (int i = 0; i < show; i++)
                     {
                         SkippedEntryInfo s = res.SkippedEntries[i];
-                        Console.WriteLine($"  - Line {s.SourceLineNumber ?? -1}: {s.Reason}");
-                        if (!string.IsNullOrWhiteSpace(s.RawLine))
-                        {
-                            Console.WriteLine("     " + s.RawLine);
-                        }
+                        foreach (string outLine in ReportRenderer.FormatSkippedEntry(s)) Console.WriteLine(outLine);
                     }
                     if (res.SkippedEntries.Count > show)
                     {

@@ -64,10 +64,9 @@ public class ScoreCommandHandler : ICommandHandler
             for (int i = 0; i < show; i++)
             {
                 SkippedEntryInfo s = res.SkippedEntries[i];
-                console.WriteLine($"  - Line {s.SourceLineNumber ?? -1}: {s.Reason}");
-                if (!string.IsNullOrWhiteSpace(s.RawLine))
+                foreach (string outLine in ReportRenderer.FormatSkippedEntry(s))
                 {
-                    console.WriteLine("     " + s.RawLine);
+                    console.WriteLine(outLine);
                 }
             }
 

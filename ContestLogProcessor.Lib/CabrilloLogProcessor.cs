@@ -125,7 +125,7 @@ public class CabrilloLogProcessor : ILogProcessor
                     entry.SourceLineNumber = lineIndex + 1;
 
                     // Attempt to parse up to five exchange tokens per side.
-                    (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6);
+                    (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6, skipped, lineIndex + 1, line);
                     entry.SentExchange = sentExch;
                     entry.ReceivedExchange = recvExch;
                     entry.TheirCall = theirCall;
@@ -186,18 +186,23 @@ public class CabrilloLogProcessor : ILogProcessor
     /// <summary>
     /// Parse exchange tokens from the parts starting at the provided index.
     /// Returns (sentExchange, theirCall, receivedExchange).
-    /// This tries to be tolerant: it will consume up to 5 tokens for the sent exchange,
-    /// then the next token may be their call, and then up to 5 tokens for the received exchange.
+    /// Performs validation of tokens and records any unparsable or invalid tokens to the provided skipped list.
+    /// This tries to be tolerant: it will consume up to 5 tokens for the sent exchange, then the next token may be their call,
+    /// and then up to 5 tokens for the received exchange.
     /// </summary>
-    private static (Exchange? sent, string? theirCall, Exchange? recv) ParseExchanges(string[] parts, int startIndex)
+    private static (Exchange? sent, string? theirCall, Exchange? recv) ParseExchanges(string[] parts, int startIndex, List<SkippedEntryInfo> skipped, int sourceLineNumber, string rawLine)
         {
         if (parts == null)
         {
             return (null, null, null);
         }
+        // Validation regexes per project rules
+        Regex sigRegex = new Regex("^(?:[1-5][0-9]{1,2}|[1-5][nN]{1,2})$", RegexOptions.Compiled);
+        Regex msgRegex = new Regex("^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$", RegexOptions.Compiled);
+        Regex callRegex = new Regex("^(?:[A-Za-z0-9]{1,5}/)?[A-Za-z0-9]{1,5}$", RegexOptions.Compiled);
         // Collect remaining tokens after the fixed-position fields (freq, mode, date, time, mycall)
         int idx = startIndex;
-    string[] tokens = parts.Skip(startIndex).ToArray();
+        string[] tokens = parts.Skip(startIndex).ToArray();
 
         Exchange sent = new Exchange();
         Exchange recv = new Exchange();
@@ -208,18 +213,51 @@ public class CabrilloLogProcessor : ILogProcessor
         // We'll handle the common 5-token case first, then fall back to a best-effort mapping for shorter variants.
         if (tokens.Length >= 5)
         {
+            // Assign and validate each token; record skips for invalid tokens but still store raw values
             sent.SentSig = tokens[0];
+            if (!sigRegex.IsMatch(tokens[0]))
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentSig token", RawLine = rawLine });
+            }
+
             sent.SentMsg = tokens[1];
+            if (!msgRegex.IsMatch(tokens[1]))
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentMsg token", RawLine = rawLine });
+            }
+
             theirCall = tokens[2];
+            if (!callRegex.IsMatch(tokens[2]))
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
+            }
+
             recv.ReceivedSig = tokens[3];
+            if (!sigRegex.IsMatch(tokens[3]))
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedSig token", RawLine = rawLine });
+            }
+
             recv.ReceivedMsg = tokens[4];
+            if (!msgRegex.IsMatch(tokens[4]))
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedMsg token", RawLine = rawLine });
+            }
         }
         else
         {
-            // Best-effort: assign what we can in order.
+            // Best-effort: assign what we can in order, validating present tokens
             int p = 0;
-            if (p < tokens.Length) sent.SentSig = tokens[p++];
-            if (p < tokens.Length) sent.SentMsg = tokens[p++];
+            if (p < tokens.Length)
+            {
+                sent.SentSig = tokens[p++];
+                if (!sigRegex.IsMatch(sent.SentSig)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentSig token", RawLine = rawLine });
+            }
+            if (p < tokens.Length)
+            {
+                sent.SentMsg = tokens[p++];
+                if (!msgRegex.IsMatch(sent.SentMsg)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentMsg token", RawLine = rawLine });
+            }
 
             if (p < tokens.Length)
             {
@@ -227,16 +265,26 @@ public class CabrilloLogProcessor : ILogProcessor
                 if (IsLikelyCallsign(tokens[p]))
                 {
                     theirCall = tokens[p++];
+                    if (!callRegex.IsMatch(theirCall)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
                 }
                 else if (tokens[p].Any(ch => char.IsLetter(ch)))
                 {
                     // contains letters — likely not a pure numeric signal, treat as theirCall
                     theirCall = tokens[p++];
+                    if (!callRegex.IsMatch(theirCall)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
                 }
             }
 
-            if (p < tokens.Length) recv.ReceivedSig = tokens[p++];
-            if (p < tokens.Length) recv.ReceivedMsg = tokens[p++];
+            if (p < tokens.Length)
+            {
+                recv.ReceivedSig = tokens[p++];
+                if (!sigRegex.IsMatch(recv.ReceivedSig)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedSig token", RawLine = rawLine });
+            }
+            if (p < tokens.Length)
+            {
+                recv.ReceivedMsg = tokens[p++];
+                if (!msgRegex.IsMatch(recv.ReceivedMsg)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedMsg token", RawLine = rawLine });
+            }
         }
 
         bool sentAny = !string.IsNullOrWhiteSpace(sent.SentSig) || !string.IsNullOrWhiteSpace(sent.SentMsg);

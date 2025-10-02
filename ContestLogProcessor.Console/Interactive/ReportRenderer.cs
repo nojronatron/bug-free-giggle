@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Console.Interactive
 {
@@ -48,6 +49,17 @@ namespace ContestLogProcessor.Console.Interactive
                 System.Console.WriteLine(prefix + part);
                 remaining = remaining.Substring(take).TrimStart();
             }
+        }
+
+        // Format a SkippedEntryInfo for console output. Returns an array of lines to print.
+        public static string[] FormatSkippedEntry(SkippedEntryInfo s)
+        {
+            if (s == null) return Array.Empty<string>();
+            string line1 = $"  - Line {s.SourceLineNumber ?? -1}: {s.Reason}";
+            if (string.IsNullOrWhiteSpace(s.RawLine)) return new[] { line1 };
+            // indent the raw line for readability
+            string raw = "     " + s.RawLine.Trim();
+            return new[] { line1, raw };
         }
     }
 }

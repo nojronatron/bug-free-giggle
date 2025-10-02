@@ -1,0 +1,35 @@
+START-OF-LOG: 3.0
+LOCATION: WWA
+CALLSIGN: K7XXX
+CLUB:  
+CONTEST: WA-SALMON-RUN
+CATEGORY-OPERATOR: SINGLE-OP
+CATEGORY-ASSISTED: NON-ASSISTED
+CATEGORY-BAND: ALL
+CATEGORY-MODE: PHONE
+CATEGORY-POWER: LOW
+CATEGORY-STATION: EXPEDITION
+CATEGORY-TRANSMITTER: ONE
+CLAIMED-SCORE: 12345
+OPERATORS: K7XXX
+NAME: Johnny Anony
+ADDRESS: 678 Anonymous Street
+ADDRESS-CITY: Whoville
+ADDRESS-STATE-PROVINCE: WA
+ADDRESS-POSTALCODE: 54321
+ADDRESS-COUNTRY: USA
+GRID-LOCATOR: CN87ZZ
+EMAIL: K7XXX@arrl.net
+CREATED-BY: N1MM Logger+ 1.0.10923.0
+X-QSO:    6m PH 2023-09-20 1605 K7XXX           59  OKA    AC7DC           59  WHI                
+QSO:    80m PH 2023-09-20 1622 K7XXX           59  OKA    K7YR            59  DOU                
+X-QSO:    80m PH 2023-09-20 1623 K7XXX           59  OKA    W7DK            59  PIE                
+QSO:    80m PH 2023-09-20 1632 K7XXX           59  OKA    KC7H            59  STE                
+X0QSO:    80m PH 2023-09-20 1641 K7XXX           59  OKA    WE4DX           59  SKAM               
+QSO:    m PH 2023-09-20 1649 K7XXX           59  OKA    NR3O            59  SNO                
+QSO:    80m js8 2023-09-20 1652 K7XXX           59  OKA    N7EPD           59  PIE                
+QSO:    40m PH 2023-09-20 1711 K7XXX           59  OKA    K7BA/M          59  KING               
+QSO:    20m PH 2023-09-20 1712 K7XXX           59  OKA    KG7OQY          59  SPO                
+QSO:    15m PH 2023-09-20 1714 K7XXX           59  OKA    K7CX            59  KING               
+QSO:    10m PH 2023-09-20 1715 K7XXX           59  OKA    KD7JB           59  COL                
+END-OF-LOG:

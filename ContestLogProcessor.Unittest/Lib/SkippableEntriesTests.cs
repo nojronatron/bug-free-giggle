@@ -1,0 +1,75 @@
+using System;
+using System.IO;
+using System.Linq;
+using Xunit;
+using ContestLogProcessor.Lib;
+
+namespace ContestLogProcessor.Unittest.Lib;
+
+public class SkippableEntriesTests
+{
+    private static string FindTestDataPath(string filename)
+    {
+        string dir = AppContext.BaseDirectory;
+        DirectoryInfo? d = new DirectoryInfo(dir);
+        while (d != null)
+        {
+            if (string.Equals(d.Name, "ContestLogProcessor.Unittest", StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.Combine(d.FullName, "Lib", "TestData", filename);
+            }
+            d = d.Parent;
+        }
+        throw new InvalidOperationException("Could not locate test data directory");
+    }
+
+    [Fact]
+    public void Import_SkippableEntries_File_ParsesExpectedNumberOfEntries()
+    {
+        string source = FindTestDataPath("K7XXX_Test_Skippable_Entries.log");
+        Assert.True(File.Exists(source), "Test data file must exist");
+
+        var p = new CabrilloLogProcessor();
+        p.ImportFile(source);
+
+        var entries = p.ReadEntries().ToList();
+        // Expect 10 QSO/X-QSO entries recognized (one malformed X0QSO header line should not produce a QSO)
+        Assert.Equal(10, entries.Count);
+    }
+
+    [Fact]
+    public void Score_SkippableEntries_File_RecordsSkippedEntries()
+    {
+        string source = FindTestDataPath("K7XXX_Test_Skippable_Entries.log");
+        Assert.True(File.Exists(source), "Test data file must exist");
+
+        var p = new CabrilloLogProcessor();
+        p.ImportFile(source);
+
+        var log = new CabrilloLogFile();
+        if (p.TryGetHeader("CALLSIGN", out string? call) && !string.IsNullOrWhiteSpace(call))
+        {
+            log.Headers["CALLSIGN"] = call!;
+        }
+        else
+        {
+            string? inferred = p.ReadEntries().FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+            if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
+        }
+
+        log.Entries = p.ReadEntries().ToList();
+
+        SalmonRunScoringService svc = new SalmonRunScoringService();
+        SalmonRunScoreResult res = svc.CalculateScore(log);
+
+        // We expect at least:
+        // - X-QSO entries marked as skipped
+        // - An unsupported mode (js8) to be skipped
+        // - An unknown/invalid band/frequency (the 'm' token) to be skipped
+
+        Assert.NotEmpty(res.SkippedEntries);
+        Assert.Contains(res.SkippedEntries, s => s.Reason != null && s.Reason.Contains("X-QSO"));
+        Assert.Contains(res.SkippedEntries, s => s.Reason != null && s.Reason.Contains("Unsupported Mode"));
+        Assert.Contains(res.SkippedEntries, s => s.Reason != null && s.Reason.Contains("Unknown or invalid band/frequency"));
+    }
+}
