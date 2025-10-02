@@ -130,4 +130,30 @@ public class LogEntry
 
         return string.Join(' ', tokens).TrimEnd();
     }
+
+    /// <summary>
+    /// Create a deep copy of this LogEntry (including exchanges).
+    /// </summary>
+    public LogEntry Clone()
+    {
+        LogEntry copy = new LogEntry
+        {
+            Id = this.Id,
+            RawLine = this.RawLine,
+            Frequency = this.Frequency,
+            Mode = this.Mode,
+            QsoDateTime = this.QsoDateTime,
+            CallSign = this.CallSign,
+            Band = this.Band,
+            FrequencyIsValid = this.FrequencyIsValid,
+            IsXQso = this.IsXQso,
+            TheirCall = this.TheirCall,
+            SourceLineNumber = this.SourceLineNumber
+        };
+
+        if (this.SentExchange != null) copy.SentExchange = this.SentExchange.Clone();
+        if (this.ReceivedExchange != null) copy.ReceivedExchange = this.ReceivedExchange.Clone();
+
+        return copy;
+    }
 }

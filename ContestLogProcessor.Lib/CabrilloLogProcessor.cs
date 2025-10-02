@@ -610,7 +610,9 @@ public class CabrilloLogProcessor : ILogProcessor
         {
             result = result.Take(take.Value);
         }
-        return result;
+
+        // Return defensive clones so external callers cannot mutate internal state
+        return result.Select(e => e.Clone());
     }
 
     /// <summary>
@@ -765,7 +767,7 @@ public class CabrilloLogProcessor : ILogProcessor
                 _logFile.Entries.Add(copy);
             }
         }
-        EntryAdded?.Invoke(this, copy);
+    EntryAdded?.Invoke(this, copy.Clone());
         return copy;
     }
 
@@ -863,14 +865,15 @@ public class CabrilloLogProcessor : ILogProcessor
             }
         }
 
-        EntryAdded?.Invoke(this, copy);
+    EntryAdded?.Invoke(this, copy.Clone());
         return copy;
     }
 
     public LogEntry? GetEntryById(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
-        return _entries.FirstOrDefault(x => x.Id == id);
+        LogEntry? found = _entries.FirstOrDefault(x => x.Id == id);
+        return found?.Clone();
     }
 
     public bool UpdateEntry(string id, Action<LogEntry> editAction)
@@ -879,7 +882,7 @@ public class CabrilloLogProcessor : ILogProcessor
     LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
         if (entry == null) return false;
         editAction?.Invoke(entry);
-        EntryUpdated?.Invoke(this, entry);
+    EntryUpdated?.Invoke(this, entry.Clone());
         return true;
     }
 

@@ -29,4 +29,19 @@ public class Exchange
                 ReceivedMsg ?? string.Empty
                 }).TrimEnd();
     }
+
+    /// <summary>
+    /// Create a deep copy of this Exchange instance.
+    /// </summary>
+    public Exchange Clone()
+    {
+        return new Exchange
+        {
+            SentSig = this.SentSig,
+            SentMsg = this.SentMsg,
+            TheirCall = this.TheirCall,
+            ReceivedSig = this.ReceivedSig,
+            ReceivedMsg = this.ReceivedMsg
+        };
+    }
 }
