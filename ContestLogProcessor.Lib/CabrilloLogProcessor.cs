@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Collections.ObjectModel;
 
 namespace ContestLogProcessor.Lib;
 
@@ -28,63 +29,24 @@ public class CabrilloLogProcessor : ILogProcessor
     /// Returns a deep copy of the currently loaded CabrilloLogFile suitable for read-only inspection by callers.
     /// This prevents external callers from mutating internal parser state. Returns null when no file is loaded.
     /// </summary>
-    public CabrilloLogFile? GetReadOnlyLogFile()
+    public CabrilloLogFileSnapshot? GetReadOnlyLogFile()
     {
         if (_logFile == null) return null;
 
-        // Clone headers
-        Dictionary<string, string> headersCopy = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    // Clone headers into a new dictionary (strings are immutable so shallow copy is sufficient)
+    Dictionary<string, string> headersCopyMutable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, string> kvp in _logFile.Headers)
         {
-            headersCopy[kvp.Key] = kvp.Value;
+            headersCopyMutable[kvp.Key] = kvp.Value;
         }
 
-        // Clone entries
+        // Clone entries via LogEntry.Clone() into a mutable list
         List<LogEntry> entriesCopy = new List<LogEntry>();
         if (_logFile.Entries != null)
         {
             foreach (LogEntry e in _logFile.Entries)
             {
-                LogEntry c = new LogEntry()
-                {
-                    Id = e.Id,
-                    RawLine = e.RawLine,
-                    Frequency = e.Frequency,
-                    Mode = e.Mode,
-                    QsoDateTime = e.QsoDateTime,
-                    CallSign = e.CallSign,
-                    Band = e.Band,
-                    FrequencyIsValid = e.FrequencyIsValid,
-                    IsXQso = e.IsXQso,
-                    TheirCall = e.TheirCall,
-                    SourceLineNumber = e.SourceLineNumber
-                };
-
-                if (e.SentExchange != null)
-                {
-                    c.SentExchange = new Exchange
-                    {
-                        SentSig = e.SentExchange.SentSig,
-                        SentMsg = e.SentExchange.SentMsg,
-                        TheirCall = e.SentExchange.TheirCall,
-                        ReceivedSig = e.SentExchange.ReceivedSig,
-                        ReceivedMsg = e.SentExchange.ReceivedMsg
-                    };
-                }
-
-                if (e.ReceivedExchange != null)
-                {
-                    c.ReceivedExchange = new Exchange
-                    {
-                        SentSig = e.ReceivedExchange.SentSig,
-                        SentMsg = e.ReceivedExchange.SentMsg,
-                        TheirCall = e.ReceivedExchange.TheirCall,
-                        ReceivedSig = e.ReceivedExchange.ReceivedSig,
-                        ReceivedMsg = e.ReceivedExchange.ReceivedMsg
-                    };
-                }
-
-                entriesCopy.Add(c);
+                entriesCopy.Add(e.Clone());
             }
         }
 
@@ -98,11 +60,12 @@ public class CabrilloLogProcessor : ILogProcessor
             }
         }
 
-        return new CabrilloLogFile
+        // Expose read-only wrappers and return a snapshot
+        return new CabrilloLogFileSnapshot
         {
-            Headers = headersCopy,
-            Entries = entriesCopy,
-            SkippedEntries = skippedCopy
+            Headers = new ReadOnlyDictionary<string, string>(headersCopyMutable),
+            Entries = new ReadOnlyCollection<LogEntry>(entriesCopy),
+            SkippedEntries = new ReadOnlyCollection<SkippedEntryInfo>(skippedCopy)
         };
     }
 

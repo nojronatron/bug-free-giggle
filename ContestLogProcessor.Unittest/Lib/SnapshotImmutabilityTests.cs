@@ -21,8 +21,22 @@ public class SnapshotImmutabilityTests
         var snap = proc.GetReadOnlyLogFile();
         Assert.NotNull(snap);
 
-        // Mutate snapshot headers and skipped entries
-        snap!.Headers["CALLSIGN"] = "MUTATED";
+        // Attempt to mutate snapshot headers - should not be possible because Headers is read-only
+        bool headerMutationRaised = false;
+        try
+        {
+            var dict = snap!.Headers as System.Collections.IDictionary;
+            if (dict != null)
+            {
+                dict["CALLSIGN"] = "MUTATED";
+            }
+        }
+        catch (System.NotSupportedException)
+        {
+            headerMutationRaised = true;
+        }
+
+        // Attempt to mutate skipped entries item if present - entries themselves are clones so mutation should not affect internal state
         if (snap.SkippedEntries != null && snap.SkippedEntries.Count > 0)
         {
             snap.SkippedEntries[0].Reason = "MUTATED-REASON";
@@ -34,7 +48,8 @@ public class SnapshotImmutabilityTests
 
         var snap2 = proc.GetReadOnlyLogFile();
         Assert.NotNull(snap2);
-        Assert.Equal("K7XXX", snap2!.GetHeader("CALLSIGN"));
+    Assert.Equal("K7XXX", snap2!.GetHeader("CALLSIGN"));
+    Assert.True(headerMutationRaised == true || snap2.GetHeader("CALLSIGN") == "K7XXX");
 
         // If there were skipped entries, ensure they were not mutated in the processor's snapshot
         if (snap2.SkippedEntries != null && snap2.SkippedEntries.Count > 0)
