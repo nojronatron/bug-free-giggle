@@ -14,6 +14,96 @@ public class CabrilloLogProcessor : ILogProcessor
     private readonly List<LogEntry> _entries = new List<LogEntry>();
     private CabrilloLogFile? _logFile;
 
+    /// <summary>
+    /// Public read-only accessor to the most recently imported or constructed CabrilloLogFile.
+    /// Returns null when no file has been imported yet.
+    /// Note: this returns the internal instance for convenience; callers should treat it as read-only.
+    /// </summary>
+    [Obsolete("CurrentLogFile exposes the internal CabrilloLogFile instance. Use GetReadOnlyLogFile() to obtain a defensive snapshot instead.", false)]
+    public CabrilloLogFile? CurrentLogFile => _logFile;
+
+    /// <summary>
+    /// Returns a deep copy of the currently loaded CabrilloLogFile suitable for read-only inspection by callers.
+    /// This prevents external callers from mutating internal parser state. Returns null when no file is loaded.
+    /// </summary>
+    public CabrilloLogFile? GetReadOnlyLogFile()
+    {
+        if (_logFile == null) return null;
+
+        // Clone headers
+        Dictionary<string, string> headersCopy = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, string> kvp in _logFile.Headers)
+        {
+            headersCopy[kvp.Key] = kvp.Value;
+        }
+
+        // Clone entries
+        List<LogEntry> entriesCopy = new List<LogEntry>();
+        if (_logFile.Entries != null)
+        {
+            foreach (LogEntry e in _logFile.Entries)
+            {
+                LogEntry c = new LogEntry()
+                {
+                    Id = e.Id,
+                    RawLine = e.RawLine,
+                    Frequency = e.Frequency,
+                    Mode = e.Mode,
+                    QsoDateTime = e.QsoDateTime,
+                    CallSign = e.CallSign,
+                    Band = e.Band,
+                    FrequencyIsValid = e.FrequencyIsValid,
+                    IsXQso = e.IsXQso,
+                    TheirCall = e.TheirCall,
+                    SourceLineNumber = e.SourceLineNumber
+                };
+
+                if (e.SentExchange != null)
+                {
+                    c.SentExchange = new Exchange
+                    {
+                        SentSig = e.SentExchange.SentSig,
+                        SentMsg = e.SentExchange.SentMsg,
+                        TheirCall = e.SentExchange.TheirCall,
+                        ReceivedSig = e.SentExchange.ReceivedSig,
+                        ReceivedMsg = e.SentExchange.ReceivedMsg
+                    };
+                }
+
+                if (e.ReceivedExchange != null)
+                {
+                    c.ReceivedExchange = new Exchange
+                    {
+                        SentSig = e.ReceivedExchange.SentSig,
+                        SentMsg = e.ReceivedExchange.SentMsg,
+                        TheirCall = e.ReceivedExchange.TheirCall,
+                        ReceivedSig = e.ReceivedExchange.ReceivedSig,
+                        ReceivedMsg = e.ReceivedExchange.ReceivedMsg
+                    };
+                }
+
+                entriesCopy.Add(c);
+            }
+        }
+
+        // Clone skipped entries
+        List<SkippedEntryInfo> skippedCopy = new List<SkippedEntryInfo>();
+        if (_logFile.SkippedEntries != null)
+        {
+            foreach (SkippedEntryInfo s in _logFile.SkippedEntries)
+            {
+                skippedCopy.Add(new SkippedEntryInfo { SourceLineNumber = s.SourceLineNumber, Reason = s.Reason, RawLine = s.RawLine });
+            }
+        }
+
+        return new CabrilloLogFile
+        {
+            Headers = headersCopy,
+            Entries = entriesCopy,
+            SkippedEntries = skippedCopy
+        };
+    }
+
     // Events for CRUD operations
     public event EventHandler<LogEntry>? EntryAdded;
     public event EventHandler<LogEntry>? EntryUpdated;
@@ -67,12 +157,23 @@ public class CabrilloLogProcessor : ILogProcessor
                         string timePart = parts[4];
                         string combined = datePart + " " + timePart;
                         string[] formats = new[] { "yyyy-MM-dd HHmm", "yyyy-MM-dd HH:mm", "yyyy-MM-dd H:mm", "yyyy-MM-dd Hm", "yyyyMMdd HHmm" };
-                        if (!DateTime.TryParseExact(combined, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out DateTime parsed))
+                        DateTime parsed = default;
+                        bool parsedOk = DateTime.TryParseExact(combined, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed);
+                        if (!parsedOk)
                         {
-                            // Fallback to a permissive parse if exact formats fail
-                            DateTime.TryParse(combined, out parsed);
+                            // Fallback to a permissive parse; ensure we treat parsed times as UTC
+                            if (!DateTime.TryParse(combined, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed))
+                            {
+                                parsed = default;
+                            }
                         }
-                        if (parsed != default) qsoDt = parsed;
+
+                        if (parsed != default)
+                        {
+                            // Normalize to UTC and truncate seconds to zero (minute precision)
+                            DateTime u = parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+                            qsoDt = new DateTime(u.Year, u.Month, u.Day, u.Hour, u.Minute, 0, DateTimeKind.Utc);
+                        }
                         else
                         {
                             // note the unparseable date/time; keep importing but record for diagnostics
