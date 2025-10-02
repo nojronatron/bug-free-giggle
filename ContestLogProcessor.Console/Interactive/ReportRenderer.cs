@@ -19,7 +19,10 @@ namespace ContestLogProcessor.Console.Interactive
                 System.Console.WriteLine($" {label} ({display}):");
             }
 
-            if (items.Count == 0) return;
+            if (items.Count == 0)
+            {
+                return;
+            }
 
             string joined = string.Join(", ", items);
             int available = Math.Max(10, innerWidth - indent);
@@ -36,6 +39,7 @@ namespace ContestLogProcessor.Console.Interactive
 
                 int cut = remaining.LastIndexOf(", ", available);
                 int take;
+                
                 if (cut == -1)
                 {
                     take = available;
@@ -54,9 +58,17 @@ namespace ContestLogProcessor.Console.Interactive
         // Format a SkippedEntryInfo for console output. Returns an array of lines to print.
         public static string[] FormatSkippedEntry(SkippedEntryInfo s)
         {
-            if (s == null) return Array.Empty<string>();
+            if (s == null)
+            {
+                return Array.Empty<string>();
+            }
+
             string line1 = $"  - Line {s.SourceLineNumber ?? -1}: {s.Reason}";
-            if (string.IsNullOrWhiteSpace(s.RawLine)) return new[] { line1 };
+            if (string.IsNullOrWhiteSpace(s.RawLine))
+            {
+                return new[] { line1 };
+            }
+
             // indent the raw line for readability
             string raw = "     " + s.RawLine.Trim();
             return new[] { line1, raw };

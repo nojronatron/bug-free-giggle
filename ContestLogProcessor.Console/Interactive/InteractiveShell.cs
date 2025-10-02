@@ -16,7 +16,11 @@ public class InteractiveShell
 
     public void RegisterHandler(ICommandHandler handler)
     {
-        if (handler == null) throw new ArgumentNullException(nameof(handler));
+        if (handler == null)
+        {
+            throw new ArgumentNullException(nameof(handler));
+        }
+
         _handlers[handler.Name] = handler;
     }
 
@@ -24,7 +28,11 @@ public class InteractiveShell
     // Returns true if a handler was found and executed, false otherwise.
     public async System.Threading.Tasks.Task<bool> ExecuteCommandAsync(string[] parts)
     {
-        if (parts == null || parts.Length == 0) return false;
+        if (parts == null || parts.Length == 0)
+        {
+            return false;
+        }
+
         string cmd = parts[0];
         if (_handlers.TryGetValue(cmd, out ICommandHandler? handler))
         {
@@ -35,8 +43,12 @@ public class InteractiveShell
             catch (Exception ex)
             {
                 _ctx.Console.WriteLine($"Error: {ex.Message}");
-                if (_ctx.Debug) _ctx.Console.WriteLine(ex.ToString());
+                if (_ctx.Debug)
+                {
+                    _ctx.Console.WriteLine(ex.ToString());
+                }
             }
+
             return true;
         }
 
@@ -57,7 +69,11 @@ public class InteractiveShell
         {
             _ctx.Console.Write("> ");
             string? line = await _ctx.Console.ReadLineAsync();
-            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
 
             string[] parts = SplitArgs(line);
             string cmd = parts[0];
@@ -76,7 +92,11 @@ public class InteractiveShell
                 catch (Exception ex)
                 {
                     _ctx.Console.WriteLine($"Error: {ex.Message}");
-                    if (_ctx.Debug) _ctx.Console.WriteLine(ex.ToString());
+
+                    if (_ctx.Debug)
+                    {
+                        _ctx.Console.WriteLine(ex.ToString());
+                    }
                 }
             }
             else
@@ -94,15 +114,25 @@ public class InteractiveShell
         bool inQuote = false;
         foreach (char c in line)
         {
-            if (c == '"') { inQuote = !inQuote; continue; }
+            if (c == '"')
+            {
+                inQuote = !inQuote; continue;
+            }
+            
             if (!inQuote && char.IsWhiteSpace(c))
             {
                 if (sb.Length > 0) { parts.Add(sb.ToString()); sb.Clear(); }
                 continue;
             }
+
             sb.Append(c);
         }
-        if (sb.Length > 0) parts.Add(sb.ToString());
+        
+        if (sb.Length > 0)
+        {
+            parts.Add(sb.ToString());
+        }
+
         return parts.ToArray();
     }
 }
