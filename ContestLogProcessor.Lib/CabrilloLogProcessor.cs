@@ -21,13 +21,8 @@ public class CabrilloLogProcessor : ILogProcessor
         _warn = warn ?? (msg => Console.WriteLine("WARN: " + msg));
     }
 
-    /// <summary>
-    /// Public read-only accessor to the most recently imported or constructed CabrilloLogFile.
-    /// Returns null when no file has been imported yet.
-    /// Note: this returns the internal instance for convenience; callers should treat it as read-only.
-    /// </summary>
-    [Obsolete("CurrentLogFile exposes the internal CabrilloLogFile instance. Use GetReadOnlyLogFile() to obtain a defensive snapshot instead.", false)]
-    public CabrilloLogFile? CurrentLogFile => _logFile;
+    // Note: The internal `_logFile` instance is intentionally not exposed publicly.
+    // Use `GetReadOnlyLogFile()` to obtain a defensive snapshot suitable for callers.
 
     /// <summary>
     /// Returns a deep copy of the currently loaded CabrilloLogFile suitable for read-only inspection by callers.
