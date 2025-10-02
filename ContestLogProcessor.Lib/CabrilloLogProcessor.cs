@@ -13,6 +13,13 @@ public class CabrilloLogProcessor : ILogProcessor
 {
     private readonly List<LogEntry> _entries = new List<LogEntry>();
     private CabrilloLogFile? _logFile;
+    private readonly Action<string>? _warn;
+
+    public CabrilloLogProcessor(Action<string>? warn = null)
+    {
+        // Default to writing warnings to the console if no callback is provided.
+        _warn = warn ?? (msg => Console.WriteLine("WARN: " + msg));
+    }
 
     /// <summary>
     /// Public read-only accessor to the most recently imported or constructed CabrilloLogFile.
@@ -102,6 +109,39 @@ public class CabrilloLogProcessor : ILogProcessor
             Entries = entriesCopy,
             SkippedEntries = skippedCopy
         };
+    }
+
+    /// <summary>
+    /// Sanitize header values by masking obviously malicious-looking substrings when the overall
+    /// value is longer than 13 characters. This is intentionally conservative: we only mask a few
+    /// high-confidence patterns and replace the matching substring with '*' characters of the same length.
+    /// </summary>
+    private string SanitizeHeaderValue(string value, string key)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return value;
+        string trimmed = value.Trim();
+        if (trimmed.Length <= 13) return trimmed;
+
+        // Patterns that are likely to indicate code or commands. Keep the patterns simple and case-insensitive.
+        string[] suspicious = new[] { "select * from", "drop table", "--", ";--", "exec ", "rm -rf", "curl ", "powershell -", "invoke-" };
+
+        string lowered = trimmed.ToLowerInvariant();
+        foreach (string pat in suspicious)
+        {
+            int idx = lowered.IndexOf(pat, StringComparison.Ordinal);
+            if (idx >= 0)
+            {
+                // Mask only the matching substring in the original-cased value
+                int len = pat.Length;
+                string masked = new string('*', len);
+                string result = trimmed.Substring(0, idx) + masked + trimmed.Substring(idx + len);
+                // Emit a warning so callers/operators can be notified of sanitization
+                _warn?.Invoke($"Sanitized header '{key}' (length {trimmed.Length}) by masking a suspicious substring.");
+                return result;
+            }
+        }
+
+        return trimmed;
     }
 
     // Events for CRUD operations
@@ -194,6 +234,13 @@ public class CabrilloLogProcessor : ILogProcessor
                         CallSign = parts.Length > 5 ? parts[5] : null
                     };
 
+                    // Sanitize CallSign when it's long enough to warrant inspection (SanitizeHeaderValue will
+                    // return unchanged for null/short values). Use header-style key for consistent warnings.
+                    if (!string.IsNullOrWhiteSpace(entry.CallSign))
+                    {
+                        entry.CallSign = SanitizeHeaderValue(entry.CallSign!, "CALLSIGN");
+                    }
+
                     // Determine Band and Frequency validity from the Frequency token (or Band token if Frequency missing)
                     if (!string.IsNullOrWhiteSpace(entry.Frequency))
                     {
@@ -233,6 +280,12 @@ public class CabrilloLogProcessor : ILogProcessor
                     (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6, skipped, lineIndex, line);
                     entry.SentExchange = sentExch;
                     entry.ReceivedExchange = recvExch;
+                    // Sanitize TheirCall similarly to CALLSIGN. The sanitizer is conservative and will
+                    // only act when the value length is greater than 13 characters.
+                    if (!string.IsNullOrWhiteSpace(theirCall))
+                    {
+                        theirCall = SanitizeHeaderValue(theirCall!, "THEIRCALL");
+                    }
                     entry.TheirCall = theirCall;
 
                     if (string.IsNullOrWhiteSpace(entry.Id))
@@ -257,12 +310,38 @@ public class CabrilloLogProcessor : ILogProcessor
             else if (!string.IsNullOrWhiteSpace(line))
             {
                 int idx = line.IndexOf(':');
-                if (idx > 0)
-                {
-                    string key = line.Substring(0, idx).Trim();
-                    string value = line.Substring(idx + 1).Trim();
-                    headers[key] = value;
-                }
+                    if (idx > 0)
+                    {
+                        string key = line.Substring(0, idx).Trim();
+                        string value = line.Substring(idx + 1).Trim();
+
+                        // Only apply sanitizer to a conservative list of header keys that may contain
+                        // long string values. The sanitizer itself is conservative and will no-op for
+                        // short values (<= 13 chars). Keys are compared case-insensitively.
+                        HashSet<string> sanitizable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            "LOCATION",
+                            "CALLSIGN",
+                            "CLUB",
+                            "NAME",
+                            "ADDRESS",
+                            "ADDRESS-CITY",
+                            "ADDRESS-POSTALCODE",
+                            "ADDRESS-COUNTRY",
+                            "EMAIL",
+                            "CREATED-BY",
+                            "SOAPBOX"
+                        };
+
+                        if (sanitizable.Contains(key))
+                        {
+                            headers[key] = SanitizeHeaderValue(value, key);
+                        }
+                        else
+                        {
+                            headers[key] = value;
+                        }
+                    }
             }
         }
 
