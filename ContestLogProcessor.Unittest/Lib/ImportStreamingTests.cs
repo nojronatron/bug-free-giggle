@@ -38,7 +38,7 @@ public class ImportStreamingTests
             Assert.Single(entries);
 
             var first = entries[0];
-            Assert.Contains("K7XXX", first.RawLine);
+            Assert.Equal("K7XXX", first.CallSign);
             // SourceLineNumber should be 3 (1-based)
             Assert.Equal(3, first.SourceLineNumber);
 

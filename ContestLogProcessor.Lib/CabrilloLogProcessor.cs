@@ -186,7 +186,8 @@ public class CabrilloLogProcessor : ILogProcessor
 
                     LogEntry entry = new LogEntry
                     {
-                        RawLine = line,
+                        // Do not keep RawLine for parsed entries to reduce memory usage for large logs.
+                        RawLine = null,
                         Frequency = parts.Length > 1 ? parts[1] : null,
                         Mode = parts.Length > 2 ? parts[2] : null,
                         QsoDateTime = qsoDt,
@@ -855,7 +856,9 @@ public class CabrilloLogProcessor : ILogProcessor
             }
             else
             {
-                lines.Add(entry.RawLine ?? string.Empty);
+                // If no raw line is available (we drop RawLine for parsed entries to save memory),
+                // fall back to canonical formatting so exported files remain valid.
+                lines.Add(entry.RawLine ?? entry.ToCabrilloLine());
             }
         }
 
