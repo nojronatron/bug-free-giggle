@@ -60,3 +60,11 @@ dotnet build "ContestLogProcessor.sln" --configuration Release
 - Use the local tool manifest approach for reproducible tooling across contributors and CI.
 - If your editor supports automatic formatting on save (for example, Visual Studio or VS Code with the C# extension), configure it to use the repository rules.
 - Consider adding a lightweight pre-commit hook that runs `dotnet format --verify-no-changes` and `dotnet build` to catch issues before pushing.
+
+## Important API behavior change
+
+- The library now returns defensive snapshots (clones) from mutation and read APIs to avoid callers inadvertently mutating internal state.
+- In particular, `CreateEntry(...)` and `DuplicateEntry(...)` return a snapshot of the stored entry rather than the live, stored instance. `ReadEntries()` and `GetEntryById()` also return clones.
+- If you need to modify an entry, mutate the clone you receive and then call `UpdateEntry(id, editAction)` to persist your changes. `UpdateEntry` is the supported mutation API and will apply validation/sanitization before updating internal state.
+
+This change prevents accidental mutations and makes the library safer for concurrent and multi-consumer scenarios. If you have performance-sensitive internal callers that require live references, open an issue to discuss a documented ``unsafe`` fast-path API.
