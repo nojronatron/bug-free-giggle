@@ -102,6 +102,36 @@ public class CabrilloLogProcessor : ILogProcessor
         return trimmed;
     }
 
+    /// <summary>
+    /// Sanitize fields on a LogEntry that may contain long string values and should be inspected
+    /// for suspicious substrings. This is intentionally conservative and reuses the header sanitizer
+    /// rules to produce consistent warnings.
+    /// </summary>
+    private void SanitizeLogEntry(LogEntry entry)
+    {
+        if (entry == null) return;
+
+        if (!string.IsNullOrWhiteSpace(entry.CallSign))
+        {
+            entry.CallSign = SanitizeHeaderValue(entry.CallSign!, "CALLSIGN");
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.TheirCall))
+        {
+            entry.TheirCall = SanitizeHeaderValue(entry.TheirCall!, "THEIRCALL");
+        }
+
+        if (entry.SentExchange != null && !string.IsNullOrWhiteSpace(entry.SentExchange.TheirCall))
+        {
+            entry.SentExchange.TheirCall = SanitizeHeaderValue(entry.SentExchange.TheirCall!, "THEIRCALL");
+        }
+
+        if (entry.ReceivedExchange != null && !string.IsNullOrWhiteSpace(entry.ReceivedExchange.TheirCall))
+        {
+            entry.ReceivedExchange.TheirCall = SanitizeHeaderValue(entry.ReceivedExchange.TheirCall!, "THEIRCALL");
+        }
+    }
+
     // Events for CRUD operations
     public event EventHandler<LogEntry>? EntryAdded;
     public event EventHandler<LogEntry>? EntryUpdated;
@@ -644,6 +674,9 @@ public class CabrilloLogProcessor : ILogProcessor
             TheirCall = entry.TheirCall
         };
 
+    // Sanitize any long/suspicious values on the copy before inserting
+    SanitizeLogEntry(copy);
+
         if (entry.SentExchange != null)
         {
             copy.SentExchange = new Exchange
@@ -730,7 +763,7 @@ public class CabrilloLogProcessor : ILogProcessor
                 _logFile.Entries.Add(copy);
             }
         }
-    EntryAdded?.Invoke(this, copy.Clone());
+        EntryAdded?.Invoke(this, copy.Clone());
         return copy.Clone();
     }
 
@@ -804,6 +837,9 @@ public class CabrilloLogProcessor : ILogProcessor
             };
         }
 
+        // Sanitize the duplicate copy before inserting/returning
+        SanitizeLogEntry(copy);
+
         // Insert the duplicate immediately after the existing entry to preserve import/order semantics
         int existingIndex = _entries.IndexOf(existing);
         if (existingIndex >= 0 && existingIndex < _entries.Count)
@@ -845,7 +881,11 @@ public class CabrilloLogProcessor : ILogProcessor
     LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
         if (entry == null) return false;
         editAction?.Invoke(entry);
-    EntryUpdated?.Invoke(this, entry.Clone());
+
+        // Sanitize any fields modified by the edit action
+        SanitizeLogEntry(entry);
+
+        EntryUpdated?.Invoke(this, entry.Clone());
         return true;
     }
 
