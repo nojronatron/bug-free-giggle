@@ -49,7 +49,7 @@ public class DateTimeParsingTests
         Assert.Equal(DateTime.MinValue, entry.QsoDateTime);
 
     // Verify that the processor recorded a skipped entry for the unparsable date/time via the public snapshot accessor
-    var snapshot = proc.GetReadOnlyLogFile();
+    CabrilloLogFileSnapshot? snapshot = proc.GetReadOnlyLogFile();
     Assert.NotNull(snapshot);
     var skipped = snapshot!.SkippedEntries;
     Assert.Contains(skipped, s => s.Reason == "Unparseable date/time" && s.SourceLineNumber == 3);

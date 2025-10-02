@@ -18,7 +18,7 @@ public class SnapshotImmutabilityTests
         proc.ImportFile(tmp);
 
         // Take a snapshot and mutate it
-        var snap = proc.GetReadOnlyLogFile();
+    CabrilloLogFileSnapshot? snap = proc.GetReadOnlyLogFile();
         Assert.NotNull(snap);
 
         // Attempt to mutate snapshot headers - should not be possible because Headers is read-only
@@ -46,8 +46,8 @@ public class SnapshotImmutabilityTests
         Assert.True(proc.TryGetHeader("CALLSIGN", out string? origCall));
         Assert.Equal("K7XXX", origCall);
 
-        var snap2 = proc.GetReadOnlyLogFile();
-        Assert.NotNull(snap2);
+    CabrilloLogFileSnapshot? snap2 = proc.GetReadOnlyLogFile();
+    Assert.NotNull(snap2);
     Assert.Equal("K7XXX", snap2!.GetHeader("CALLSIGN"));
     Assert.True(headerMutationRaised == true || snap2.GetHeader("CALLSIGN") == "K7XXX");
 

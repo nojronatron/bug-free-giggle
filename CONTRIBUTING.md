@@ -65,6 +65,42 @@ dotnet build "ContestLogProcessor.sln" --configuration Release
 
 - The library now returns defensive snapshots (clones) from mutation and read APIs to avoid callers inadvertently mutating internal state.
 - In particular, `CreateEntry(...)` and `DuplicateEntry(...)` return a snapshot of the stored entry rather than the live, stored instance. `ReadEntries()` and `GetEntryById()` also return clones.
-- If you need to modify an entry, mutate the clone you receive and then call `UpdateEntry(id, editAction)` to persist your changes. `UpdateEntry` is the supported mutation API and will apply validation/sanitization before updating internal state.
+If you need to modify an entry, mutate the clone you receive and then call `UpdateEntry(id, editAction)` to persist your changes. `UpdateEntry` is the supported mutation API and will apply validation/sanitization before updating internal state.
 
 This change prevents accidental mutations and makes the library safer for concurrent and multi-consumer scenarios. If you have performance-sensitive internal callers that require live references, open an issue to discuss a documented ``unsafe`` fast-path API.
+
+Additional migration details (new since last release):
+
+- New snapshot type: `CabrilloLogFileSnapshot`
+  - `GetReadOnlyLogFile()` now returns a `CabrilloLogFileSnapshot?` (or `null` when no file is loaded). The snapshot uses `IReadOnlyDictionary<string,string>` for headers and `IReadOnlyList<T>` for entries and skipped entries, and exposes a `GetHeader(string)` helper.
+  - Snapshots are deep clones (entries are cloned, skipped entries copied) and are wrapped in read-only collections to prevent accidental mutation of internal state.
+
+### Migration guidance
+
+- Update callers that previously expected a mutable `CabrilloLogFile` to use the new snapshot type. Example:
+
+```csharp
+// old (mutable) usage - no longer returned by the library
+// var file = proc.GetReadOnlyLogFile();
+
+// new usage
+CabrilloLogFileSnapshot? snap = proc.GetReadOnlyLogFile();
+string? call = snap?.GetHeader("CALLSIGN");
+var entries = snap?.Entries; // IReadOnlyList<LogEntry>
+```
+
+- If you only need a single header value prefer `GetHeader("KEY")` to avoid direct dictionary indexing that might be awkward with read-only wrappers.
+- If you relied on mutating an object returned by `ReadEntries()` or `GetEntryById()` to persist changes, switch to `UpdateEntry(id, editAction)` to apply and persist edits.
+
+### Backwards compatibility and deprecation policy
+
+- The library intentionally changed the surface to return snapshots; there is not currently a deprecated shim that returns a live mutable `CabrilloLogFile`. This keeps the public API clear and avoids accidental downstream reliance on mutable references.
+- If you need a staged deprecation (compile-time warnings) for large downstream codebases, open an issue and we can add an `[Obsolete]` shim that forwards to a snapshot-to-mutable adapter for a transition period.
+
+### Performance note
+
+- Creating a snapshot clones the data; for very large logs this has a cost. If callers need to repeatedly inspect very large logs, consider:
+  - Reusing a single snapshot instance rather than calling `GetReadOnlyLogFile()` in tight loops.
+  - Requesting an internal/unsafe fast-path (will be considered via issue) that returns a non-cloned view for trusted callers (this will be explicitly documented and gated).
+
+Write your code accordingly and open an issue if you need help migrating large codebases.

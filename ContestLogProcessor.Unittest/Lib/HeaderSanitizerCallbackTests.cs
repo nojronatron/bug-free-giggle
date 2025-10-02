@@ -35,10 +35,10 @@ namespace ContestLogProcessor.Unittest.Lib
 
                 // Assert
                 // The header should be present but sanitized in the read-only snapshot
-                var snapshot = proc.GetReadOnlyLogFile();
+                CabrilloLogFileSnapshot? snapshot = proc.GetReadOnlyLogFile();
                 Assert.NotNull(snapshot);
                 Assert.True(snapshot.Headers.ContainsKey("NAME"));
-                string nameVal = snapshot.Headers["NAME"];
+                string nameVal = snapshot.GetHeader("NAME") ?? string.Empty;
                 // The suspicious substring should have been masked (asterisks)
                 Assert.DoesNotContain("select * from", nameVal, StringComparison.OrdinalIgnoreCase);
 
