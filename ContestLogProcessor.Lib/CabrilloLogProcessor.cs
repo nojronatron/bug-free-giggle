@@ -768,7 +768,7 @@ public class CabrilloLogProcessor : ILogProcessor
             }
         }
     EntryAdded?.Invoke(this, copy.Clone());
-        return copy;
+        return copy.Clone();
     }
 
     /// <summary>
@@ -866,7 +866,7 @@ public class CabrilloLogProcessor : ILogProcessor
         }
 
     EntryAdded?.Invoke(this, copy.Clone());
-        return copy;
+        return copy.Clone();
     }
 
     public LogEntry? GetEntryById(string id)
