@@ -116,21 +116,24 @@ public class CabrilloLogProcessor : ILogProcessor
             throw new FileNotFoundException($"File not found: {filePath}");
         }
 
-        string[] lines = File.ReadAllLines(filePath);
-    Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-    List<LogEntry> entries = new List<LogEntry>();
-    List<SkippedEntryInfo> skipped = new List<SkippedEntryInfo>();
+        IEnumerable<string> lines = File.ReadLines(filePath);
+        Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        List<LogEntry> entries = new List<LogEntry>();
+        List<SkippedEntryInfo> skipped = new List<SkippedEntryInfo>();
 
-        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        int lineIndex = 0;
+        foreach (string line in lines)
         {
-            string line = lines[lineIndex];
-
-            // Stop processing when END-OF-LOG is encountered
+            // advance to 1-based line number at start so 'continue' does not skip counting
+            lineIndex++;
+            // Stop processing when END-OF-LOG is encountered; don't read the remainder of the file
             if (line.StartsWith("END-OF-LOG:", StringComparison.OrdinalIgnoreCase))
             {
                 headers["END-OF-LOG"] = string.Empty;
                 break;
             }
+
+            // (handled above) -- continue processing
 
             // Mark that we've seen a START-OF-LOG tag
             if (line.StartsWith("START-OF-LOG:", StringComparison.OrdinalIgnoreCase))
@@ -177,7 +180,7 @@ public class CabrilloLogProcessor : ILogProcessor
                         else
                         {
                             // note the unparseable date/time; keep importing but record for diagnostics
-                            skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex + 1, Reason = "Unparseable date/time", RawLine = line });
+                            skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Unparseable date/time", RawLine = line });
                         }
                     }
 
@@ -223,10 +226,10 @@ public class CabrilloLogProcessor : ILogProcessor
                     }
 
                     // Record source line number (1-based)
-                    entry.SourceLineNumber = lineIndex + 1;
+                    entry.SourceLineNumber = lineIndex;
 
                     // Attempt to parse up to five exchange tokens per side.
-                    (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6, skipped, lineIndex + 1, line);
+                    (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6, skipped, lineIndex, line);
                     entry.SentExchange = sentExch;
                     entry.ReceivedExchange = recvExch;
                     entry.TheirCall = theirCall;
@@ -239,7 +242,7 @@ public class CabrilloLogProcessor : ILogProcessor
                     // If exchange parsing failed to find their call, record a skipped entry for diagnostics
                     if (string.IsNullOrWhiteSpace(entry.TheirCall))
                     {
-                        skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex + 1, Reason = "Missing TheirCall token", RawLine = line });
+                        skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Missing TheirCall token", RawLine = line });
                     }
 
                     entries.Add(entry);
@@ -247,7 +250,7 @@ public class CabrilloLogProcessor : ILogProcessor
                 else
                 {
                     // Malformed QSO line (not enough tokens)
-                    skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex + 1, Reason = "Malformed QSO line (insufficient tokens)", RawLine = line });
+                    skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Malformed QSO line (insufficient tokens)", RawLine = line });
                 }
             }
             else if (!string.IsNullOrWhiteSpace(line))
@@ -261,7 +264,6 @@ public class CabrilloLogProcessor : ILogProcessor
                 }
             }
         }
-
 
         _logFile = new CabrilloLogFile
         {
