@@ -38,7 +38,7 @@ When it is time to create additional projects in this Solution:
 - Use object initializer syntax with data: `Student Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };`
 - Use empty initialization syntax when no initialization data is needed: `Car Subaru = new();`
 - Use collection expression syntax `List<string> = []` (supported in C# 12 and later)
-- If-then-else statements always use braces around their code blocks
+- Always add braces around If-then-else statement code blocks
 - Use explicit types instead of var: `Backpack EmptyGenericBackpack = new();` and `Student? FoundStudent = _entries.Find(match);`
 
 ## Libraries and Frameworks
