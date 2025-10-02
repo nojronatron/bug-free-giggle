@@ -287,6 +287,8 @@ There are many entries in the Cabrillo "Explanation of Fields - Freq" documentat
 
 ### Mapping Bands to Frequency Ranges
 
+For mapping Bands to frequency ranges:
+
 - 160m <-> 1800 kHz through 2000 kHz
 - 80m <-> 3500 kHz through 4000 kHz
 - 40m <-> 7000 kHz through 7300 kHz
@@ -294,6 +296,16 @@ There are many entries in the Cabrillo "Explanation of Fields - Freq" documentat
 - 15m <-> 21000 kHz through 21450 kHz
 - 10m <-> 28000 kHz through 29700 kHz
 - 6m <-> 50000 kHz through 54000 kHz
+
+When a LogEntry has a Band but not a Frequency, pick the lowest frequency in the available range:
+
+- 160m -> 1800
+- 80m -> 3500
+- 40m -> 7000
+- 20m -> 14000
+- 15m -> 21000
+- 10m -> 28000
+- 6m -> 50000
 
 When two frequencies are within range of one band, they are the same band:
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace ContestLogProcessor.Lib;
 
@@ -87,6 +88,32 @@ public class CabrilloLogProcessor : ILogProcessor
                         QsoDateTime = qsoDt,
                         CallSign = parts.Length > 5 ? parts[5] : null
                     };
+
+                    // Determine Band and Frequency validity from the Frequency token (or Band token if Frequency missing)
+                    if (!string.IsNullOrWhiteSpace(entry.Frequency))
+                    {
+                        // Try to parse frequency token into integer kHz (truncate decimals)
+                        int? freqKHz = ParseFrequencyToken(entry.Frequency);
+                        if (freqKHz.HasValue)
+                        {
+                            entry.FrequencyIsValid = true;
+                            // If the original token was a band mapping, we may have returned the mapped frequency
+                            entry.Band = MapFrequencyToBand(freqKHz.Value) ?? entry.Band;
+                            // Normalize Frequency string to the integer kHz representation so downstream code can rely on numeric values
+                            entry.Frequency = freqKHz.Value.ToString();
+                        }
+                        else
+                        {
+                            entry.FrequencyIsValid = false;
+                            // if frequency token is invalid, leave Band null for now
+                        }
+                    }
+                    else
+                    {
+                        // No frequency token; attempt to map Band token if present
+                        // Some logs may supply Band in a different token position; we look at parts[1] earlier for Frequency.
+                        entry.FrequencyIsValid = false;
+                    }
 
                     // If this was an X-QSO line, mark it so.
                     if (isXQsoLine)
@@ -238,6 +265,101 @@ public class CabrilloLogProcessor : ILogProcessor
 
         // Require at least one letter and either a digit or a slash to be confident it's a callsign
         return hasLetter && (hasDigit || hasSlash);
+    }
+
+    /// <summary>
+    /// Parse a frequency token into an integer kHz value when possible.
+    /// Accepts integer or floating values; truncates fractional part. Returns null when token is invalid per Salmon Run rules.
+    /// </summary>
+    private static int? ParseFrequencyToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        token = token.Trim();
+
+        // If token looks like a band token (e.g., "40m"), map to the band's lowest frequency kHz value
+        Match m = Regex.Match(token, "^(\\d{1,3})m$", RegexOptions.IgnoreCase);
+        if (m.Success)
+        {
+            if (int.TryParse(m.Groups[1].Value, out int bandNum))
+            {
+                int? mapped = MapBandTokenToFrequency(bandNum);
+                if (mapped.HasValue) return mapped.Value;
+            }
+            return null;
+        }
+
+        // Reject tokens containing letter 'G' or unit suffixes other than a trailing 'm' handled above
+        if (token.IndexOf('G', StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return null;
+        }
+
+        // Reject the literal LIGHT
+        if (string.Equals(token, "LIGHT", StringComparison.OrdinalIgnoreCase)) return null;
+
+        // Try parse as double to support floating formats like 7.053
+        if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d))
+        {
+            // Only consider whole-number portion (truncate) per rules
+            int whole = (int)Math.Truncate(d);
+            // Reject ranges outside allowed bounds
+            if (whole < 1800 || whole > 54000) return null;
+            // Also reject the 55..1000 range per rules
+            if (whole >= 55 && whole <= 1000) return null;
+            return whole;
+        }
+
+        // Try parse integer without decimals
+        if (int.TryParse(token, out int i))
+        {
+            if (i < 1800 || i > 54000) return null;
+            if (i >= 55 && i <= 1000) return null;
+            return i;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Map an integer kHz frequency to one of the Salmon Run bands (e.g., "40m"). Returns null when no band matches.
+    /// </summary>
+    private static string? MapFrequencyToBand(int freqKHz)
+    {
+        // 160m <-> 1800 kHz through 2000 kHz
+        if (freqKHz >= 1800 && freqKHz <= 2000) return "160m";
+        // 80m <-> 3500 kHz through 4000 kHz
+        if (freqKHz >= 3500 && freqKHz <= 4000) return "80m";
+        // 40m <-> 7000 kHz through 7300 kHz
+        if (freqKHz >= 7000 && freqKHz <= 7300) return "40m";
+        // 20m <-> 14000 kHz through 14350 kHz
+        if (freqKHz >= 14000 && freqKHz <= 14350) return "20m";
+        // 15m <-> 21000 kHz through 21450 kHz
+        if (freqKHz >= 21000 && freqKHz <= 21450) return "15m";
+        // 10m <-> 28000 kHz through 29700 kHz
+        if (freqKHz >= 28000 && freqKHz <= 29700) return "10m";
+        // 6m <-> 50000 kHz through 54000 kHz
+        if (freqKHz >= 50000 && freqKHz <= 54000) return "6m";
+
+        return null;
+    }
+
+    /// <summary>
+    /// Map a band number like 40 -> low frequency (kHz) for that band, or null when unknown.
+    /// This is used when logs supply a band token instead of a numeric frequency.
+    /// </summary>
+    private static int? MapBandTokenToFrequency(int bandNumber)
+    {
+        return bandNumber switch
+        {
+            160 => 1800,
+            80 => 3500,
+            40 => 7000,
+            20 => 14000,
+            15 => 21000,
+            10 => 28000,
+            6 => 50000,
+            _ => null
+        };
     }
 
     public IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null)

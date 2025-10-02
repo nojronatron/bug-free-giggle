@@ -65,6 +65,12 @@ public class LogEntry
     public string? Band { get; set; }
 
     /// <summary>
+    /// True when the Frequency token was recognized as a valid Salmon Run frequency
+    /// (falls within one of the known band ranges). False otherwise.
+    /// </summary>
+    public bool FrequencyIsValid { get; set; }
+
+    /// <summary>
     /// Flag indicating the QSO was marked with an X-QSO tag (ignored by some processors).
     /// </summary>
     public bool IsXQso { get; set; }
