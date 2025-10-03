@@ -49,7 +49,8 @@ public class InteractiveShell
                 }
             }
 
-            return true;
+            // If a handler requested the shell to exit, signal caller
+            return !_ctx.ExitRequested;
         }
 
         return false;
@@ -98,6 +99,11 @@ public class InteractiveShell
                         _ctx.Console.WriteLine(ex.ToString());
                     }
                 }
+
+                if (_ctx.ExitRequested)
+                {
+                    break;
+                }
             }
             else
             {
@@ -127,7 +133,7 @@ public class InteractiveShell
 
             sb.Append(c);
         }
-        
+
         if (sb.Length > 0)
         {
             parts.Add(sb.ToString());

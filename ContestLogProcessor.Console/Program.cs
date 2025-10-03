@@ -159,6 +159,7 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
     shell.RegisterHandler(new ImportCommandHandler());
     shell.RegisterHandler(new DuplicateCommandHandler());
     shell.RegisterHandler(new HelpCommandHandler(shell));
+    shell.RegisterHandler(new ExitCommandHandler());
 
     while (true)
     {
@@ -171,6 +172,13 @@ static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
 
         string[] parts = PromptHelper.SplitArguments(input);
         string cmd = parts.Length > 0 ? parts[0] : string.Empty;
+
+        // Allow users to type 'exit' or 'quit' to leave the interactive session
+        if (string.Equals(cmd, "exit", StringComparison.OrdinalIgnoreCase) || string.Equals(cmd, "quit", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("Exiting interactive session.");
+            break;
+        }
 
         try
         {

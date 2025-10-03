@@ -14,4 +14,13 @@ public class CommandContext : ICommandContext
     public CabrilloLogProcessor Processor { get; }
     public bool Debug { get; }
     public IConsole Console { get; }
+
+    private bool _exitRequested = false;
+
+    public void RequestExit()
+    {
+        _exitRequested = true;
+    }
+
+    public bool ExitRequested => _exitRequested;
 }
