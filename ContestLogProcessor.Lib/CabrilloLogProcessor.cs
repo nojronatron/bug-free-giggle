@@ -1067,14 +1067,50 @@ public class CabrilloLogProcessor : ILogProcessor
         }
     }
 
-    public bool DeleteEntry(string id)
+    /// <summary>
+    /// OperationResult-based deletion of an entry. Removes the entry from the internal lists and
+    /// keeps the internal `_logFile.Entries` collection in sync when present.
+    /// </summary>
+    public OperationResult<Unit> DeleteEntryResult(string id)
     {
-        if (string.IsNullOrWhiteSpace(id)) return false;
-    LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
-        if (entry == null) return false;
-        _entries.Remove(entry);
-        EntryDeleted?.Invoke(this, id);
-        return true;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return OperationResult.Failure<Unit>("Id must not be null or whitespace.", ResponseStatus.BadFormat);
+            }
+
+            LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
+            if (entry == null)
+            {
+                return OperationResult.Failure<Unit>($"No entry found with id {id}", ResponseStatus.NotFound);
+            }
+
+            // Remove from the in-memory list
+            _entries.Remove(entry);
+
+            // Keep _logFile entries in sync if present
+            if (_logFile != null && _logFile.Entries != null)
+            {
+                // Find and remove the item with the same Id
+                int idx = _logFile.Entries.FindIndex(e => e != null && e.Id == id);
+                if (idx >= 0)
+                {
+                    _logFile.Entries.RemoveAt(idx);
+                }
+            }
+
+            EntryDeleted?.Invoke(this, id);
+            return OperationResult.Success(Unit.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // preserve cancellation semantics
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<Unit>("Failed to delete entry.", ResponseStatus.Error, ex);
+        }
     }
 
     public void ExportFile(string filePath, bool useCanonicalFormat = true)

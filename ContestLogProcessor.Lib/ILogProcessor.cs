@@ -73,5 +73,9 @@ public interface ILogProcessor
     OperationResult<Unit> UpdateEntryResult(string id, Action<LogEntry> editAction);
 
     bool UpdateEntry(string id, Action<LogEntry> editAction);
-    bool DeleteEntry(string id);
+    /// <summary>
+    /// OperationResult-based variant of DeleteEntry. Returns Success when the entry was removed,
+    /// NotFound when no entry exists for the provided id, or BadFormat when id is null/whitespace.
+    /// </summary>
+    OperationResult<Unit> DeleteEntryResult(string id);
 }

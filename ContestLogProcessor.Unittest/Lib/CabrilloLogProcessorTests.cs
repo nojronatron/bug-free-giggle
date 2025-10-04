@@ -79,9 +79,9 @@ public class CabrilloLogProcessorTests
     Assert.True(updatedResult.IsSuccess);
         Assert.Contains(updated, u => u.Id == created.Id && u.Band == "20m");
 
-        // Delete
-        bool deleted = processor.DeleteEntry(created.Id);
-        Assert.True(deleted);
+    // Delete (migrated to OperationResult API)
+    var deletedResult = processor.DeleteEntryResult(created.Id);
+    Assert.True(deletedResult.IsSuccess);
         Assert.Contains(deletedIds, id => id == created.Id);
         Assert.Null(processor.GetEntryById(created.Id));
     }
