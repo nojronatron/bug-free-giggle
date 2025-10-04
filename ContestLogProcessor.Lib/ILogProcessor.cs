@@ -55,6 +55,11 @@ public interface ILogProcessor
     /// </summary>
     LogEntry DuplicateEntry(string id, DuplicateField field = DuplicateField.None, string? newValue = null);
     IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
+    /// <summary>
+    /// OperationResult-based variant of ReadEntries. Returns a success OperationResult with the enumerable of defensive clones,
+    /// or a failure OperationResult with Diagnostic populated when an unexpected error occurs.
+    /// </summary>
+    OperationResult<IEnumerable<LogEntry>> ReadEntriesResult(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
     LogEntry? GetEntryById(string id);
     /// <summary>
     /// Update an existing entry by id using the provided edit action. Returns an OperationResult indicating success or failure.

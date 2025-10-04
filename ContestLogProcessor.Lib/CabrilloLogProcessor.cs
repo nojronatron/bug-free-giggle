@@ -649,6 +649,32 @@ public class CabrilloLogProcessor : ILogProcessor
     }
 
     /// <summary>
+    /// OperationResult-based wrapper for ReadEntries to support a result-returning API surface.
+    /// Returns a successful OperationResult containing defensive clones when the operation completes normally.
+    /// Unexpected exceptions are converted into a failure OperationResult with Diagnostic populated.
+    /// </summary>
+    public OperationResult<IEnumerable<LogEntry>> ReadEntriesResult(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null)
+    {
+        try
+        {
+            // ReadEntries returns a deferred IEnumerable that clones entries on enumeration.
+            // Materialize into a list here so any cloning-time exceptions are observed and
+            // can be converted into a failure OperationResult rather than escaping later.
+            IEnumerable<LogEntry> entries = ReadEntries(filter, orderBy, skip, take);
+            List<LogEntry> materialized = entries.ToList();
+            return OperationResult.Success<IEnumerable<LogEntry>>(materialized);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // preserve cancellation semantics
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<IEnumerable<LogEntry>>("Failed to read entries.", ResponseStatus.Error, ex);
+        }
+    }
+
+    /// <summary>
     /// Try to read a header value from the currently loaded Cabrillo file (if any).
     /// Returns false when no file is loaded or the header is not present.
     /// </summary>
