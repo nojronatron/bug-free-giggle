@@ -21,7 +21,8 @@ public class ExportHandlerTests
             var console = new TestConsole(new string?[] { });
             var proc = new CabrilloLogProcessor();
             // add a sample entry so export writes something
-            proc.CreateEntry(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            var r = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            Assert.True(r.IsSuccess);
 
             var ctx = new CommandContext(proc, console, debug: false);
             var handler = new ExportCommandHandler();

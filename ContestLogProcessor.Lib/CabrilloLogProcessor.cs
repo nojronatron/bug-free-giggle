@@ -157,6 +157,8 @@ public class CabrilloLogProcessor : ILogProcessor
         throw new InvalidOperationException(result.ErrorMessage ?? "Import failed.", result.Diagnostic);
     }
 
+    // ...existing code...
+
     /// <summary>
     /// Import the Cabrillo log file into the in-memory store and return an OperationResult describing success/failure.
     /// This method is tolerant of malformed log lines and will record skipped entries; it will not throw for common
@@ -803,6 +805,30 @@ public class CabrilloLogProcessor : ILogProcessor
         }
         EntryAdded?.Invoke(this, copy.Clone());
         return copy.Clone();
+    }
+
+    /// <summary>
+    /// OperationResult-based wrapper for CreateEntry to support the new API on ILogProcessor.
+    /// </summary>
+    public OperationResult<LogEntry> CreateEntryResult(LogEntry entry)
+    {
+        try
+        {
+            LogEntry created = CreateEntry(entry);
+            return OperationResult.Success(created);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (ArgumentException argEx)
+        {
+            return OperationResult.Failure<LogEntry>(argEx.Message, ResponseStatus.BadFormat, argEx);
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<LogEntry>("Failed to create entry.", ResponseStatus.Error, ex);
+        }
     }
 
     /// <summary>

@@ -28,6 +28,15 @@ public interface ILogProcessor
     void ExportFile(string filePath, bool useCanonicalFormat = true);
 
     // CRUD operations
+    /// <summary>
+    /// Create a new LogEntry and return the stored snapshot wrapped in an OperationResult.
+    /// Implementations should return a failure OperationResult when the entry cannot be created for recoverable reasons.
+    /// </summary>
+    OperationResult<LogEntry> CreateEntryResult(LogEntry entry);
+
+    /// <summary>
+    /// Obsolete shim that preserves the original synchronous CreateEntry behavior. New callers should use CreateEntryResult.
+    /// </summary>
     LogEntry CreateEntry(LogEntry entry);
     /// <summary>
     /// Duplicate an existing entry identified by id. The returned entry is a new stored copy.

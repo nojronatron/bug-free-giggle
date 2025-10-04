@@ -27,8 +27,10 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-        var created = processor.CreateEntry(newEntry);
-        Assert.NotNull(created);
+    var createdResult = processor.CreateEntryResult(newEntry);
+    Assert.True(createdResult.IsSuccess);
+    var created = createdResult.Value;
+    Assert.NotNull(created);
 
         var found = processor.ReadEntries().Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
         Assert.True(found, "Created entry should be visible via ReadEntries after import.");

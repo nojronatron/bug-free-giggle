@@ -13,7 +13,9 @@ namespace ContestLogProcessor.Unittest.Lib
             var proc = new CabrilloLogProcessor();
 
             // Create an entry and get the stored id
-            var created = proc.CreateEntry(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T1" });
+            var createdResult = proc.CreateEntryResult(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T1" });
+            Assert.True(createdResult.IsSuccess);
+            var created = createdResult.Value;
             string id = created.Id;
 
             // Read via ReadEntries (returns clone). Mutating clone should not affect stored entry.
@@ -46,12 +48,14 @@ namespace ContestLogProcessor.Unittest.Lib
                 e.CallSign = "CHANGED_IN_EVENT";
             };
 
-            var created = proc.CreateEntry(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T2" });
+            var createdResult2 = proc.CreateEntryResult(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T2" });
+            Assert.True(createdResult2.IsSuccess);
+            var created2 = createdResult2.Value;
             Assert.NotNull(eventEntry);
             Assert.Equal("CHANGED_IN_EVENT", eventEntry.CallSign);
 
             // Stored value should remain original
-            var stored = proc.GetEntryById(created.Id);
+            var stored = proc.GetEntryById(created2.Id);
             Assert.Equal("ORIGINAL", stored!.CallSign);
         }
     }

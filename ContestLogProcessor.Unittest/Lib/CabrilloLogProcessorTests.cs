@@ -62,10 +62,12 @@ public class CabrilloLogProcessorTests
             TheirCall = "K7XXX"
         };
 
-        var created = processor.CreateEntry(newEntry);
-        Assert.NotNull(created);
-        Assert.False(string.IsNullOrWhiteSpace(created.Id));
-        Assert.Contains(added, a => a.Id == created.Id);
+    var createdResult = processor.CreateEntryResult(newEntry);
+    Assert.True(createdResult.IsSuccess);
+    var created = createdResult.Value;
+    Assert.NotNull(created);
+    Assert.False(string.IsNullOrWhiteSpace(created.Id));
+    Assert.Contains(added, a => a.Id == created.Id);
 
         // Read by id
         var fetched = processor.GetEntryById(created.Id);
@@ -107,8 +109,10 @@ public class CabrilloLogProcessorTests
             TheirCall = "INTEG"
         };
 
-        var created = processor.CreateEntry(newEntry);
-        processor.UpdateEntry(created.Id, e => e.Band = "40m");
+    var createdResult = processor.CreateEntryResult(newEntry);
+    Assert.True(createdResult.IsSuccess);
+    var created = createdResult.Value;
+    processor.UpdateEntry(created.Id, e => e.Band = "40m");
 
         var exportFile = ExportPath + "_crud_integ.log";
         if (File.Exists(exportFile)) File.Delete(exportFile);

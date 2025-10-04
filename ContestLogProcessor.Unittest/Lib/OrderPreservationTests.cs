@@ -41,7 +41,9 @@ public class OrderPreservationTests
                 TheirCall = "F4KE"
             };
 
-            var created = p.CreateEntry(newEntry);
+            var createdResult = p.CreateEntryResult(newEntry);
+            Assert.True(createdResult.IsSuccess);
+            var created = createdResult.Value;
 
             var entries = p.ReadEntries().ToList();
             // Expect the new entry to be after the two 1716 entries, which are at indexes 1 and 2 (0-based list: 0->1715,1->1716,2->1716,3->1717)

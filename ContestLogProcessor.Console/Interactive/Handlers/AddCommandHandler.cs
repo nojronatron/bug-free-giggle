@@ -68,14 +68,18 @@ public class AddCommandHandler : ICommandHandler
             newEntry.ReceivedExchange = new Exchange { ReceivedMsg = recvEx };
         }
 
-        try
+    OperationResult<LogEntry> result = ctx.Processor.CreateEntryResult(newEntry);
+    if (result.IsSuccess && result.Value != null)
         {
-            LogEntry stored = ctx.Processor.CreateEntry(newEntry);
-            ctx.Console.WriteLine($"Added entry with Id: {stored.Id}");
+            ctx.Console.WriteLine($"Added entry with Id: {result.Value.Id}");
         }
-        catch (System.Exception ex)
+        else
         {
-            ctx.Console.WriteLine($"Failed to add entry: {ex.Message}");
+            ctx.Console.WriteLine($"Failed to add entry: {result.ErrorMessage}");
+            if (ctx.Debug && result.Diagnostic != null)
+            {
+                ctx.Console.WriteLine($"Diagnostic: {result.Diagnostic}");
+            }
         }
 
         await Task.CompletedTask;
