@@ -137,220 +137,258 @@ public class CabrilloLogProcessor : ILogProcessor
     public event EventHandler<LogEntry>? EntryUpdated;
     public event EventHandler<string>? EntryDeleted;
 
+    [Obsolete("Use ImportFileResult(string) which returns OperationResult<Unit>. This shim will throw on failure to preserve existing behavior.", false)]
     public void ImportFile(string filePath)
     {
-        if (!File.Exists(filePath))
+    OperationResult<Unit> result = ImportFileResult(filePath);
+        if (result.IsSuccess) return;
+        // Preserve legacy behavior: throw for not found and other severe errors
+        if (result.Status == ResponseStatus.NotFound)
         {
-            throw new FileNotFoundException($"File not found: {filePath}");
+            throw new FileNotFoundException(result.ErrorMessage ?? $"File not found: {filePath}");
+        }
+        if (result.Status == ResponseStatus.Cancelled)
+        {
+            // Propagate cancellation as an exception
+            throw new OperationCanceledException(result.ErrorMessage, result.Diagnostic);
         }
 
-        IEnumerable<string> lines = File.ReadLines(filePath);
-        Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        List<LogEntry> entries = new List<LogEntry>();
-        List<SkippedEntryInfo> skipped = new List<SkippedEntryInfo>();
+        // For other failure statuses, surface as InvalidOperationException with diagnostic as inner when available
+        throw new InvalidOperationException(result.ErrorMessage ?? "Import failed.", result.Diagnostic);
+    }
 
-        int lineIndex = 0;
-        foreach (string line in lines)
+    /// <summary>
+    /// Import the Cabrillo log file into the in-memory store and return an OperationResult describing success/failure.
+    /// This method is tolerant of malformed log lines and will record skipped entries; it will not throw for common
+    /// parse problems but will return a failure when the file cannot be read.
+    /// </summary>
+    public OperationResult<Unit> ImportFileResult(string filePath)
+    {
+        try
         {
-            // advance to 1-based line number at start so 'continue' does not skip counting
-            lineIndex++;
-            // Stop processing when END-OF-LOG is encountered; don't read the remainder of the file
-            if (line.StartsWith("END-OF-LOG:", StringComparison.OrdinalIgnoreCase))
+            if (!File.Exists(filePath))
             {
-                headers["END-OF-LOG"] = string.Empty;
-                break;
+                return OperationResult.Failure<Unit>($"File not found: {filePath}", ResponseStatus.NotFound);
             }
 
-            // (handled above) -- continue processing
+            IEnumerable<string> lines = File.ReadLines(filePath);
+            Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            List<LogEntry> entries = new List<LogEntry>();
+            List<SkippedEntryInfo> skipped = new List<SkippedEntryInfo>();
 
-            // Mark that we've seen a START-OF-LOG tag
-            if (line.StartsWith("START-OF-LOG:", StringComparison.OrdinalIgnoreCase))
+            int lineIndex = 0;
+            foreach (string line in lines)
             {
-                int idx = line.IndexOf(':');
-                string val = idx >= 0 ? line.Substring(idx + 1).Trim() : string.Empty;
-                headers["START-OF-LOG"] = val;
-                continue;
-            }
-
-            // Accept QSO: and X-QSO: lines. X-QSO lines should be parsed but marked as ignored for scoring.
-            bool isXQsoLine = line.StartsWith("X-QSO:", StringComparison.OrdinalIgnoreCase);
-            if (line.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase) || isXQsoLine)
-            {
-                // Cabrillo QSO line format: QSO: <freq> <mode> <date> <time> <mycall> ...
-                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length >= 6)
+                // advance to 1-based line number at start so 'continue' does not skip counting
+                lineIndex++;
+                // Stop processing when END-OF-LOG is encountered; don't read the remainder of the file
+                if (line.StartsWith("END-OF-LOG:", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Basic parsing: parts indices reflect the common Cabrillo layout
-                    DateTime qsoDt = DateTime.MinValue;
-                    if (parts.Length > 4)
+                    headers["END-OF-LOG"] = string.Empty;
+                    break;
+                }
+
+                // Mark that we've seen a START-OF-LOG tag
+                if (line.StartsWith("START-OF-LOG:", StringComparison.OrdinalIgnoreCase))
+                {
+                    int idx = line.IndexOf(':');
+                    string val = idx >= 0 ? line.Substring(idx + 1).Trim() : string.Empty;
+                    headers["START-OF-LOG"] = val;
+                    continue;
+                }
+
+                // Accept QSO: and X-QSO: lines. X-QSO lines should be parsed but marked as ignored for scoring.
+                bool isXQsoLine = line.StartsWith("X-QSO:", StringComparison.OrdinalIgnoreCase);
+                if (line.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase) || isXQsoLine)
+                {
+                    // Cabrillo QSO line format: QSO: <freq> <mode> <date> <time> <mycall> ...
+                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 6)
                     {
-                        string datePart = parts[3];
-                        string timePart = parts[4];
-                        string combined = datePart + " " + timePart;
-                        string[] formats = new[] { "yyyy-MM-dd HHmm", "yyyy-MM-dd HH:mm", "yyyy-MM-dd H:mm", "yyyy-MM-dd Hm", "yyyyMMdd HHmm" };
-                        DateTime parsed = default;
-                        bool parsedOk = DateTime.TryParseExact(combined, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed);
-                        if (!parsedOk)
+                        // Basic parsing: parts indices reflect the common Cabrillo layout
+                        DateTime qsoDt = DateTime.MinValue;
+                        if (parts.Length > 4)
                         {
-                            // Fallback to a permissive parse; ensure we treat parsed times as UTC
-                            if (!DateTime.TryParse(combined, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed))
+                            string datePart = parts[3];
+                            string timePart = parts[4];
+                            string combined = datePart + " " + timePart;
+                            string[] formats = new[] { "yyyy-MM-dd HHmm", "yyyy-MM-dd HH:mm", "yyyy-MM-dd H:mm", "yyyy-MM-dd Hm", "yyyyMMdd HHmm" };
+                            DateTime parsed = default;
+                            bool parsedOk = DateTime.TryParseExact(combined, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed);
+                            if (!parsedOk)
                             {
-                                parsed = default;
+                                // Fallback to a permissive parse; ensure we treat parsed times as UTC
+                                if (!DateTime.TryParse(combined, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed))
+                                {
+                                    parsed = default;
+                                }
+                            }
+
+                            if (parsed != default)
+                            {
+                                // Normalize to UTC and truncate seconds to zero (minute precision)
+                                DateTime u = parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+                                qsoDt = new DateTime(u.Year, u.Month, u.Day, u.Hour, u.Minute, 0, DateTimeKind.Utc);
+                            }
+                            else
+                            {
+                                // note the unparseable date/time; keep importing but record for diagnostics
+                                skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Unparseable date/time", RawLine = line });
                             }
                         }
 
-                        if (parsed != default)
+                        LogEntry entry = new LogEntry
                         {
-                            // Normalize to UTC and truncate seconds to zero (minute precision)
-                            DateTime u = parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
-                            qsoDt = new DateTime(u.Year, u.Month, u.Day, u.Hour, u.Minute, 0, DateTimeKind.Utc);
+                            // Do not keep RawLine for parsed entries to reduce memory usage for large logs.
+                            RawLine = null,
+                            Frequency = parts.Length > 1 ? parts[1] : null,
+                            Mode = parts.Length > 2 ? parts[2] : null,
+                            QsoDateTime = qsoDt,
+                            CallSign = parts.Length > 5 ? parts[5] : null
+                        };
+
+                        // Sanitize CallSign when it's long enough to warrant inspection (SanitizeHeaderValue will
+                        // return unchanged for null/short values). Use header-style key for consistent warnings.
+                        if (!string.IsNullOrWhiteSpace(entry.CallSign))
+                        {
+                            entry.CallSign = SanitizeHeaderValue(entry.CallSign!, "CALLSIGN");
+                        }
+
+                        // Determine Band and Frequency validity from the Frequency token (or Band token if Frequency missing)
+                        if (!string.IsNullOrWhiteSpace(entry.Frequency))
+                        {
+                            // Try to parse frequency token into integer kHz (truncate decimals)
+                            int? freqKHz = ParseFrequencyToken(entry.Frequency);
+                            if (freqKHz.HasValue)
+                            {
+                                entry.FrequencyIsValid = true;
+                                // If the original token was a band mapping, we may have returned the mapped frequency
+                                entry.Band = MapFrequencyToBand(freqKHz.Value) ?? entry.Band;
+                                // Normalize Frequency string to the integer kHz representation so downstream code can rely on numeric values
+                                entry.Frequency = freqKHz.Value.ToString();
+                            }
+                            else
+                            {
+                                entry.FrequencyIsValid = false;
+                                // if frequency token is invalid, leave Band null for now
+                            }
                         }
                         else
                         {
-                            // note the unparseable date/time; keep importing but record for diagnostics
-                            skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Unparseable date/time", RawLine = line });
-                        }
-                    }
-
-                    LogEntry entry = new LogEntry
-                    {
-                        // Do not keep RawLine for parsed entries to reduce memory usage for large logs.
-                        RawLine = null,
-                        Frequency = parts.Length > 1 ? parts[1] : null,
-                        Mode = parts.Length > 2 ? parts[2] : null,
-                        QsoDateTime = qsoDt,
-                        CallSign = parts.Length > 5 ? parts[5] : null
-                    };
-
-                    // Sanitize CallSign when it's long enough to warrant inspection (SanitizeHeaderValue will
-                    // return unchanged for null/short values). Use header-style key for consistent warnings.
-                    if (!string.IsNullOrWhiteSpace(entry.CallSign))
-                    {
-                        entry.CallSign = SanitizeHeaderValue(entry.CallSign!, "CALLSIGN");
-                    }
-
-                    // Determine Band and Frequency validity from the Frequency token (or Band token if Frequency missing)
-                    if (!string.IsNullOrWhiteSpace(entry.Frequency))
-                    {
-                        // Try to parse frequency token into integer kHz (truncate decimals)
-                        int? freqKHz = ParseFrequencyToken(entry.Frequency);
-                        if (freqKHz.HasValue)
-                        {
-                            entry.FrequencyIsValid = true;
-                            // If the original token was a band mapping, we may have returned the mapped frequency
-                            entry.Band = MapFrequencyToBand(freqKHz.Value) ?? entry.Band;
-                            // Normalize Frequency string to the integer kHz representation so downstream code can rely on numeric values
-                            entry.Frequency = freqKHz.Value.ToString();
-                        }
-                        else
-                        {
+                            // No frequency token; attempt to map Band token if present
+                            // Some logs may supply Band in a different token position; we look at parts[1] earlier for Frequency.
                             entry.FrequencyIsValid = false;
-                            // if frequency token is invalid, leave Band null for now
                         }
+
+                        // If this was an X-QSO line, mark it so.
+                        if (isXQsoLine)
+                        {
+                            entry.IsXQso = true;
+                        }
+
+                        // Record source line number (1-based)
+                        entry.SourceLineNumber = lineIndex;
+
+                        // Attempt to parse up to five exchange tokens per side.
+                        (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6, skipped, lineIndex, line);
+                        entry.SentExchange = sentExch;
+                        entry.ReceivedExchange = recvExch;
+                        // Sanitize TheirCall similarly to CALLSIGN. The sanitizer is conservative and will
+                        // only act when the value length is greater than 13 characters.
+                        if (!string.IsNullOrWhiteSpace(theirCall))
+                        {
+                            theirCall = SanitizeHeaderValue(theirCall!, "THEIRCALL");
+                        }
+                        entry.TheirCall = theirCall;
+
+                        if (string.IsNullOrWhiteSpace(entry.Id))
+                        {
+                            entry.Id = Guid.NewGuid().ToString();
+                        }
+
+                        // If exchange parsing failed to find their call, record a skipped entry for diagnostics
+                        if (string.IsNullOrWhiteSpace(entry.TheirCall))
+                        {
+                            skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Missing TheirCall token", RawLine = line });
+                        }
+
+                        entries.Add(entry);
                     }
                     else
                     {
-                        // No frequency token; attempt to map Band token if present
-                        // Some logs may supply Band in a different token position; we look at parts[1] earlier for Frequency.
-                        entry.FrequencyIsValid = false;
+                        // Malformed QSO line (not enough tokens)
+                        skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Malformed QSO line (insufficient tokens)", RawLine = line });
                     }
-
-                    // If this was an X-QSO line, mark it so.
-                    if (isXQsoLine)
-                    {
-                        entry.IsXQso = true;
-                    }
-
-                    // Record source line number (1-based)
-                    entry.SourceLineNumber = lineIndex;
-
-                    // Attempt to parse up to five exchange tokens per side.
-                    (Exchange? sentExch, string? theirCall, Exchange? recvExch) = ParseExchanges(parts, 6, skipped, lineIndex, line);
-                    entry.SentExchange = sentExch;
-                    entry.ReceivedExchange = recvExch;
-                    // Sanitize TheirCall similarly to CALLSIGN. The sanitizer is conservative and will
-                    // only act when the value length is greater than 13 characters.
-                    if (!string.IsNullOrWhiteSpace(theirCall))
-                    {
-                        theirCall = SanitizeHeaderValue(theirCall!, "THEIRCALL");
-                    }
-                    entry.TheirCall = theirCall;
-
-                    if (string.IsNullOrWhiteSpace(entry.Id))
-                    {
-                        entry.Id = Guid.NewGuid().ToString();
-                    }
-
-                    // If exchange parsing failed to find their call, record a skipped entry for diagnostics
-                    if (string.IsNullOrWhiteSpace(entry.TheirCall))
-                    {
-                        skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Missing TheirCall token", RawLine = line });
-                    }
-
-                    entries.Add(entry);
                 }
-                else
+                else if (!string.IsNullOrWhiteSpace(line))
                 {
-                    // Malformed QSO line (not enough tokens)
-                    skipped.Add(new SkippedEntryInfo { SourceLineNumber = lineIndex, Reason = "Malformed QSO line (insufficient tokens)", RawLine = line });
+                    int idx = line.IndexOf(':');
+                        if (idx > 0)
+                        {
+                            string key = line.Substring(0, idx).Trim();
+                            string value = line.Substring(idx + 1).Trim();
+
+                            // Only apply sanitizer to a conservative list of header keys that may contain
+                            // long string values. The sanitizer itself is conservative and will no-op for
+                            // short values (<= 13 chars). Keys are compared case-insensitively.
+                            HashSet<string> sanitizable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                            {
+                                "LOCATION",
+                                "CALLSIGN",
+                                "CLUB",
+                                "NAME",
+                                "ADDRESS",
+                                "ADDRESS-CITY",
+                                "ADDRESS-POSTALCODE",
+                                "ADDRESS-COUNTRY",
+                                "EMAIL",
+                                "CREATED-BY",
+                                "SOAPBOX"
+                            };
+
+                            if (sanitizable.Contains(key))
+                            {
+                                headers[key] = SanitizeHeaderValue(value, key);
+                            }
+                            else
+                            {
+                                headers[key] = value;
+                            }
+                        }
                 }
             }
-            else if (!string.IsNullOrWhiteSpace(line))
+
+            _logFile = new CabrilloLogFile
             {
-                int idx = line.IndexOf(':');
-                    if (idx > 0)
-                    {
-                        string key = line.Substring(0, idx).Trim();
-                        string value = line.Substring(idx + 1).Trim();
+                Headers = headers,
+                Entries = entries,
+                SkippedEntries = skipped
+            };
 
-                        // Only apply sanitizer to a conservative list of header keys that may contain
-                        // long string values. The sanitizer itself is conservative and will no-op for
-                        // short values (<= 13 chars). Keys are compared case-insensitively.
-                        HashSet<string> sanitizable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                        {
-                            "LOCATION",
-                            "CALLSIGN",
-                            "CLUB",
-                            "NAME",
-                            "ADDRESS",
-                            "ADDRESS-CITY",
-                            "ADDRESS-POSTALCODE",
-                            "ADDRESS-COUNTRY",
-                            "EMAIL",
-                            "CREATED-BY",
-                            "SOAPBOX"
-                        };
+            _entries.Clear();
+            _entries.AddRange(entries);
 
-                        if (sanitizable.Contains(key))
-                        {
-                            headers[key] = SanitizeHeaderValue(value, key);
-                        }
-                        else
-                        {
-                            headers[key] = value;
-                        }
-                    }
+            // If there are parsed QSO entries but no CALLSIGN header, record a skipped-header item so callers
+            // can inspect problems. Do not throw here to keep import tolerant for unit tests and tools.
+            if (_logFile.Entries.Count > 0)
+            {
+                if (!_logFile.Headers.ContainsKey("CALLSIGN") || string.IsNullOrWhiteSpace(_logFile.Headers["CALLSIGN"]))
+                {
+                    skipped.Add(new SkippedEntryInfo { SourceLineNumber = null, Reason = "Missing CALLSIGN header", RawLine = null });
+                }
             }
+
+            return OperationResult.Success(Unit.Value);
         }
-
-        _logFile = new CabrilloLogFile
+        catch (OperationCanceledException)
         {
-            Headers = headers,
-            Entries = entries,
-            SkippedEntries = skipped
-        };
-
-        _entries.Clear();
-        _entries.AddRange(entries);
-
-        // If there are parsed QSO entries but no CALLSIGN header, record a skipped-header item so callers
-        // can inspect problems. Do not throw here to keep import tolerant for unit tests and tools.
-        if (_logFile.Entries.Count > 0)
+            // Preserve cancellation semantics by propagating
+            throw;
+        }
+        catch (Exception ex)
         {
-            if (!_logFile.Headers.ContainsKey("CALLSIGN") || string.IsNullOrWhiteSpace(_logFile.Headers["CALLSIGN"]))
-            {
-                skipped.Add(new SkippedEntryInfo { SourceLineNumber = null, Reason = "Missing CALLSIGN header", RawLine = null });
-            }
+            // Convert unexpected exceptions into a failure OperationResult. Caller may log Diagnostic.
+            return OperationResult.Failure<Unit>($"Failed to import file: {ex.Message}", ResponseStatus.Error, ex);
         }
     }
 
