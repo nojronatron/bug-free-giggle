@@ -149,7 +149,8 @@ public class OrderPreservationTests
             Assert.True(dupResult2.IsSuccess);
             var dup = dupResult2.Value;
 
-            p.ExportFile(Path.Combine(Path.GetTempPath(), "export_out_" + Guid.NewGuid()));
+            var exportResult = p.ExportFileResult(Path.Combine(Path.GetTempPath(), "export_out_" + Guid.NewGuid()));
+            Assert.True(exportResult.IsSuccess);
             // read the last created file by matching prefix
             var exported = Directory.GetFiles(Path.GetTempPath(), "export_out_*.log");
             Assert.NotEmpty(exported);

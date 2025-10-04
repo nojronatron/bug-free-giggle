@@ -127,8 +127,16 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
         if (!string.IsNullOrWhiteSpace(export))
         {
-            processor.ExportFile(export);
-            Console.WriteLine($"Exported: {export}");
+            var res = processor.ExportFileResult(export);
+            if (res.IsSuccess)
+            {
+                Console.WriteLine($"Exported: {export}");
+            }
+            else
+            {
+                Console.WriteLine($"Export failed: {res.ErrorMessage}");
+                if (debug && res.Diagnostic != null) Console.WriteLine(res.Diagnostic.ToString());
+            }
         }
     }
     catch (Exception ex)

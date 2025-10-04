@@ -118,8 +118,9 @@ public class CabrilloLogProcessorTests
         var exportFile = ExportPath + "_crud_integ.log";
         if (File.Exists(exportFile)) File.Delete(exportFile);
 
-        processor.ExportFile(ExportPath + "_crud_integ");
-        Assert.True(File.Exists(exportFile));
+    var r = processor.ExportFileResult(ExportPath + "_crud_integ");
+    Assert.True(r.IsSuccess);
+    Assert.True(File.Exists(exportFile));
 
         var lines = File.ReadAllLines(exportFile);
         Assert.Contains(lines, l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));

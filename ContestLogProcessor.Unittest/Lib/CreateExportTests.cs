@@ -92,7 +92,8 @@ public class CreateExportTests
             if (File.Exists(expectedFile)) File.Delete(expectedFile);
 
             // Call ExportFile with a path that lacks the .log extension
-            processor.ExportFile(basePath);
+            var r = processor.ExportFileResult(basePath);
+            Assert.True(r.IsSuccess);
 
             Assert.True(File.Exists(expectedFile), "ExportFile should append .log when writing files.");
 
@@ -114,7 +115,9 @@ public class CreateExportTests
         try
         {
             if (File.Exists(tmp)) File.Delete(tmp);
-            Assert.Throws<InvalidOperationException>(() => processor.ExportFile(tmp));
+            var fail = processor.ExportFileResult(tmp);
+            Assert.False(fail.IsSuccess);
+            Assert.Equal(ResponseStatus.Error, fail.Status);
         }
         finally
         {

@@ -1071,4 +1071,32 @@ public class CabrilloLogProcessor : ILogProcessor
         string content = string.Join(crlf, lines) + crlf;
         File.WriteAllText(filePath, content);
     }
+
+    /// <summary>
+    /// OperationResult-based wrapper for ExportFile to support the new API on ILogProcessor.
+    /// </summary>
+    public OperationResult<Unit> ExportFileResult(string filePath, bool useCanonicalFormat = true)
+    {
+        try
+        {
+            ExportFile(filePath, useCanonicalFormat);
+            return OperationResult.Success(Unit.Value);
+        }
+        catch (ArgumentNullException an)
+        {
+            return OperationResult.Failure<Unit>(an.Message, ResponseStatus.BadFormat, an);
+        }
+        catch (DirectoryNotFoundException dn)
+        {
+            return OperationResult.Failure<Unit>(dn.Message, ResponseStatus.NotFound, dn);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // preserve cancellation semantics
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<Unit>("Failed to export file.", ResponseStatus.Error, ex);
+        }
+    }
 }

@@ -25,6 +25,11 @@ public interface ILogProcessor
     /// Implementations should propagate OperationCanceledException for cancellations.
     /// </summary>
     OperationResult<Unit> ImportFileResult(string filePath);
+    /// <summary>
+    /// Export the in-memory log to a file. New API returns an OperationResult indicating success/failure.
+    /// </summary>
+    OperationResult<Unit> ExportFileResult(string filePath, bool useCanonicalFormat = true);
+
     void ExportFile(string filePath, bool useCanonicalFormat = true);
 
     // CRUD operations

@@ -44,7 +44,8 @@ namespace ContestLogProcessor.Unittest.Lib
 
                 // Export to a temp output and re-import to verify
                 string outFile = Path.Combine(Path.GetTempPath(), "bulk-inplace-test.log");
-                proc.ExportFile(outFile);
+                var exportResult = proc.ExportFileResult(outFile);
+                Assert.True(exportResult.IsSuccess);
 
                 CabrilloLogProcessor verify = new CabrilloLogProcessor();
                 verify.ImportFile(outFile);
@@ -83,7 +84,8 @@ namespace ContestLogProcessor.Unittest.Lib
 
                 CabrilloLogProcessor proc = new CabrilloLogProcessor();
                 proc.ImportFile(temp);
-                proc.ExportFile(outFile);
+                var exportRes = proc.ExportFileResult(outFile);
+                Assert.True(exportRes.IsSuccess);
 
                 byte[] data = File.ReadAllBytes(outFile);
                 // Must end with CRLF on Windows (\r\n)
