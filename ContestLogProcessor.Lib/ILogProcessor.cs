@@ -20,6 +20,11 @@ public interface ILogProcessor
     }
     // File operations
     void ImportFile(string filePath);
+    /// <summary>
+    /// Import file with an OperationResult return that describes success or failure.
+    /// Implementations should propagate OperationCanceledException for cancellations.
+    /// </summary>
+    OperationResult<Unit> ImportFileResult(string filePath);
     void ExportFile(string filePath, bool useCanonicalFormat = true);
 
     // CRUD operations
