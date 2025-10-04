@@ -62,6 +62,11 @@ public interface ILogProcessor
     OperationResult<IEnumerable<LogEntry>> ReadEntriesResult(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
     LogEntry? GetEntryById(string id);
     /// <summary>
+    /// OperationResult-based variant of GetEntryById. Returns Success with the found entry (defensive clone)
+    /// or a Failure with ResponseStatus.NotFound when no entry exists for the provided id.
+    /// </summary>
+    OperationResult<LogEntry> GetEntryByIdResult(string id);
+    /// <summary>
     /// Update an existing entry by id using the provided edit action. Returns an OperationResult indicating success or failure.
     /// Use OperationResult.Unit for void-like semantics; callers may inspect ErrorMessage and Diagnostic on failure.
     /// </summary>

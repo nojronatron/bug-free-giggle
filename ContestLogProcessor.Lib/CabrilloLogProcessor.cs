@@ -993,6 +993,37 @@ public class CabrilloLogProcessor : ILogProcessor
         return found?.Clone();
     }
 
+    /// <summary>
+    /// OperationResult-based wrapper for GetEntryById to support the new API on ILogProcessor.
+    /// Returns Success with a defensive clone of the found entry, or NotFound when no entry exists.
+    /// </summary>
+    public OperationResult<LogEntry> GetEntryByIdResult(string id)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return OperationResult.Failure<LogEntry>("Id must not be null or whitespace.", ResponseStatus.BadFormat);
+            }
+
+            LogEntry? found = GetEntryById(id);
+            if (found == null)
+            {
+                return OperationResult.Failure<LogEntry>($"No entry found with id {id}", ResponseStatus.NotFound);
+            }
+
+            return OperationResult.Success(found);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // preserve cancellation semantics
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<LogEntry>("Failed to get entry by id.", ResponseStatus.Error, ex);
+        }
+    }
+
     public bool UpdateEntry(string id, Action<LogEntry> editAction)
     {
         if (string.IsNullOrWhiteSpace(id)) return false;
