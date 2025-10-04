@@ -162,14 +162,15 @@ public class DuplicateCommandHandler : ICommandHandler
 
         foreach (string targetId in targets)
         {
-            try
+            OperationResult<LogEntry> res = ctx.Processor.DuplicateEntryResult(targetId, field, newValue);
+            if (res.IsSuccess && res.Value != null)
             {
-                ctx.Processor.DuplicateEntry(targetId, field, newValue);
                 ctx.Console.WriteLine("Duplicated entry.");
             }
-            catch (System.Exception ex)
+            else
             {
-                ctx.Console.WriteLine($"Duplicate failed: {ex.Message}");
+                ctx.Console.WriteLine($"Duplicate failed: {res.ErrorMessage}");
+                if (ctx.Debug && res.Diagnostic != null) ctx.Console.WriteLine($"Diagnostic: {res.Diagnostic}");
             }
         }
 

@@ -76,7 +76,9 @@ public class OrderPreservationTests
 
             var entriesBefore = p.ReadEntries().ToList();
             var source = entriesBefore[0];
-            var dup = p.DuplicateEntry(source.Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
+            var dupResult = p.DuplicateEntryResult(source.Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
+            Assert.True(dupResult.IsSuccess);
+            var dup = dupResult.Value;
 
             var entries = p.ReadEntries().ToList();
             int sourceIndex = entries.FindIndex(e => e.Id == source.Id);
@@ -143,7 +145,9 @@ public class OrderPreservationTests
 
             // Duplicate first entry so order becomes: orig1, dup1, orig2
             var entriesBefore = p.ReadEntries().ToList();
-            var dup = p.DuplicateEntry(entriesBefore[0].Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
+            var dupResult2 = p.DuplicateEntryResult(entriesBefore[0].Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
+            Assert.True(dupResult2.IsSuccess);
+            var dup = dupResult2.Value;
 
             p.ExportFile(Path.Combine(Path.GetTempPath(), "export_out_" + Guid.NewGuid()));
             // read the last created file by matching prefix

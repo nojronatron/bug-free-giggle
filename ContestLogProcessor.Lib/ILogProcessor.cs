@@ -39,9 +39,14 @@ public interface ILogProcessor
     /// </summary>
     LogEntry CreateEntry(LogEntry entry);
     /// <summary>
-    /// Duplicate an existing entry identified by id. The returned entry is a new stored copy.
+    /// Duplicate an existing entry identified by id and return the stored duplicate as an OperationResult.
     /// The duplicate will copy all fields except for Id (new GUID) and may replace a SentExchange field
     /// (SentSig, SentMsg, or TheirCall) when <paramref name="field"/> and <paramref name="newValue"/> are provided.
+    /// </summary>
+    OperationResult<LogEntry> DuplicateEntryResult(string id, DuplicateField field = DuplicateField.None, string? newValue = null);
+
+    /// <summary>
+    /// Obsolete shim preserving the original synchronous DuplicateEntry behavior. New callers should use DuplicateEntryResult.
     /// </summary>
     LogEntry DuplicateEntry(string id, DuplicateField field = DuplicateField.None, string? newValue = null);
     IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);

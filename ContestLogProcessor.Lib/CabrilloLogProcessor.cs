@@ -932,6 +932,34 @@ public class CabrilloLogProcessor : ILogProcessor
         return copy.Clone();
     }
 
+    /// <summary>
+    /// OperationResult-based wrapper for DuplicateEntry to support the new API on ILogProcessor.
+    /// </summary>
+    public OperationResult<LogEntry> DuplicateEntryResult(string id, ILogProcessor.DuplicateField field = ILogProcessor.DuplicateField.None, string? newValue = null)
+    {
+        try
+        {
+            LogEntry dup = DuplicateEntry(id, field, newValue);
+            return OperationResult.Success(dup);
+        }
+        catch (ArgumentNullException an)
+        {
+            return OperationResult.Failure<LogEntry>(an.Message, ResponseStatus.BadFormat, an);
+        }
+        catch (ArgumentException a)
+        {
+            return OperationResult.Failure<LogEntry>(a.Message, ResponseStatus.NotFound, a);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // preserve cancellation semantics
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<LogEntry>("Failed to duplicate entry.", ResponseStatus.Error, ex);
+        }
+    }
+
     public LogEntry? GetEntryById(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;

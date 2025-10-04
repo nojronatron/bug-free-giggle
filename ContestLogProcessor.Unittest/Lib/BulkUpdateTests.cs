@@ -138,7 +138,8 @@ namespace ContestLogProcessor.Unittest.Lib
                 // Act: duplicate every entry and change TheirCall to NEWCALL
                 foreach (var e in entries)
                 {
-                    proc.DuplicateEntry(e.Id, ILogProcessor.DuplicateField.TheirCall, "NEWCALL");
+                    var r = proc.DuplicateEntryResult(e.Id, ILogProcessor.DuplicateField.TheirCall, "NEWCALL");
+                    Assert.True(r.IsSuccess);
                 }
 
                 // Inspect in-memory entries to verify duplicates were added and had TheirCall updated

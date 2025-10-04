@@ -46,7 +46,9 @@ public class CreateExportTests
         Assert.NotNull(original);
 
     string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
-    var dup = processor.DuplicateEntry(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
+    var dupResult = processor.DuplicateEntryResult(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
+    Assert.True(dupResult.IsSuccess);
+    var dup = dupResult.Value;
 
         Assert.NotNull(dup);
         Assert.NotEqual(original.Id, dup.Id);
