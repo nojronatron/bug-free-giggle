@@ -34,12 +34,12 @@ namespace ContestLogProcessor.Unittest.Lib
                 // Act: update SentMsg in-place
                 foreach (var e in entries)
                 {
-                    bool ok = proc.UpdateEntry(e.Id, entry =>
+                    var r = proc.UpdateEntryResult(e.Id, entry =>
                     {
                         if (entry.SentExchange == null) entry.SentExchange = new Exchange();
                         entry.SentExchange.SentMsg = "ZZZ";
                     });
-                    Assert.True(ok, "UpdateEntry failed for an entry");
+                    Assert.True(r.IsSuccess, "UpdateEntryResult failed for an entry");
                 }
 
                 // Export to a temp output and re-import to verify

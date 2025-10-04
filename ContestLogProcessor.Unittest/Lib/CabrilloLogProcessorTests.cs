@@ -75,8 +75,8 @@ public class CabrilloLogProcessorTests
         Assert.Equal("UNITTEST", fetched.CallSign);
 
         // Update
-        bool updatedResult = processor.UpdateEntry(created.Id, e => e.Band = "20m");
-        Assert.True(updatedResult);
+    var updatedResult = processor.UpdateEntryResult(created.Id, e => e.Band = "20m");
+    Assert.True(updatedResult.IsSuccess);
         Assert.Contains(updated, u => u.Id == created.Id && u.Band == "20m");
 
         // Delete
@@ -112,7 +112,8 @@ public class CabrilloLogProcessorTests
     var createdResult = processor.CreateEntryResult(newEntry);
     Assert.True(createdResult.IsSuccess);
     var created = createdResult.Value;
-    processor.UpdateEntry(created.Id, e => e.Band = "40m");
+    var updatedResult2 = processor.UpdateEntryResult(created.Id, e => e.Band = "40m");
+    Assert.True(updatedResult2.IsSuccess);
 
         var exportFile = ExportPath + "_crud_integ.log";
         if (File.Exists(exportFile)) File.Delete(exportFile);

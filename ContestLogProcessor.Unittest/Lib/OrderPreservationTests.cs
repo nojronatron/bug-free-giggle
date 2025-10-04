@@ -113,8 +113,8 @@ public class OrderPreservationTests
             var target = entries[1];
             int beforeIndex = entries.IndexOf(target);
 
-            bool ok = p.UpdateEntry(target.Id, e => { if (e.SentExchange != null) e.SentExchange.SentMsg = "CHE"; });
-            Assert.True(ok);
+            var updateResult = p.UpdateEntryResult(target.Id, e => { if (e.SentExchange != null) e.SentExchange.SentMsg = "CHE"; });
+            Assert.True(updateResult.IsSuccess);
 
             var entriesAfter = p.ReadEntries().ToList();
             int afterIndex = entriesAfter.FindIndex(e => e.Id == target.Id);

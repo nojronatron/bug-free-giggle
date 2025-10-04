@@ -981,6 +981,35 @@ public class CabrilloLogProcessor : ILogProcessor
         return true;
     }
 
+    /// <summary>
+    /// OperationResult-based wrapper for UpdateEntry to support the new API on ILogProcessor.
+    /// </summary>
+    public OperationResult<Unit> UpdateEntryResult(string id, Action<LogEntry> editAction)
+    {
+        try
+        {
+            bool ok = UpdateEntry(id, editAction);
+            if (ok) return OperationResult.Success(Unit.Value);
+            return OperationResult.Failure<Unit>($"No entry found with id {id}", ResponseStatus.NotFound);
+        }
+        catch (ArgumentNullException an)
+        {
+            return OperationResult.Failure<Unit>(an.Message, ResponseStatus.BadFormat, an);
+        }
+        catch (ArgumentException a)
+        {
+            return OperationResult.Failure<Unit>(a.Message, ResponseStatus.BadFormat, a);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // preserve cancellation semantics
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<Unit>("Failed to update entry.", ResponseStatus.Error, ex);
+        }
+    }
+
     public bool DeleteEntry(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return false;
