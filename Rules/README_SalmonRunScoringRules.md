@@ -90,7 +90,7 @@ Each LogEntry must meet these minimum requirements in order to be eligible for s
   - Mode
 - Mode must match one of 'PH' or 'CW'.
 - Call must match at least one Header 'CALLSIGN' entry value:
-  - If CALLSIGN Header is missing, or there are no matches, return an error message requesting the header be updated so that 'at least one CALLSIGN matches at least on LogEntry Call field'. Stop processing the log.
+  - If CALLSIGN Header is missing, has empty or whitespace value, or there are no match of Call to any comma or space-separated entry in CALLSIGN header, return an error message requesting the header be updated so that 'at least one CALLSIGN matches at least on LogEntry Call field'. Stop processing the log.
 - SentMsg must match one item within the list of abbreviations for [WA Counties](#washington-state-county-abbreviations), [US States](#us-state-and-territory-abbreviations), [Canadian Provinces](#arrl-canadian-province-and-territories-multipliers-list), or [DXCC Entities](#arrl-registered-dxcc-entities-abbreviations):
 - LogEntries beginning with `X-QSO:` cannot be scored and are not eligible for scoring in any way.
 
