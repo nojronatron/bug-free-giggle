@@ -48,7 +48,7 @@ When it is time to create additional projects in this Solution:
 - Always ask before adding, updating, or removing NuGet packages
 - When writing unit tests use xUnit
 - Use a NuGet package like Moq to enable mocking only when necessary to implement and run a unit test
-- The solution may be deployed to Docker containers for portability
+- Projects within the solution (except the Unittest project) may be deployed to Docker containers for portability
 
 ## Architecture Guidelines
 
@@ -57,15 +57,53 @@ When it is time to create additional projects in this Solution:
 - Projects should utilize Logging features (i.e. `<ILogger>`) and have a way to log output
 - ContestLogProcessor.Lib is the core processing component and other projects are for UI, testing, or other purposes
 - Each project should have a Docker container, except for `ContestLogProcessor.Lib` which is a dependency of the other projects
-- The Unittest Project should NOT be Dockerized
 
-### Exception Handling
+### Exception handling and Result contract
 
-- The Console should catch and handle exceptions, returning a message to the user with information on what went wrong and how to fix it with altered user input
-- Design classes so that exceptions can be avoided where possible
-- Use try-catch-finally blocks to recover from exceptions, including cancellation/asynchronous exceptions
-- Exceptions that must be returned to the caller should be thrown using the `throw` keyword so that the stack trace is maintained
-	- Use a finally block to clean up resources
+This project follows a consistent, C#-idiomatic approach to error handling: public library APIs return an immutable
+OperationResult<T> for recoverable failures; exceptions are reserved for programmer/runtime errors and truly
+unexpected conditions. For operations that are conceptually void, use OperationResult<Unit> (a small Unit/Empty type).
+
+Key policies (high level):
+
+- Validate early. Design public APIs and classes so that invalid inputs are detected and rejected before doing work.
+
+- Recoverable vs programmer/runtime errors:
+  - Recoverable errors: return a failure OperationResult<T>. The OperationResult carries a machine-friendly
+    ResponseStatus, a concise user-facing ErrorMessage, and an optional Diagnostic (Exception) for logging.
+  - Programmer/runtime errors (null reference, failed invariants, corrupted internal state): throw an exception.
+    These indicate bugs that should be fixed rather than normal runtime conditions.
+
+- Void-like operations: return OperationResult<Unit> rather than throwing for expected, recoverable error conditions.
+  This keeps the public API surface consistent and easy to compose.
+
+- Catch only what you can handle. Avoid blanket catches of System.Exception in library code; instead let
+  higher-level callers (for example the Console app) catch and decide how to convert to OperationResult or log.
+
+- Converting exceptions to OperationResult: do this at well-defined boundaries. When you catch an exception to
+  convert it into a failure OperationResult, populate ErrorMessage (user-facing) and Diagnostic (developer-facing)
+  so callers can log the diagnostic when appropriate (for example when a --debug flag is set).
+
+- Rethrow vs wrap:
+  - If you only need to propagate the same exception, rethrow with `throw;` to preserve the original stack trace.
+  - If you must add contextual information, wrap the original exception as the InnerException of a new exception
+    that contains the extra context. Be explicit in comments that the stack trace will reflect the wrapping point.
+  - If you need to preserve the original stack trace while adding context, consider `ExceptionDispatchInfo.Capture(ex).Throw()`
+    (use sparingly and document intent).
+
+- Cancellation semantics:
+  - Prefer to propagate OperationCanceledException (do not silently convert it into a generic failure). If a
+    particular API chooses to surface cancellation as an OperationResult with a ResponseStatus.Cancelled, document it
+    clearly and consistently across the API surface.
+
+- Logging responsibility:
+  - Library code should not write directly to console or user-facing streams. Return diagnostics in the
+    OperationResult and let the calling application (Console) decide how and when to log diagnostic details.
+  - Diagnostic (Exception) data contained in OperationResult is intended for logs only and must not be shown to end users
+    unless an explicit debug flag is set.
+
+See [Result object specification](../ContestLogProcessor.Lib/Docs/ResultObjectDefinition.md) for exact fields,
+invariants, and usage examples.
 
 ### ContestLogProcessor.Console
 
