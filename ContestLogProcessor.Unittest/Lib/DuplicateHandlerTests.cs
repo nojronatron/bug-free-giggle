@@ -14,7 +14,8 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             var proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            proc.ImportFile(path);
+            var imp = proc.ImportFileResult(path);
+            Assert.True(imp.IsSuccess);
 
             // Before count
             int before = proc.ReadEntries().ToList().Count;
@@ -38,9 +39,10 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             var proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            proc.ImportFile(path);
+            var imp2 = proc.ImportFileResult(path);
+            Assert.True(imp2.IsSuccess);
 
-            int before = proc.ReadEntries().ToList().Count;
+            int before = proc.ReadEntriesResult().Value!.ToList().Count;
 
             // Provide 'all' to duplicate all matches and '' to skip field change
             var console = new TestConsole(new string?[] { "all", "" });
@@ -61,7 +63,8 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             var proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            proc.ImportFile(path);
+            var imp3 = proc.ImportFileResult(path);
+            Assert.True(imp3.IsSuccess);
 
             var console = new TestConsole(new string?[] { });
             var ctx = new CommandContext(proc, console, false);

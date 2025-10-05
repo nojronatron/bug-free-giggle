@@ -31,10 +31,11 @@ public class ImportStreamingTests
             File.WriteAllLines(tmp, lines);
 
             var proc = new CabrilloLogProcessor();
-            proc.ImportFile(tmp);
+            var imp = proc.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
             // Only the QSO before END-OF-LOG should be imported
-            var entries = proc.ReadEntries().ToList();
+            var entries = proc.ReadEntriesResult().Value!.ToList();
             Assert.Single(entries);
 
             var first = entries[0];

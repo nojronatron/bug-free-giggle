@@ -13,7 +13,8 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             var proc = new CabrilloLogProcessor();
             string path = LocateTestData("K7XXX_Test_WithDX.log");
-            proc.ImportFile(path);
+            var imp = proc.ImportFileResult(path);
+            Assert.True(imp.IsSuccess);
 
             var console = new TestConsole(new string?[] { });
             var ctx = new CommandContext(proc, console, false);
@@ -30,7 +31,8 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             var proc = new CabrilloLogProcessor();
             string path = LocateTestData("K7XXX_Test_WithDX.log");
-            proc.ImportFile(path);
+            var imp2 = proc.ImportFileResult(path);
+            Assert.True(imp2.IsSuccess);
             // Provide inputs: 'all' then choose '3' (TheirCall) then value 'ZZZ'
             var console = new TestConsole(new string?[] { "all", "3", "ZZZ" });
             var ctx = new CommandContext(proc, console, false);

@@ -14,8 +14,9 @@ public class SnapshotImmutabilityTests
         string tmp = Path.GetTempFileName();
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCALLSIGN: K7XXX\r\nCREATED-BY: Test\r\nQSO: 7265 PH 2025-09-20 1715 K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
-        var proc = new CabrilloLogProcessor();
-        proc.ImportFile(tmp);
+    var proc = new CabrilloLogProcessor();
+    var imp = proc.ImportFileResult(tmp);
+    Assert.True(imp.IsSuccess);
 
         // Take a snapshot and mutate it
     CabrilloLogFileSnapshot? snap = proc.GetReadOnlyLogFile();

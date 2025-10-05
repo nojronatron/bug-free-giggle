@@ -26,9 +26,10 @@ namespace ContestLogProcessor.Unittest.Lib
             try
             {
                 CabrilloLogProcessor proc = new CabrilloLogProcessor();
-                proc.ImportFile(temp);
+                var imp = proc.ImportFileResult(temp);
+                Assert.True(imp.IsSuccess);
 
-                var entries = proc.ReadEntries().ToList();
+                var entries = proc.ReadEntriesResult().Value!.ToList();
                 Assert.Equal(2, entries.Count);
 
                 // Act: update SentMsg in-place
@@ -48,8 +49,9 @@ namespace ContestLogProcessor.Unittest.Lib
                 Assert.True(exportResult.IsSuccess);
 
                 CabrilloLogProcessor verify = new CabrilloLogProcessor();
-                verify.ImportFile(outFile);
-                var vEntries = verify.ReadEntries().ToList();
+                var impVerify = verify.ImportFileResult(outFile);
+                Assert.True(impVerify.IsSuccess);
+                var vEntries = verify.ReadEntriesResult().Value!.ToList();
                 Assert.Equal(entries.Count, vEntries.Count);
                 foreach (var ve in vEntries)
                 {
@@ -83,7 +85,8 @@ namespace ContestLogProcessor.Unittest.Lib
                 if (File.Exists(outFile)) File.Delete(outFile);
 
                 CabrilloLogProcessor proc = new CabrilloLogProcessor();
-                proc.ImportFile(temp);
+                var imp2 = proc.ImportFileResult(temp);
+                Assert.True(imp2.IsSuccess);
                 var exportRes = proc.ExportFileResult(outFile);
                 Assert.True(exportRes.IsSuccess);
 
@@ -131,9 +134,10 @@ namespace ContestLogProcessor.Unittest.Lib
             try
             {
                 CabrilloLogProcessor proc = new CabrilloLogProcessor();
-                proc.ImportFile(temp);
+                var imp3 = proc.ImportFileResult(temp);
+                Assert.True(imp3.IsSuccess);
 
-                var entries = proc.ReadEntries().ToList();
+                var entries = proc.ReadEntriesResult().Value!.ToList();
                 int originalCount = entries.Count;
                 Assert.Equal(2, originalCount);
 

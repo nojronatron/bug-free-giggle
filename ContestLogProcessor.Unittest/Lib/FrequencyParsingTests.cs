@@ -24,9 +24,10 @@ public class FrequencyParsingTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntries().FirstOrDefault();
+            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
             Assert.True(e.FrequencyIsValid, "Frequency should be recognized as valid");
             Assert.Equal("40m", e.Band);
@@ -54,9 +55,10 @@ public class FrequencyParsingTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntries().FirstOrDefault();
+            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
         // Band token placed into Frequency is now mapped to the band's low kHz and considered valid
         Assert.True(e.FrequencyIsValid);
@@ -86,9 +88,10 @@ public class FrequencyParsingTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntries().FirstOrDefault();
+            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
             // fractional part truncated -> 7053 kHz, which is within 40m
             Assert.True(e.FrequencyIsValid, "Floating frequency should be treated as valid after truncation");
@@ -118,9 +121,10 @@ public class FrequencyParsingTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntries().FirstOrDefault();
+            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
             Assert.False(e.FrequencyIsValid, "Frequency token containing unit markers should be invalid");
             Assert.Null(e.Band);
@@ -151,9 +155,10 @@ public class FrequencyParsingTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-            var entries = p.ReadEntries().ToList();
+            var entries = p.ReadEntriesResult().Value!.ToList();
             Assert.Equal(2, entries.Count);
 
             Assert.False(entries[0].FrequencyIsValid, "Frequency 100 (in excluded low range) should be invalid");

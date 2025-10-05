@@ -27,7 +27,8 @@ public class OrderPreservationTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
             // Create a new entry with timestamp 2023-09-20 17:16 which should be inserted after the two 1716 entries
             var dt = DateTime.SpecifyKind(new DateTime(2023, 9, 20, 17, 16, 0), DateTimeKind.Utc);
@@ -72,9 +73,10 @@ public class OrderPreservationTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp2 = p.ImportFileResult(tmp);
+            Assert.True(imp2.IsSuccess);
 
-            var entriesBefore = p.ReadEntries().ToList();
+            var entriesBefore = p.ReadEntriesResult().Value!.ToList();
             var source = entriesBefore[0];
             var dupResult = p.DuplicateEntryResult(source.Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
             Assert.True(dupResult.IsSuccess);
@@ -107,9 +109,10 @@ public class OrderPreservationTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp3 = p.ImportFileResult(tmp);
+            Assert.True(imp3.IsSuccess);
 
-            var entries = p.ReadEntries().ToList();
+            var entries = p.ReadEntriesResult().Value!.ToList();
             var target = entries[1];
             int beforeIndex = entries.IndexOf(target);
 
@@ -141,7 +144,8 @@ public class OrderPreservationTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp4 = p.ImportFileResult(tmp);
+            Assert.True(imp4.IsSuccess);
 
             // Duplicate first entry so order becomes: orig1, dup1, orig2
             var entriesBefore = p.ReadEntries().ToList();

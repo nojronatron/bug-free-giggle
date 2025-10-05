@@ -25,9 +25,10 @@ public class ParseExchangeTests
             File.WriteAllLines(filePath, lines);
 
             var processor = new CabrilloLogProcessor();
-            processor.ImportFile(filePath);
+            var imp = processor.ImportFileResult(filePath);
+            Assert.True(imp.IsSuccess);
 
-            var entry = processor.ReadEntries().FirstOrDefault();
+            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
 
             // Verify the sent exchange SentMsg parsed as "OKA" and TheirCall parsed as "AC7DC"
@@ -55,9 +56,10 @@ public class ParseExchangeTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntries().FirstOrDefault();
+            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
             Assert.NotNull(e.SentExchange);
             Assert.Equal("59", e.SentExchange.SentSig);
@@ -85,9 +87,10 @@ public class ParseExchangeTests
         {
             File.WriteAllLines(tmp, lines);
             var p = new CabrilloLogProcessor();
-            p.ImportFile(tmp);
+            var imp = p.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntries().FirstOrDefault();
+            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
 
             // The processor should have recorded skipped entries for invalid tokens

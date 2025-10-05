@@ -14,7 +14,8 @@ public class CreateExportTests
     public void CreateEntry_AfterImport_IsVisibleInReadEntries()
     {
         var processor = new CabrilloLogProcessor();
-        processor.ImportFile(SampleLogPath);
+        var imp = processor.ImportFileResult(SampleLogPath);
+        Assert.True(imp.IsSuccess);
 
         string uniqueCall = "UNITTEST_CREATE_" + Guid.NewGuid().ToString("N");
         var newEntry = new LogEntry
@@ -32,7 +33,7 @@ public class CreateExportTests
     var created = createdResult.Value;
     Assert.NotNull(created);
 
-        var found = processor.ReadEntries().Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
+        var found = processor.ReadEntriesResult().Value!.Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
         Assert.True(found, "Created entry should be visible via ReadEntries after import.");
     }
 
@@ -40,9 +41,10 @@ public class CreateExportTests
     public void DuplicateEntry_CopiesAndAllowsSentMsgOverride()
     {
         var processor = new CabrilloLogProcessor();
-        processor.ImportFile(SampleLogPath);
+        var imp = processor.ImportFileResult(SampleLogPath);
+        Assert.True(imp.IsSuccess);
 
-        var original = processor.ReadEntries().FirstOrDefault();
+        var original = processor.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(original);
 
     string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
@@ -68,7 +70,8 @@ public class CreateExportTests
     public void ExportFile_AppendsLogExtension_And_IncludesCreatedEntry()
     {
         var processor = new CabrilloLogProcessor();
-        processor.ImportFile(SampleLogPath);
+        var imp2 = processor.ImportFileResult(SampleLogPath);
+        Assert.True(imp2.IsSuccess);
 
         string uniqueCall = "EXPORTTEST_" + Guid.NewGuid().ToString("N");
         var newEntry = new LogEntry

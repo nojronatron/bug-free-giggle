@@ -29,10 +29,11 @@ public class SkippableEntriesTests
         string source = FindTestDataPath("K7XXX_Test_Skippable_Entries.log");
         Assert.True(File.Exists(source), "Test data file must exist");
 
-        var p = new CabrilloLogProcessor();
-        p.ImportFile(source);
+    var p = new CabrilloLogProcessor();
+    var imp = p.ImportFileResult(source);
+    Assert.True(imp.IsSuccess);
 
-        var entries = p.ReadEntries().ToList();
+    var entries = p.ReadEntriesResult().Value!.ToList();
         // Expect 10 QSO/X-QSO entries recognized (one malformed X0QSO header line should not produce a QSO)
         Assert.Equal(10, entries.Count);
     }
@@ -43,8 +44,9 @@ public class SkippableEntriesTests
         string source = FindTestDataPath("K7XXX_Test_Skippable_Entries.log");
         Assert.True(File.Exists(source), "Test data file must exist");
 
-        var p = new CabrilloLogProcessor();
-        p.ImportFile(source);
+    var p = new CabrilloLogProcessor();
+    var imp = p.ImportFileResult(source);
+    Assert.True(imp.IsSuccess);
 
         var log = new CabrilloLogFile();
         if (p.TryGetHeader("CALLSIGN", out string? call) && !string.IsNullOrWhiteSpace(call))
@@ -53,11 +55,11 @@ public class SkippableEntriesTests
         }
         else
         {
-            string? inferred = p.ReadEntries().FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+            string? inferred = p.ReadEntriesResult().Value!.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
             if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
         }
 
-        log.Entries = p.ReadEntries().ToList();
+    log.Entries = p.ReadEntriesResult().Value!.ToList();
 
     SalmonRunScoringService svc = new SalmonRunScoringService();
     var resOp = svc.CalculateScoreResult(log);

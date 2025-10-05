@@ -31,7 +31,8 @@ namespace ContestLogProcessor.Unittest.Lib
                 var proc = new CabrilloLogProcessor(capture);
 
                 // Act
-                proc.ImportFile(tempPath);
+                var imp = proc.ImportFileResult(tempPath);
+                Assert.True(imp.IsSuccess);
 
                 // Assert
                 // The header should be present but sanitized in the read-only snapshot
