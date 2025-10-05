@@ -21,7 +21,15 @@ public class ViewCommandHandler : ICommandHandler
                 pageSize = Math.Max(1, parsed);
             }
 
-            List<LogEntry> entries = ctx.Processor.ReadEntries().ToList();
+            OperationResult<IEnumerable<LogEntry>> readOp = ctx.Processor.ReadEntriesResult();
+            if (!readOp.IsSuccess)
+            {
+                ctx.Console.WriteLine($"Operation failed: {readOp.ErrorMessage}");
+                if (ctx.Debug && readOp.Diagnostic != null) ctx.Console.WriteLine(readOp.Diagnostic.ToString());
+                return;
+            }
+
+            List<LogEntry> entries = readOp.Value!.ToList();
             int total = entries.Count;
             if (total == 0)
             {

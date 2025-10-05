@@ -47,8 +47,16 @@ public class ExportCommandHandler : ICommandHandler
                 }
             }
 
-            ctx.Processor.ExportFile(path);
-            ctx.Console.WriteLine($"Exported: {path}");
+            OperationResult<Unit> res = ctx.Processor.ExportFileResult(path);
+            if (res.IsSuccess)
+            {
+                ctx.Console.WriteLine($"Exported: {path}");
+            }
+            else
+            {
+                ctx.Console.WriteLine($"Export failed: {res.ErrorMessage}");
+                if (ctx.Debug && res.Diagnostic != null) ctx.Console.WriteLine(res.Diagnostic.ToString());
+            }
         }
         catch (Exception ex)
         {

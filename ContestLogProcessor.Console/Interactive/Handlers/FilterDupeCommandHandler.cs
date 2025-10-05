@@ -19,11 +19,34 @@ public class FilterDupeCommandHandler : ICommandHandler
 
         string filter = string.Join(' ', parts, 1, parts.Length - 1);
 
-        System.Collections.Generic.List<LogEntry> matches = ctx.Processor.ReadEntries().Where(e =>
-            (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-            (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-            e.ToCabrilloLine().IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0
-        ).ToList();
+            OperationResult<IEnumerable<LogEntry>> readOp = ctx.Processor.ReadEntriesResult();
+            if (!readOp.IsSuccess)
+            {
+                ctx.Console.WriteLine($"Operation failed: {readOp.ErrorMessage}");
+                if (ctx.Debug && readOp.Diagnostic != null) ctx.Console.WriteLine(readOp.Diagnostic.ToString());
+                return;
+            }
+
+            System.Collections.Generic.List<LogEntry> all = readOp.Value!.ToList();
+            System.Collections.Generic.List<LogEntry> matches = all.Where(e =>
+                (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (TrySafeToCabrillo(e, out string line) && line.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
+            ).ToList();
+
+        static bool TrySafeToCabrillo(LogEntry e, out string line)
+        {
+            try
+            {
+                line = e.ToCabrilloLine();
+                return true;
+            }
+            catch
+            {
+                line = string.Empty;
+                return false;
+            }
+        }
 
         if (matches.Count == 0)
         {
