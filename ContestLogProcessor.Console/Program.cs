@@ -44,8 +44,16 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
     {
         if (!string.IsNullOrWhiteSpace(import))
         {
-            processor.ImportFile(import);
-            Console.WriteLine($"Imported: {import}");
+            OperationResult<Unit> importResult = processor.ImportFileResult(import);
+            if (importResult.IsSuccess)
+            {
+                Console.WriteLine($"Imported: {import}");
+            }
+            else
+            {
+                Console.WriteLine($"Import failed: {importResult.ErrorMessage}");
+                if (debug && importResult.Diagnostic != null) Console.WriteLine(importResult.Diagnostic.ToString());
+            }
         }
 
                 if (!string.IsNullOrWhiteSpace(score))
@@ -135,9 +143,18 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
         if (list)
         {
-            foreach (LogEntry e in processor.ReadEntries())
+            OperationResult<IEnumerable<LogEntry>> readRes = processor.ReadEntriesResult();
+            if (!readRes.IsSuccess)
             {
-                Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
+                Console.WriteLine($"Failed to read entries: {readRes.ErrorMessage}");
+                if (debug && readRes.Diagnostic != null) Console.WriteLine(readRes.Diagnostic.ToString());
+            }
+            else
+            {
+                foreach (LogEntry e in readRes.Value!)
+                {
+                    Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
+                }
             }
         }
 

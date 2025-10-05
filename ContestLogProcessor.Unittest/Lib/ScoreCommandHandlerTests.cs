@@ -22,7 +22,8 @@ public class ScoreCommandHandlerTests
             "QSO: 14000 PH 2025-09-20 0300 K7XXX 59 OKA W7DX 59 ON",
             "END-OF-LOG:"
         });
-        proc.ImportFile(tmp);
+    var importRes = proc.ImportFileResult(tmp);
+    Assert.True(importRes.IsSuccess);
 
         var testConsole = new TestConsole(new string[0]);
         var ctx = new CommandContext(proc, testConsole, debug: false);
@@ -53,7 +54,8 @@ public class ScoreCommandHandlerTests
             "QSO: 7073 CW 2025-09-20 0300 K7XXX 59 OKA W7DX 59 ADA",
             "END-OF-LOG:"
         });
-        proc.ImportFile(tmp2);
+    var importRes2 = proc.ImportFileResult(tmp2);
+    Assert.True(importRes2.IsSuccess);
 
         var testConsole = new TestConsole(new string[0]);
         var ctx = new CommandContext(proc, testConsole, debug: false);
@@ -83,7 +85,8 @@ public class ScoreCommandHandlerTests
             "QSO: 28000 PH 2025-09-20 0400 K7XXX 59 OKA K1ABC 59 F",
             "END-OF-LOG:"
         });
-        proc.ImportFile(tmp3);
+    var importRes3 = proc.ImportFileResult(tmp3);
+    Assert.True(importRes3.IsSuccess);
 
     var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
     var log = new ContestLogProcessor.Lib.CabrilloLogFile();

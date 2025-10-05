@@ -11,7 +11,9 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             var proc = new CabrilloLogProcessor();
             string fake = Path.Combine(Path.GetTempPath(), "this-file-does-not-exist-xyz.log");
-            Assert.Throws<FileNotFoundException>(() => proc.ImportFile(fake));
+            var res = proc.ImportFileResult(fake);
+            Assert.False(res.IsSuccess);
+            Assert.Equal(ResponseStatus.NotFound, res.Status);
         }
 
         [Fact]
@@ -22,8 +24,11 @@ namespace ContestLogProcessor.Unittest.Lib
             try
             {
                 File.WriteAllText(tmp, string.Empty);
-                proc.ImportFile(tmp);
-                Assert.Empty(proc.ReadEntries().ToList());
+                var res = proc.ImportFileResult(tmp);
+                Assert.True(res.IsSuccess);
+                var read = proc.ReadEntriesResult();
+                Assert.True(read.IsSuccess);
+                Assert.Empty(read.Value!.ToList());
             }
             finally
             {
