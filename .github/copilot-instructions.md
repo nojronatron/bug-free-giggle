@@ -40,6 +40,9 @@ When it is time to create additional projects in this Solution:
 - Use collection expression syntax `List<string> = []` (supported in C# 12 and later)
 - Always add braces around If-then-else statement code blocks
 - Use explicit types instead of var: `Backpack EmptyGenericBackpack = new();` and `Student? FoundStudent = _entries.Find(match);`
+- Lambdas should use descriptive naming conventions including any arguments:
+  - Avoid highly abbreviated or abstract naming conventions: `...(e => e.Length >= 13)`
+  - Prefer representative argument naming: `...(entry => entry.Length >= 13)`
 
 ## Libraries and Frameworks
 
