@@ -20,6 +20,13 @@ public class DuplicateCommandHandler : ICommandHandler
 
         System.Collections.Generic.List<string> targets = new System.Collections.Generic.List<string>();
 
+        // Local helper to print OperationResult failures consistently
+        static void ReportFailure<T>(IConsole console, OperationResult<T> op, bool debug)
+        {
+            console.WriteLine($"Operation failed: {op.ErrorMessage}");
+            if (debug && op.Diagnostic != null) console.WriteLine(op.Diagnostic.ToString());
+        }
+
         if (parts[1].Equals("--index", System.StringComparison.OrdinalIgnoreCase) && parts.Length >= 3)
         {
             if (!int.TryParse(parts[2], out int idx))
@@ -28,7 +35,14 @@ public class DuplicateCommandHandler : ICommandHandler
                 return;
             }
 
-            System.Collections.Generic.List<ContestLogProcessor.Lib.LogEntry> all = ctx.Processor.ReadEntries(orderBy: e => e.QsoDateTime).ToList();
+            OperationResult<System.Collections.Generic.IEnumerable<ContestLogProcessor.Lib.LogEntry>> readOp = ctx.Processor.ReadEntriesResult(orderBy: e => e.QsoDateTime);
+            if (!readOp.IsSuccess)
+            {
+                ReportFailure(ctx.Console, readOp, ctx.Debug);
+                return;
+            }
+
+            System.Collections.Generic.List<ContestLogProcessor.Lib.LogEntry> all = readOp.Value!.ToList();
             if (idx < 0 || idx >= all.Count)
             {
                 ctx.Console.WriteLine($"Index out of range (0-{all.Count - 1}).");
@@ -39,11 +53,19 @@ public class DuplicateCommandHandler : ICommandHandler
         else if (parts[1].Equals("--filter", System.StringComparison.OrdinalIgnoreCase) && parts.Length >= 3)
         {
             string filter = parts[2];
-            System.Collections.Generic.List<ContestLogProcessor.Lib.LogEntry> matches = ctx.Processor.ReadEntries().Where(e =>
-                (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-                (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-                e.ToCabrilloLine().IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0
-            ).ToList();
+            OperationResult<System.Collections.Generic.IEnumerable<ContestLogProcessor.Lib.LogEntry>> readOp = ctx.Processor.ReadEntriesResult();
+            if (!readOp.IsSuccess)
+            {
+                ReportFailure(ctx.Console, readOp, ctx.Debug);
+                return;
+            }
+
+            System.Collections.Generic.List<ContestLogProcessor.Lib.LogEntry> matches = readOp.Value!
+                .Where(e =>
+                    (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (e.ToCabrilloLine()?.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                ).ToList();
 
             if (matches.Count == 0)
             {
@@ -94,17 +116,32 @@ public class DuplicateCommandHandler : ICommandHandler
         // Show brief summary
         if (targets.Count == 1)
         {
-            try
+            OperationResult<ContestLogProcessor.Lib.LogEntry> getOp = ctx.Processor.GetEntryByIdResult(targets[0]);
+            if (!getOp.IsSuccess)
             {
-                ContestLogProcessor.Lib.LogEntry? original = ctx.Processor.GetEntryById(targets[0]);
+                if (getOp.Status == ResponseStatus.NotFound)
+                {
+                    ctx.Console.WriteLine("Selected entry not found.");
+                }
+                else
+                {
+                    ReportFailure(ctx.Console, getOp, ctx.Debug);
+                }
+            }
+            else
+            {
+                ContestLogProcessor.Lib.LogEntry? original = getOp.Value;
                 if (original != null)
                 {
                     ctx.Console.WriteLine("About to duplicate the following entry:");
                     try { ctx.Console.WriteLine(original.ToCabrilloLine()); }
-                    catch { ctx.Console.WriteLine(original.RawLine ?? original.CallSign ?? "(no data)"); }
+                    catch (Exception ex)
+                    {
+                        if (ctx.Debug) ctx.Console.WriteLine(ex.ToString());
+                        ctx.Console.WriteLine(original.RawLine ?? original.CallSign ?? "(no data)");
+                    }
                 }
             }
-            catch { }
         }
         else
         {
@@ -112,16 +149,23 @@ public class DuplicateCommandHandler : ICommandHandler
             int listCount = System.Math.Min(10, targets.Count);
             for (int i = 0; i < listCount; i++)
             {
-                try
+                OperationResult<ContestLogProcessor.Lib.LogEntry> getOp = ctx.Processor.GetEntryByIdResult(targets[i]);
+                if (!getOp.IsSuccess)
                 {
-                    ContestLogProcessor.Lib.LogEntry? o = ctx.Processor.GetEntryById(targets[i]);
-                    if (o != null)
+                    if (ctx.Debug && getOp.Diagnostic != null) ctx.Console.WriteLine(getOp.Diagnostic.ToString());
+                    continue;
+                }
+
+                ContestLogProcessor.Lib.LogEntry? o = getOp.Value;
+                if (o != null)
+                {
+                    try { ctx.Console.WriteLine($"[{i}] {o.ToCabrilloLine()}"); }
+                    catch (Exception ex)
                     {
-                        try { ctx.Console.WriteLine($"[{i}] {o.ToCabrilloLine()}"); }
-                        catch { ctx.Console.WriteLine($"[{i}] {o.RawLine ?? o.CallSign ?? "(no data)"}"); }
+                        if (ctx.Debug) ctx.Console.WriteLine(ex.ToString());
+                        ctx.Console.WriteLine($"[{i}] {o.RawLine ?? o.CallSign ?? "(no data)"}");
                     }
                 }
-                catch { }
             }
             if (targets.Count > listCount)
             {
