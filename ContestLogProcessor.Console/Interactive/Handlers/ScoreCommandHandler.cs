@@ -12,12 +12,20 @@ public class ScoreCommandHandler : ICommandHandler
 
     public async Task HandleAsync(string[] parts, ICommandContext ctx)
     {
-        CabrilloLogProcessor processor = ctx.Processor;
+        ILogProcessor processor = ctx.Processor;
         IConsole console = ctx.Console;
 
         try
         {
-            List<LogEntry> entries = processor.ReadEntries().ToList();
+            OperationResult<IEnumerable<LogEntry>> readOp = processor.ReadEntriesResult();
+            if (!readOp.IsSuccess)
+            {
+                console.WriteLine($"Operation failed: {readOp.ErrorMessage}");
+                if (ctx.Debug && readOp.Diagnostic != null) console.WriteLine(readOp.Diagnostic.ToString());
+                return;
+            }
+
+            List<LogEntry> entries = readOp.Value!.ToList();
             if (entries.Count == 0)
             {
                 console.WriteLine("No entries loaded. Import a log first using: import <path>");
@@ -25,15 +33,9 @@ public class ScoreCommandHandler : ICommandHandler
             }
 
             CabrilloLogFile log = new CabrilloLogFile();
-            if (processor.TryGetHeader("CALLSIGN", out string? call) && !string.IsNullOrWhiteSpace(call))
-            {
-                log.Headers["CALLSIGN"] = call!;
-            }
-            else
-            {
-                string? inferred = entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
-                if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
-            }
+            // Try to infer CALLSIGN from entries when header access isn't available on the processor interface
+            string? inferred = entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+            if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
 
             log.Entries = entries;
 
