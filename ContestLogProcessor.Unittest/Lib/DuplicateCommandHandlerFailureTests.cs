@@ -17,7 +17,16 @@ public class DuplicateCommandHandlerFailureTests
         OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
         OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat) => OperationResult.Failure<Unit>("not implemented");
         void ILogProcessor.ExportFile(string filePath, bool useCanonicalFormat) => throw new NotImplementedException();
-        void ILogProcessor.ImportFile(string filePath) => throw new NotImplementedException();
+        void ILogProcessor.ImportFile(string filePath)
+        {
+            var res = ((ILogProcessor)this).ImportFileResult(filePath);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.NotFound) throw new FileNotFoundException(res.ErrorMessage ?? "File not found: " + filePath);
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Import failed", res.Diagnostic);
+            }
+        }
 
         OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
         LogEntry ILogProcessor.CreateEntry(LogEntry entry) => throw new NotImplementedException();
@@ -58,7 +67,16 @@ public class DuplicateCommandHandlerFailureTests
         OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
         OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat) => OperationResult.Failure<Unit>("not implemented");
         void ILogProcessor.ExportFile(string filePath, bool useCanonicalFormat) => throw new NotImplementedException();
-        void ILogProcessor.ImportFile(string filePath) => throw new NotImplementedException();
+        void ILogProcessor.ImportFile(string filePath)
+        {
+            var res = ((ILogProcessor)this).ImportFileResult(filePath);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.NotFound) throw new FileNotFoundException(res.ErrorMessage ?? "File not found: " + filePath);
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Import failed", res.Diagnostic);
+            }
+        }
 
         OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
         LogEntry ILogProcessor.CreateEntry(LogEntry entry) => throw new NotImplementedException();
@@ -99,7 +117,16 @@ public class DuplicateCommandHandlerFailureTests
         OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
         OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat) => OperationResult.Failure<Unit>("not implemented");
         void ILogProcessor.ExportFile(string filePath, bool useCanonicalFormat) => throw new NotImplementedException();
-        void ILogProcessor.ImportFile(string filePath) => throw new NotImplementedException();
+        void ILogProcessor.ImportFile(string filePath)
+        {
+            var res = ((ILogProcessor)this).ImportFileResult(filePath);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.NotFound) throw new FileNotFoundException(res.ErrorMessage ?? "File not found: " + filePath);
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Import failed", res.Diagnostic);
+            }
+        }
 
         OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
         LogEntry ILogProcessor.CreateEntry(LogEntry entry) => throw new NotImplementedException();

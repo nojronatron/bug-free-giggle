@@ -19,6 +19,7 @@ public interface ILogProcessor
         TheirCall
     }
     // File operations
+    [Obsolete("Use ImportFileResult(string) which returns OperationResult<Unit>. This shim will throw on failure to preserve existing behavior.", false)]
     void ImportFile(string filePath);
     /// <summary>
     /// Import file with an OperationResult return that describes success or failure.
