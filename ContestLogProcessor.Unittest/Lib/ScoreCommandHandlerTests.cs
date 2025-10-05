@@ -85,12 +85,14 @@ public class ScoreCommandHandlerTests
         });
         proc.ImportFile(tmp3);
 
-        var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
-        var log = new ContestLogProcessor.Lib.CabrilloLogFile();
-        log.Headers["CALLSIGN"] = "K7XXX";
-        log.Entries = proc.ReadEntries().ToList();
+    var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+    var log = new ContestLogProcessor.Lib.CabrilloLogFile();
+    log.Headers["CALLSIGN"] = "K7XXX";
+    log.Entries = proc.ReadEntries().ToList();
 
-        var res = svc.CalculateScore(log);
+    var resOp = svc.CalculateScoreResult(log);
+    Assert.True(resOp.IsSuccess);
+    var res = resOp.Value!;
 
         // QSO points expected: PH=2, CW=3, PH=2 => total 7
         Assert.Equal(7, res.QsoPoints);

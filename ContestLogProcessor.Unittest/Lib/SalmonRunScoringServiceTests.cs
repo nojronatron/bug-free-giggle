@@ -1,5 +1,6 @@
 using System;
 using Xunit;
+using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -12,8 +13,10 @@ public class SalmonRunScoringServiceTests
         var log = new ContestLogProcessor.Lib.CabrilloLogFile();
         var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => svc.CalculateScore(log));
+    // Act & Assert: expect a BadFormat failure via the new OperationResult wrapper
+    var failed = svc.CalculateScoreResult(log);
+    Assert.False(failed.IsSuccess);
+    Assert.Equal(ResponseStatus.BadFormat, failed.Status);
     }
 
     [Fact]
@@ -101,8 +104,10 @@ public class SalmonRunScoringServiceTests
 
         var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
-        // Act
-        var result = svc.CalculateScore(log);
+    // Act
+    var resultOp = svc.CalculateScoreResult(log);
+    Assert.True(resultOp.IsSuccess);
+    var result = resultOp.Value!;
 
         // Assert expected points:
         // QSO points: e1=2 (PH), e2=3 (CW), e3=3 (CW), e4=2 (PH), e5=2 (PH) => total 12
@@ -209,7 +214,9 @@ public class SalmonRunScoringServiceTests
         var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
-        var result = svc.CalculateScore(log);
+    var resultOp = svc.CalculateScoreResult(log);
+    Assert.True(resultOp.IsSuccess);
+    var result = resultOp.Value!;
 
         // Assert: both modes (PH and CW) should have been counted once => 2 * 500 = 1000
         Assert.Equal(1000, result.W7DxBonusPoints);
@@ -257,7 +264,9 @@ public class SalmonRunScoringServiceTests
         var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
-        var result = svc.CalculateScore(log);
+    var resultOp = svc.CalculateScoreResult(log);
+    Assert.True(resultOp.IsSuccess);
+    var result = resultOp.Value!;
 
         // Assert: only first 10 DXCC entries were counted
         Assert.Equal(10, result.UniqueDxccEntities.Count);

@@ -59,8 +59,10 @@ public class SkippableEntriesTests
 
         log.Entries = p.ReadEntries().ToList();
 
-        SalmonRunScoringService svc = new SalmonRunScoringService();
-        SalmonRunScoreResult res = svc.CalculateScore(log);
+    SalmonRunScoringService svc = new SalmonRunScoringService();
+    var resOp = svc.CalculateScoreResult(log);
+    Assert.True(resOp.IsSuccess);
+    SalmonRunScoreResult res = resOp.Value!;
 
         // We expect at least:
         // - X-QSO entries marked as skipped

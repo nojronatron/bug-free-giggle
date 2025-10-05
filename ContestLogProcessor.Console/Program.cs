@@ -75,7 +75,15 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
                     log.Entries = scProc.ReadEntries().ToList();
 
                     SalmonRunScoringService svc = new SalmonRunScoringService();
-                    SalmonRunScoreResult res = svc.CalculateScore(log);
+                    OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScoreResult(log);
+                    if (!scoreOp.IsSuccess)
+                    {
+                        Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                        if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                        return;
+                    }
+
+                    SalmonRunScoreResult res = scoreOp.Value!;
 
                     string headerBorder = "+----------------------------------------+";
                     string headerTitle = "|          Salmon Run Score Report      |";
@@ -127,7 +135,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
         if (!string.IsNullOrWhiteSpace(export))
         {
-            var res = processor.ExportFileResult(export);
+            OperationResult<Unit> res = processor.ExportFileResult(export);
             if (res.IsSuccess)
             {
                 Console.WriteLine($"Exported: {export}");

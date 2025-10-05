@@ -38,7 +38,15 @@ public class ScoreCommandHandler : ICommandHandler
             log.Entries = entries;
 
             SalmonRunScoringService svc = new SalmonRunScoringService();
-            SalmonRunScoreResult res = svc.CalculateScore(log);
+            OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScoreResult(log);
+            if (!scoreOp.IsSuccess)
+            {
+                console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                if (ctx.Debug && scoreOp.Diagnostic != null) console.WriteLine(scoreOp.Diagnostic.ToString());
+                return;
+            }
+
+            SalmonRunScoreResult res = scoreOp.Value!;
 
             string headerBorder = "+----------------------------------------+";
             string headerTitle = "|          Salmon Run Score Report      |";
