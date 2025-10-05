@@ -32,7 +32,7 @@ RootCommand root = new RootCommand("ContestLogProcessor CLI - parse, edit and ex
 
 root.SetHandler(async (bool debug, string? import, string? export, bool list, bool interactive, string? score) =>
 {
-    CabrilloLogProcessor processor = new CabrilloLogProcessor();
+    ILogProcessor processor = new CabrilloLogProcessor();
 
     if (interactive)
     {
@@ -48,7 +48,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
             Console.WriteLine($"Imported: {import}");
         }
 
-        if (!string.IsNullOrWhiteSpace(score))
+                if (!string.IsNullOrWhiteSpace(score))
         {
             if (!File.Exists(score))
             {
@@ -58,21 +58,29 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
             {
                 try
                 {
-                    CabrilloLogProcessor scProc = new CabrilloLogProcessor();
-                    scProc.ImportFile(score);
+                            ILogProcessor scProc = new CabrilloLogProcessor();
+                            OperationResult<Unit> importRes = scProc.ImportFileResult(score);
+                            if (!importRes.IsSuccess)
+                            {
+                                Console.WriteLine($"Import failed: {importRes.ErrorMessage}");
+                                if (debug && importRes.Diagnostic != null) Console.WriteLine(importRes.Diagnostic.ToString());
+                                return;
+                            }
 
-                    CabrilloLogFile log = new CabrilloLogFile();
-                    if (scProc.TryGetHeader("CALLSIGN", out string? call) && !string.IsNullOrWhiteSpace(call))
-                    {
-                        log.Headers["CALLSIGN"] = call!;
-                    }
-                    else
-                    {
-                        string? inferred = scProc.ReadEntries().FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
-                        if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
-                    }
+                            CabrilloLogFile log = new CabrilloLogFile();
+                            OperationResult<IEnumerable<LogEntry>> readRes = scProc.ReadEntriesResult();
+                            if (!readRes.IsSuccess)
+                            {
+                                Console.WriteLine($"Failed to read entries: {readRes.ErrorMessage}");
+                                if (debug && readRes.Diagnostic != null) Console.WriteLine(readRes.Diagnostic.ToString());
+                                return;
+                            }
 
-                    log.Entries = scProc.ReadEntries().ToList();
+                            List<LogEntry> entriesForScore = readRes.Value!.ToList();
+                            string? inferred = entriesForScore.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+                            if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
+
+                            log.Entries = entriesForScore;
 
                     SalmonRunScoringService svc = new SalmonRunScoringService();
                     OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScoreResult(log);
@@ -161,7 +169,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
 return await root.InvokeAsync(args);
 
-static async Task RunInteractive(CabrilloLogProcessor processor, bool debug)
+static async Task RunInteractive(ILogProcessor processor, bool debug)
 {
     Console.WriteLine("Entering interactive mode. Type 'help' for available commands.");
 
