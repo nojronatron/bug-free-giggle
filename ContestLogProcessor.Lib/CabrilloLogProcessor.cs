@@ -137,28 +137,6 @@ public class CabrilloLogProcessor : ILogProcessor
     public event EventHandler<LogEntry>? EntryUpdated;
     public event EventHandler<string>? EntryDeleted;
 
-    [Obsolete("Use ImportFileResult(string) which returns OperationResult<Unit>. This shim will throw on failure to preserve existing behavior.", false)]
-    public void ImportFile(string filePath)
-    {
-    OperationResult<Unit> result = ImportFileResult(filePath);
-        if (result.IsSuccess) return;
-        // Preserve legacy behavior: throw for not found and other severe errors
-        if (result.Status == ResponseStatus.NotFound)
-        {
-            throw new FileNotFoundException(result.ErrorMessage ?? $"File not found: {filePath}");
-        }
-        if (result.Status == ResponseStatus.Cancelled)
-        {
-            // Propagate cancellation as an exception
-            throw new OperationCanceledException(result.ErrorMessage, result.Diagnostic);
-        }
-
-        // For other failure statuses, surface as InvalidOperationException with diagnostic as inner when available
-        throw new InvalidOperationException(result.ErrorMessage ?? "Import failed.", result.Diagnostic);
-    }
-
-    // ...existing code...
-
     /// <summary>
     /// Import the Cabrillo log file into the in-memory store and return an OperationResult describing success/failure.
     /// This method is tolerant of malformed log lines and will record skipped entries; it will not throw for common
@@ -504,6 +482,13 @@ public class CabrilloLogProcessor : ILogProcessor
         return (sentAny ? sent : null, theirCall, recvAny ? recv : null);
     }
 
+    /// <summary>
+    /// Heuristic check to determine whether the supplied token looks like a callsign.
+    /// This is intentionally permissive: it accepts alphanumeric tokens and tokens containing
+    /// a single '/' separator commonly used for portable or special-event suffixes.
+    /// </summary>
+    /// <param name="token">Input token to evaluate for callsign-likeness.</param>
+    /// <returns><c>true</c> when the token plausibly represents a callsign; otherwise <c>false</c>.</returns>
     private static bool IsLikelyCallsign(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -649,6 +634,17 @@ public class CabrilloLogProcessor : ILogProcessor
     }
 
     /// <summary>
+    /// Return a sequence of defensive clones of stored <see cref="LogEntry"/> items.
+    /// The returned sequence respects optional filtering, ordering and simple paging parameters.
+    /// Callers receive clones so modifications do not affect the processor's internal state.
+    /// </summary>
+    /// <param name="filter">Optional predicate to filter returned entries.</param>
+    /// <param name="orderBy">Optional key selector to order results.</param>
+    /// <param name="skip">Optional number of items to skip (for paging).</param>
+    /// <param name="take">Optional maximum number of items to return (for paging).</param>
+    /// <returns>An <see cref="IEnumerable{LogEntry}"/> of defensive clones matching the query.</returns>
+
+    /// <summary>
     /// OperationResult-based wrapper for ReadEntries to support a result-returning API surface.
     /// Returns a successful OperationResult containing defensive clones when the operation completes normally.
     /// Unexpected exceptions are converted into a failure OperationResult with Diagnostic populated.
@@ -702,7 +698,8 @@ public class CabrilloLogProcessor : ILogProcessor
     /// <param name="entry">The entry to add to the processor. Must not be <c>null</c>.</param>
     /// <returns>The copy of the entry that was stored.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="entry"/> is <c>null</c>.</exception>
-    public LogEntry CreateEntry(LogEntry entry)
+    // Internal synchronous implementations (private) restored to support OperationResult wrappers.
+    private LogEntry CreateEntry(LogEntry entry)
     {
         if (entry == null) throw new ArgumentNullException(nameof(entry));
         if (string.IsNullOrWhiteSpace(entry.Id)) entry.Id = Guid.NewGuid().ToString();
@@ -727,7 +724,7 @@ public class CabrilloLogProcessor : ILogProcessor
             _logFile.Entries = new List<LogEntry>();
         }
 
-    LogEntry copy = new LogEntry
+        LogEntry copy = new LogEntry
         {
             Id = entry.Id,
             RawLine = entry.RawLine,
@@ -740,8 +737,8 @@ public class CabrilloLogProcessor : ILogProcessor
             TheirCall = entry.TheirCall
         };
 
-    // Sanitize any long/suspicious values on the copy before inserting
-    SanitizeLogEntry(copy);
+        // Sanitize any long/suspicious values on the copy before inserting
+        SanitizeLogEntry(copy);
 
         if (entry.SentExchange != null)
         {
@@ -861,7 +858,7 @@ public class CabrilloLogProcessor : ILogProcessor
     /// Duplicate an existing entry. Copies all fields and exchanges, assigns a new Id,
     /// and optionally replaces a field on the SentExchange with the supplied new value.
     /// </summary>
-    public LogEntry DuplicateEntry(string id, ILogProcessor.DuplicateField field = ILogProcessor.DuplicateField.None, string? newValue = null)
+    private LogEntry DuplicateEntry(string id, ILogProcessor.DuplicateField field = ILogProcessor.DuplicateField.None, string? newValue = null)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentNullException(nameof(id));
         LogEntry? existing = _entries.FirstOrDefault(x => x.Id == id);
@@ -881,7 +878,7 @@ public class CabrilloLogProcessor : ILogProcessor
             TheirCall = existing.TheirCall
         };
 
-    if (existing.SentExchange != null)
+        if (existing.SentExchange != null)
         {
             string? sentSig = existing.SentExchange.SentSig;
             string? sentMsg = existing.SentExchange.SentMsg;
@@ -954,7 +951,7 @@ public class CabrilloLogProcessor : ILogProcessor
             }
         }
 
-    EntryAdded?.Invoke(this, copy.Clone());
+        EntryAdded?.Invoke(this, copy.Clone());
         return copy.Clone();
     }
 
@@ -986,7 +983,13 @@ public class CabrilloLogProcessor : ILogProcessor
         }
     }
 
-    public LogEntry? GetEntryById(string id)
+    /// <summary>
+    /// Retrieve a defensive clone of the stored entry with the specified <paramref name="id"/>, or <c>null</c> when not found.
+    /// This private helper returns a clone to maintain the processor's internal invariants.
+    /// </summary>
+    /// <param name="id">The identifier of the entry to retrieve.</param>
+    /// <returns>A clone of the stored <see cref="LogEntry"/> when found; otherwise <c>null</c>.</returns>
+    private LogEntry? GetEntryById(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
         LogEntry? found = _entries.FirstOrDefault(x => x.Id == id);
@@ -1024,10 +1027,18 @@ public class CabrilloLogProcessor : ILogProcessor
         }
     }
 
-    public bool UpdateEntry(string id, Action<LogEntry> editAction)
+    /// <summary>
+    /// Apply an in-place edit action to the stored entry with the given <paramref name="id"/>.
+    /// The edit action is applied to the stored instance and the <see cref="EntryUpdated"/> event
+    /// is raised with a defensive clone when the update succeeds.
+    /// </summary>
+    /// <param name="id">Identifier of the entry to update.</param>
+    /// <param name="editAction">Action to apply to the stored <see cref="LogEntry"/> instance.</param>
+    /// <returns><c>true</c> when the entry was found and updated; otherwise <c>false</c>.</returns>
+    private bool UpdateEntry(string id, Action<LogEntry> editAction)
     {
         if (string.IsNullOrWhiteSpace(id)) return false;
-    LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
+        LogEntry? entry = _entries.FirstOrDefault(x => x.Id == id);
         if (entry == null) return false;
         editAction?.Invoke(entry);
 
@@ -1113,7 +1124,17 @@ public class CabrilloLogProcessor : ILogProcessor
         }
     }
 
-    public void ExportFile(string filePath, bool useCanonicalFormat = true)
+    /// <summary>
+    /// Export the current in-memory log to the specified file path.
+    /// Writes header tags and QSO lines in the processor's in-memory order, appends a single
+    /// <c>END-OF-LOG:</c> line, and forces CRLF line endings for compatibility with Cabrillo
+    /// consumers. The method will add a <c>.log</c> extension when one is not present.
+    /// </summary>
+    /// <param name="filePath">Destination file path to write the exported log.</param>
+    /// <param name="useCanonicalFormat">If <c>true</c>, write canonical, padded Cabrillo QSO lines; otherwise prefer raw lines when available.</param>
+    /// <exception cref="InvalidOperationException">Thrown when no log data is available to export.</exception>
+    /// <exception cref="DirectoryNotFoundException">Thrown when the destination directory does not exist.</exception>
+    private void ExportFile(string filePath, bool useCanonicalFormat = true)
     {
         if (_logFile == null || _logFile.Entries == null || _logFile.Entries.Count == 0)
         {
