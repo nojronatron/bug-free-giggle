@@ -48,11 +48,11 @@ public class ViewCommandHandler : ICommandHandler
                 for (int idx = start; idx < end; idx++)
                 {
                     LogEntry e = entries[idx];
-                    try
+                    if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line))
                     {
-                        ctx.Console.WriteLine(e.ToCabrilloLine());
+                        ctx.Console.WriteLine(line);
                     }
-                    catch
+                    else
                     {
                         ctx.Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
                     }
@@ -104,11 +104,11 @@ public class ViewCommandHandler : ICommandHandler
                     for (int idx = 0; idx < total; idx++)
                     {
                         LogEntry e = entries[idx];
-                        try
+                        if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line))
                         {
-                            ctx.Console.WriteLine(e.ToCabrilloLine());
+                            ctx.Console.WriteLine(line);
                         }
-                        catch
+                        else
                         {
                             ctx.Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
                         }

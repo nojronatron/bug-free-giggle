@@ -134,10 +134,12 @@ public class DuplicateCommandHandler : ICommandHandler
                 if (original != null)
                 {
                     ctx.Console.WriteLine("About to duplicate the following entry:");
-                    try { ctx.Console.WriteLine(original.ToCabrilloLine()); }
-                    catch (Exception ex)
+                    if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(original, out string origLine))
                     {
-                        if (ctx.Debug) ctx.Console.WriteLine(ex.ToString());
+                        ctx.Console.WriteLine(origLine);
+                    }
+                    else
+                    {
                         ctx.Console.WriteLine(original.RawLine ?? original.CallSign ?? "(no data)");
                     }
                 }
@@ -159,10 +161,12 @@ public class DuplicateCommandHandler : ICommandHandler
                 ContestLogProcessor.Lib.LogEntry? o = getOp.Value;
                 if (o != null)
                 {
-                    try { ctx.Console.WriteLine($"[{i}] {o.ToCabrilloLine()}"); }
-                    catch (Exception ex)
+                    if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(o, out string oLine))
                     {
-                        if (ctx.Debug) ctx.Console.WriteLine(ex.ToString());
+                        ctx.Console.WriteLine($"[{i}] {oLine}");
+                    }
+                    else
+                    {
                         ctx.Console.WriteLine($"[{i}] {o.RawLine ?? o.CallSign ?? "(no data)"}");
                     }
                 }
