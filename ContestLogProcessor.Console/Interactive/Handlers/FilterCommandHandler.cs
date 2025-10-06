@@ -43,7 +43,14 @@ public class FilterCommandHandler : ICommandHandler
         ctx.Console.WriteLine($"Found {matches.Count} matches. List:");
         for (int i = 0; i < matches.Count; i++)
         {
-            ctx.Console.WriteLine($"[{i}] {matches[i].ToCabrilloLine()}");
+            if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(matches[i], out string outLine))
+            {
+                ctx.Console.WriteLine($"[{i}] {outLine}");
+            }
+            else
+            {
+                ctx.Console.WriteLine($"[{i}] {matches[i].RawLine ?? matches[i].CallSign ?? "(no data)"}");
+            }
         }
 
         await System.Threading.Tasks.Task.CompletedTask;

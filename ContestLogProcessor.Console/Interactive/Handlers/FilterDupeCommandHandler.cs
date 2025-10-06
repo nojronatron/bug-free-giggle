@@ -43,7 +43,14 @@ public class FilterDupeCommandHandler : ICommandHandler
         ctx.Console.WriteLine($"Found {matches.Count} matches. List:");
         for (int i = 0; i < matches.Count; i++)
         {
-            ctx.Console.WriteLine($"[{i}] {matches[i].ToCabrilloLine()}");
+            if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(matches[i], out string outLine))
+            {
+                ctx.Console.WriteLine($"[{i}] {outLine}");
+            }
+            else
+            {
+                ctx.Console.WriteLine($"[{i}] {matches[i].RawLine ?? matches[i].CallSign ?? "(no data)"}");
+            }
         }
 
         ctx.Console.WriteLine("Enter index to duplicate, 'all' to duplicate all matches, or 'cancel': ");
