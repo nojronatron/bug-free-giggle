@@ -1,39 +1,31 @@
 using System;
 using ContestLogProcessor.Lib;
+using ContestLogProcessor.Console.Interactive;
 
 namespace ContestLogProcessor.Console.Interactive.Formatters;
 
 /// <summary>
-/// Small helper helpers for producing Cabrillo-formatted lines from LogEntry instances
-/// in a safe, exception-tolerant manner.
+/// Tiny adapter in the Console project that forwards Cabrillo formatting requests
+/// to the library formatter. Keep this small so we can add UI-specific behavior
+/// later (colors, progress, etc.) without touching the library.
 /// </summary>
 public static class CabrilloFormatter
 {
     /// <summary>
-    /// Try to produce a Cabrillo-formatted line from the provided <paramref name="entry"/>.
-    /// This method catches exceptions thrown by <see cref="LogEntry.ToCabrilloLine"/> and
-    /// returns <c>false</c> with an empty string when formatting fails.
+    /// Forwarding call to the library's <c>ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo</c>.
     /// </summary>
-    /// <param name="entry">The log entry to format.</param>
-    /// <param name="line">When successful, contains the Cabrillo-formatted line; otherwise empty.</param>
-    /// <returns><c>true</c> when formatting succeeded; otherwise <c>false</c>.</returns>
     public static bool TrySafeToCabrillo(LogEntry entry, out string line)
-    {
-        if (entry == null)
-        {
-            line = string.Empty;
-            return false;
-        }
+        => ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(entry, out line);
 
-        try
-        {
-            line = entry.ToCabrilloLine();
-            return true;
-        }
-        catch (Exception)
-        {
-            line = string.Empty;
-            return false;
-        }
+    /// <summary>
+    /// Forwarding call that accepts an <see cref="IConsole"/>. In the future this
+    /// adapter can use the console reference to apply colors or other UI-specific
+    /// behavior; for now it just provides a logger callback that writes messages
+    /// to <c>console.WriteLine</c> when provided.
+    /// </summary>
+    public static bool TrySafeToCabrillo(LogEntry entry, out string line, IConsole? console)
+    {
+        Action<string>? logger = console is null ? null : new Action<string>(s => console.WriteLine(s));
+        return ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(entry, out line, logger);
     }
 }
