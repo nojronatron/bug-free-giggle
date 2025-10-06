@@ -18,7 +18,24 @@ public static class CabrilloFormatter
     /// <param name="entry">The log entry to format.</param>
     /// <param name="line">When successful, contains the Cabrillo-formatted line; otherwise empty.</param>
     /// <returns><c>true</c> when formatting succeeded; otherwise <c>false</c>.</returns>
+    /// <summary>
+    /// Try to produce a Cabrillo-formatted line from the provided <paramref name="entry"/>.
+    /// Backwards-compatible wrapper that calls the overload accepting an optional logger.
+    /// </summary>
     public static bool TrySafeToCabrillo(LogEntry entry, out string line)
+        => TrySafeToCabrillo(entry, out line, null);
+
+    /// <summary>
+    /// Try to produce a Cabrillo-formatted line from the provided <paramref name="entry"/>.
+    /// When an exception occurs during formatting, the optional <paramref name="logger"/>
+    /// will be invoked with a diagnostic message. The method returns <c>false</c> and an
+    /// empty <paramref name="line"/> on failure.
+    /// </summary>
+    /// <param name="entry">The log entry to format.</param>
+    /// <param name="line">When successful, contains the Cabrillo-formatted line; otherwise empty.</param>
+    /// <param name="logger">Optional callback invoked with diagnostic message when formatting fails.</param>
+    /// <returns><c>true</c> when formatting succeeded; otherwise <c>false</c>.</returns>
+    public static bool TrySafeToCabrillo(LogEntry entry, out string line, Action<string>? logger)
     {
         if (entry == null)
         {
@@ -31,9 +48,17 @@ public static class CabrilloFormatter
             line = entry.ToCabrilloLine();
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             line = string.Empty;
+            try
+            {
+                logger?.Invoke($"Failed to format LogEntry.Id={entry.Id}: {ex}");
+            }
+            catch
+            {
+                // Swallow logger exceptions to avoid cascading failures
+            }
             return false;
         }
     }
