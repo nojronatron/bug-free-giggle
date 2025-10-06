@@ -31,7 +31,7 @@ public class FilterCommandHandler : ICommandHandler
             System.Collections.Generic.List<LogEntry> matches = all.Where(e =>
                 (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
                 (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-                (ContestLogProcessor.Console.Interactive.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line) && line.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line) && line.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
             ).ToList();
 
         if (matches.Count == 0)
