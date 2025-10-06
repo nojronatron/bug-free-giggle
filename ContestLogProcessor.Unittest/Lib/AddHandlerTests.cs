@@ -25,8 +25,8 @@ public class AddHandlerTests
         await handler.HandleAsync(new string[] { "add" }, ctx);
 
         // Assert
-        var entries = processor.ReadEntries();
-        Assert.Single(entries);
+    var entries = processor.ReadEntriesResult().Value!;
+    Assert.Single(entries);
     string consoleOutput = string.Join('\n', testConsole.Outputs);
     Assert.Contains("Added entry with Id:", consoleOutput);
     }

@@ -18,7 +18,7 @@ namespace ContestLogProcessor.Unittest.Lib
             Assert.True(imp.IsSuccess);
 
             // Before count
-            int before = proc.ReadEntries().ToList().Count;
+            int before = proc.ReadEntriesResult().Value!.ToList().Count;
 
             // Provide empty string to skip changing any field
             var console = new TestConsole(new string?[] { "" });
@@ -29,7 +29,7 @@ namespace ContestLogProcessor.Unittest.Lib
 
             await shell.ExecuteCommandAsync(new[] { "duplicate", "--index", "0" });
 
-            int after = proc.ReadEntries().ToList().Count;
+            int after = proc.ReadEntriesResult().Value!.ToList().Count;
             Assert.True(after > before, "After duplicating by index, entry count should increase.");
             Assert.Contains(console.Outputs, o => o.Contains("Duplicated entry") || o.Contains("Duplicated entry."));
         }

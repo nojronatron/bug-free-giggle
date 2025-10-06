@@ -46,7 +46,7 @@ public class DateTimeParsingTests
         // However ImportFile stores the SkippedEntries in the internal _logFile and tests elsewhere rely on that via imports that check for missing headers.
         // We'll assert that a parsed entry exists but has DateTime.MinValue and that a skipped entry with reason exists in the exported file via ExportFile attempt.
 
-        var entry = proc.ReadEntries().FirstOrDefault();
+    var entry = proc.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(entry);
         Assert.Equal(DateTime.MinValue, entry.QsoDateTime);
 

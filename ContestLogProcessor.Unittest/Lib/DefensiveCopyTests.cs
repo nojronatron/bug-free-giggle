@@ -19,7 +19,7 @@ namespace ContestLogProcessor.Unittest.Lib
             string id = created.Id;
 
             // Read via ReadEntries (returns clone). Mutating clone should not affect stored entry.
-            var cloneFromList = proc.ReadEntries().FirstOrDefault();
+            var cloneFromList = proc.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(cloneFromList);
             cloneFromList!.CallSign = "MUTATED_BY_CALLER";
 

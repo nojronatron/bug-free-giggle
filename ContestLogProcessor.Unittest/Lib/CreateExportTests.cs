@@ -84,7 +84,9 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-        var created = processor.CreateEntry(newEntry);
+    var createdResult = processor.CreateEntryResult(newEntry);
+    Assert.True(createdResult.IsSuccess);
+    var created = createdResult.Value;
 
         string tempDir = Path.GetTempPath();
         string basePath = Path.Combine(tempDir, "clp_export_test_" + Guid.NewGuid().ToString("N"));

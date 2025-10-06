@@ -50,7 +50,8 @@ public class ExportHandlerTests
         {
             var console = new TestConsole(new string?[] { });
             var proc = new CabrilloLogProcessor();
-            proc.CreateEntry(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            var _created = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            Assert.True(_created.IsSuccess);
             var ctx = new CommandContext(proc, console, debug: false);
             var handler = new ExportCommandHandler();
 
@@ -80,7 +81,8 @@ public class ExportHandlerTests
         {
             var console = new TestConsole(new string?[] { "n" });
             var proc = new CabrilloLogProcessor();
-            proc.CreateEntry(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            var _created2 = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            Assert.True(_created2.IsSuccess);
             var ctx = new CommandContext(proc, console, debug: false);
             var handler = new ExportCommandHandler();
 

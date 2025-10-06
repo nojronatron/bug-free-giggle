@@ -41,7 +41,7 @@ namespace ContestLogProcessor.Unittest.Lib
             await handler.HandleAsync(new[] { "filter-dupe", "AC7DC" }, ctx);
 
             // After duplication, processor should have more entries than original
-            System.Collections.Generic.List<ContestLogProcessor.Lib.LogEntry> entries = proc.ReadEntries().ToList();
+            System.Collections.Generic.List<ContestLogProcessor.Lib.LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
             Assert.True(entries.Count > 0);
         }
 

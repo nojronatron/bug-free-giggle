@@ -46,7 +46,7 @@ public class OrderPreservationTests
             Assert.True(createdResult.IsSuccess);
             var created = createdResult.Value;
 
-            var entries = p.ReadEntries().ToList();
+            var entries = p.ReadEntriesResult().Value!.ToList();
             // Expect the new entry to be after the two 1716 entries, which are at indexes 1 and 2 (0-based list: 0->1715,1->1716,2->1716,3->1717)
             int idx = entries.FindIndex(e => e.Id == created.Id);
             Assert.Equal(3, idx); // 0:1715,1:1716,2:1716,3:new(1716),4:1717
@@ -82,7 +82,7 @@ public class OrderPreservationTests
             Assert.True(dupResult.IsSuccess);
             var dup = dupResult.Value;
 
-            var entries = p.ReadEntries().ToList();
+            var entries = p.ReadEntriesResult().Value!.ToList();
             int sourceIndex = entries.FindIndex(e => e.Id == source.Id);
             Assert.True(sourceIndex >= 0);
             Assert.Equal(sourceIndex + 1, entries.FindIndex(e => e.Id == dup.Id));
@@ -119,7 +119,7 @@ public class OrderPreservationTests
             var updateResult = p.UpdateEntryResult(target.Id, e => { if (e.SentExchange != null) e.SentExchange.SentMsg = "CHE"; });
             Assert.True(updateResult.IsSuccess);
 
-            var entriesAfter = p.ReadEntries().ToList();
+            var entriesAfter = p.ReadEntriesResult().Value!.ToList();
             int afterIndex = entriesAfter.FindIndex(e => e.Id == target.Id);
             Assert.Equal(beforeIndex, afterIndex);
             Assert.Equal("CHE", entriesAfter[afterIndex].SentExchange?.SentMsg);
@@ -148,7 +148,7 @@ public class OrderPreservationTests
             Assert.True(imp4.IsSuccess);
 
             // Duplicate first entry so order becomes: orig1, dup1, orig2
-            var entriesBefore = p.ReadEntries().ToList();
+            var entriesBefore = p.ReadEntriesResult().Value!.ToList();
             var dupResult2 = p.DuplicateEntryResult(entriesBefore[0].Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
             Assert.True(dupResult2.IsSuccess);
             var dup = dupResult2.Value;
@@ -162,7 +162,7 @@ public class OrderPreservationTests
             var outLines = File.ReadAllLines(file);
 
             // Create expected canonical lines from in-memory entries
-            var mem = p.ReadEntries().ToList();
+            var mem = p.ReadEntriesResult().Value!.ToList();
 
             // Extract exported QSO lines (lines that start with "QSO:") in order
             var exportedQsoLines = outLines.Where(l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase)).ToList();

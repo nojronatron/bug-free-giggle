@@ -149,7 +149,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 }
 
                 // Inspect in-memory entries to verify duplicates were added and had TheirCall updated
-                var allInMemory = proc.ReadEntries().ToList();
+                var allInMemory = proc.ReadEntriesResult().Value!.ToList();
                 Assert.True(allInMemory.Count >= originalCount * 2, "Expected total entries to increase by at least the original count");
                 var changed = allInMemory.Where(x => string.Equals(x.TheirCall, "NEWCALL", StringComparison.OrdinalIgnoreCase)).ToList();
                 Assert.True(changed.Count > 0, "Expected at least one changed entry with THEIRCALL set to NEWCALL");

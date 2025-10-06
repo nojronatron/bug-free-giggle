@@ -25,7 +25,7 @@ namespace ContestLogProcessor.Unittest.Lib
 
             // Expect console output contains 'Imported:' and processor has entries
             Assert.Contains(console.Outputs, o => o.Contains("Imported:"));
-            Assert.True(proc.ReadEntries().ToList().Count > 0);
+            Assert.True(proc.ReadEntriesResult().Value!.ToList().Count > 0);
         }
 
         private static string FilterHandlerTests_LocateTestData(string fileName)
