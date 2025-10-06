@@ -19,8 +19,6 @@ public interface ILogProcessor
         TheirCall
     }
     // File operations
-    [Obsolete("Use ImportFileResult(string) which returns OperationResult<Unit>. This shim will throw on failure to preserve existing behavior.", false)]
-    void ImportFile(string filePath);
     /// <summary>
     /// Import file with an OperationResult return that describes success or failure.
     /// Implementations should propagate OperationCanceledException for cancellations.
@@ -31,8 +29,6 @@ public interface ILogProcessor
     /// </summary>
     OperationResult<Unit> ExportFileResult(string filePath, bool useCanonicalFormat = true);
 
-    void ExportFile(string filePath, bool useCanonicalFormat = true);
-
     // CRUD operations
     /// <summary>
     /// Create a new LogEntry and return the stored snapshot wrapped in an OperationResult.
@@ -40,10 +36,7 @@ public interface ILogProcessor
     /// </summary>
     OperationResult<LogEntry> CreateEntryResult(LogEntry entry);
 
-    /// <summary>
-    /// Obsolete shim that preserves the original synchronous CreateEntry behavior. New callers should use CreateEntryResult.
-    /// </summary>
-    LogEntry CreateEntry(LogEntry entry);
+    
     /// <summary>
     /// Duplicate an existing entry identified by id and return the stored duplicate as an OperationResult.
     /// The duplicate will copy all fields except for Id (new GUID) and may replace a SentExchange field
@@ -51,17 +44,13 @@ public interface ILogProcessor
     /// </summary>
     OperationResult<LogEntry> DuplicateEntryResult(string id, DuplicateField field = DuplicateField.None, string? newValue = null);
 
-    /// <summary>
-    /// Obsolete shim preserving the original synchronous DuplicateEntry behavior. New callers should use DuplicateEntryResult.
-    /// </summary>
-    LogEntry DuplicateEntry(string id, DuplicateField field = DuplicateField.None, string? newValue = null);
-    IEnumerable<LogEntry> ReadEntries(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
+    
     /// <summary>
     /// OperationResult-based variant of ReadEntries. Returns a success OperationResult with the enumerable of defensive clones,
     /// or a failure OperationResult with Diagnostic populated when an unexpected error occurs.
     /// </summary>
     OperationResult<IEnumerable<LogEntry>> ReadEntriesResult(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
-    LogEntry? GetEntryById(string id);
+    
     /// <summary>
     /// OperationResult-based variant of GetEntryById. Returns Success with the found entry (defensive clone)
     /// or a Failure with ResponseStatus.NotFound when no entry exists for the provided id.
@@ -73,7 +62,7 @@ public interface ILogProcessor
     /// </summary>
     OperationResult<Unit> UpdateEntryResult(string id, Action<LogEntry> editAction);
 
-    bool UpdateEntry(string id, Action<LogEntry> editAction);
+    
     /// <summary>
     /// OperationResult-based variant of DeleteEntry. Returns Success when the entry was removed,
     /// NotFound when no entry exists for the provided id, or BadFormat when id is null/whitespace.
