@@ -16,7 +16,16 @@ public class DuplicateCommandHandlerFailureTests
 
         OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
         OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat) => OperationResult.Failure<Unit>("not implemented");
-        void ILogProcessor.ExportFile(string filePath, bool useCanonicalFormat) => throw new NotImplementedException();
+        void ILogProcessor.ExportFile(string filePath, bool useCanonicalFormat)
+        {
+            var res = ((ILogProcessor)this).ExportFileResult(filePath, useCanonicalFormat);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.NotFound) throw new FileNotFoundException(res.ErrorMessage ?? "File not found: " + filePath);
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Export failed", res.Diagnostic);
+            }
+        }
         void ILogProcessor.ImportFile(string filePath)
         {
             var res = ((ILogProcessor)this).ImportFileResult(filePath);
@@ -29,12 +38,41 @@ public class DuplicateCommandHandlerFailureTests
         }
 
         OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
-        LogEntry ILogProcessor.CreateEntry(LogEntry entry) => throw new NotImplementedException();
+        LogEntry ILogProcessor.CreateEntry(LogEntry entry)
+        {
+            var res = ((ILogProcessor)this).CreateEntryResult(entry);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.NotFound) throw new KeyNotFoundException(res.ErrorMessage ?? "Create target not found");
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Create failed", res.Diagnostic);
+            }
+            return res.Value!;
+        }
 
         OperationResult<LogEntry> ILogProcessor.DuplicateEntryResult(string id, ILogProcessor.DuplicateField field, string? newValue) => OperationResult.Failure<LogEntry>("not implemented");
-        LogEntry ILogProcessor.DuplicateEntry(string id, ILogProcessor.DuplicateField field, string? newValue) => throw new NotImplementedException();
+        LogEntry ILogProcessor.DuplicateEntry(string id, ILogProcessor.DuplicateField field, string? newValue)
+        {
+            var res = ((ILogProcessor)this).DuplicateEntryResult(id, field, newValue);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.NotFound) throw new KeyNotFoundException(res.ErrorMessage ?? $"Entry not found: {id}");
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Duplicate failed", res.Diagnostic);
+            }
+            return res.Value!;
+        }
 
-        IEnumerable<LogEntry> ILogProcessor.ReadEntries(Func<LogEntry, bool>? filter, Func<LogEntry, object>? orderBy, int? skip, int? take) => throw new NotImplementedException();
+        IEnumerable<LogEntry> ILogProcessor.ReadEntries(Func<LogEntry, bool>? filter, Func<LogEntry, object>? orderBy, int? skip, int? take)
+        {
+            var res = ((ILogProcessor)this).ReadEntriesResult(filter, orderBy, skip, take);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Read failed", res.Diagnostic);
+            }
+            return res.Value!;
+        }
         OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesResult(Func<LogEntry, bool>? filter, Func<LogEntry, object>? orderBy, int? skip, int? take)
         {
             return OperationResult.Failure<IEnumerable<LogEntry>>("Read failed", ResponseStatus.Error, new InvalidOperationException("boom"));
@@ -43,7 +81,17 @@ public class DuplicateCommandHandlerFailureTests
         OperationResult<LogEntry> ILogProcessor.GetEntryByIdResult(string id) => OperationResult.Failure<LogEntry>("not implemented");
 
         OperationResult<Unit> ILogProcessor.UpdateEntryResult(string id, Action<LogEntry> editAction) => OperationResult.Failure<Unit>("not implemented");
-        bool ILogProcessor.UpdateEntry(string id, Action<LogEntry> editAction) => throw new NotImplementedException();
+        bool ILogProcessor.UpdateEntry(string id, Action<LogEntry> editAction)
+        {
+            var res = ((ILogProcessor)this).UpdateEntryResult(id, editAction);
+            if (!res.IsSuccess)
+            {
+                if (res.Status == ResponseStatus.NotFound) throw new KeyNotFoundException(res.ErrorMessage ?? $"Entry not found: {id}");
+                if (res.Status == ResponseStatus.Cancelled) throw new OperationCanceledException(res.ErrorMessage, res.Diagnostic);
+                throw new InvalidOperationException(res.ErrorMessage ?? "Update failed", res.Diagnostic);
+            }
+            return true;
+        }
 
         OperationResult<Unit> ILogProcessor.DeleteEntryResult(string id) => OperationResult.Failure<Unit>("not implemented");
     }
