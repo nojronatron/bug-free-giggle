@@ -31,22 +31,8 @@ public class FilterDupeCommandHandler : ICommandHandler
             System.Collections.Generic.List<LogEntry> matches = all.Where(e =>
                 (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
                 (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-                (TrySafeToCabrillo(e, out string line) && line.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line) && line.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
             ).ToList();
-
-        static bool TrySafeToCabrillo(LogEntry e, out string line)
-        {
-            try
-            {
-                line = e.ToCabrilloLine();
-                return true;
-            }
-            catch
-            {
-                line = string.Empty;
-                return false;
-            }
-        }
 
         if (matches.Count == 0)
         {
