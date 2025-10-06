@@ -70,10 +70,10 @@ public class CabrilloLogProcessorTests
     Assert.False(string.IsNullOrWhiteSpace(created.Id));
     Assert.Contains(added, a => a.Id == created.Id);
 
-        // Read by id
-        var fetched = processor.GetEntryById(created.Id);
-        Assert.NotNull(fetched);
-        Assert.Equal("UNITTEST", fetched.CallSign);
+    // Read by id (OperationResult API)
+    var fetched = processor.GetEntryByIdResult(created.Id).Value;
+    Assert.NotNull(fetched);
+    Assert.Equal("UNITTEST", fetched.CallSign);
 
         // Update
     var updatedResult = processor.UpdateEntryResult(created.Id, e => e.Band = "20m");
@@ -84,7 +84,7 @@ public class CabrilloLogProcessorTests
     var deletedResult = processor.DeleteEntryResult(created.Id);
     Assert.True(deletedResult.IsSuccess);
         Assert.Contains(deletedIds, id => id == created.Id);
-        Assert.Null(processor.GetEntryById(created.Id));
+    Assert.False(processor.GetEntryByIdResult(created.Id).IsSuccess);
     }
 
     [Fact]

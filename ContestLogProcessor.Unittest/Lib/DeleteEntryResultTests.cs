@@ -35,8 +35,8 @@ namespace ContestLogProcessor.Unittest.Lib
             // Event should have been raised
             Assert.Contains(created.Id, deletedIds);
 
-            // Entry should no longer be retrievable
-            Assert.Null(proc.GetEntryById(created.Id));
+            // Entry should no longer be retrievable (use OperationResult API)
+            Assert.False(proc.GetEntryByIdResult(created.Id).IsSuccess);
         }
 
         [Fact]

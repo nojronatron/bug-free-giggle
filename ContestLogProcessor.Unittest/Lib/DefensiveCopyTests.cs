@@ -23,15 +23,15 @@ namespace ContestLogProcessor.Unittest.Lib
             Assert.NotNull(cloneFromList);
             cloneFromList!.CallSign = "MUTATED_BY_CALLER";
 
-            var fresh = proc.GetEntryById(id);
+            var fresh = proc.GetEntryByIdResult(id).Value;
             Assert.NotNull(fresh);
             Assert.Equal("ORIGINAL", fresh!.CallSign);
 
             // Mutate clone returned by GetEntryById
-            var cloneById = proc.GetEntryById(id);
+            var cloneById = proc.GetEntryByIdResult(id).Value;
             cloneById!.CallSign = "MUTATED_BY_ID";
 
-            var fresh2 = proc.GetEntryById(id);
+            var fresh2 = proc.GetEntryByIdResult(id).Value;
             Assert.Equal("ORIGINAL", fresh2!.CallSign);
         }
 
@@ -55,7 +55,7 @@ namespace ContestLogProcessor.Unittest.Lib
             Assert.Equal("CHANGED_IN_EVENT", eventEntry.CallSign);
 
             // Stored value should remain original
-            var stored = proc.GetEntryById(created2.Id);
+            var stored = proc.GetEntryByIdResult(created2.Id).Value;
             Assert.Equal("ORIGINAL", stored!.CallSign);
         }
     }
