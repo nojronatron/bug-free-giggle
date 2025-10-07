@@ -10,7 +10,7 @@ namespace ContestLogProcessor.Lib;
 /// <summary>
 /// Cabrillo log processor implementation.
 /// </summary>
-public class CabrilloLogProcessor : ILogProcessor
+public partial class CabrilloLogProcessor : ILogProcessor
 {
     private readonly List<LogEntry> _entries = new List<LogEntry>();
     private CabrilloLogFile? _logFile;
@@ -385,10 +385,8 @@ public class CabrilloLogProcessor : ILogProcessor
         {
             return (null, null, null);
         }
-        // Validation regexes per project rules
-        Regex sigRegex = new Regex("^(?:[1-5][0-9]{1,2}|[1-5][nN]{1,2})$", RegexOptions.Compiled);
-        Regex msgRegex = new Regex("^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$", RegexOptions.Compiled);
-        Regex callRegex = new Regex("^(?:[A-Za-z0-9]{1,5}/)?[A-Za-z0-9]{1,5}$", RegexOptions.Compiled);
+    // Use source-generated Regex instances (GeneratedRegex) for best runtime performance
+    // and to avoid allocating/parsing patterns on every invocation.
         // Collect remaining tokens after the fixed-position fields (freq, mode, date, time, mycall)
         int idx = startIndex;
         string[] tokens = parts.Skip(startIndex).ToArray();
@@ -404,31 +402,31 @@ public class CabrilloLogProcessor : ILogProcessor
         {
             // Assign and validate each token; record skips for invalid tokens but still store raw values
             sent.SentSig = tokens[0];
-            if (!sigRegex.IsMatch(tokens[0]))
+            if (!SigRegex().IsMatch(tokens[0]))
             {
                 skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentSig token", RawLine = rawLine });
             }
 
             sent.SentMsg = tokens[1];
-            if (!msgRegex.IsMatch(tokens[1]))
+            if (!MsgRegex().IsMatch(tokens[1]))
             {
                 skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentMsg token", RawLine = rawLine });
             }
 
             theirCall = tokens[2];
-            if (!callRegex.IsMatch(tokens[2]))
+            if (!CallRegex().IsMatch(tokens[2]))
             {
                 skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
             }
 
             recv.ReceivedSig = tokens[3];
-            if (!sigRegex.IsMatch(tokens[3]))
+            if (!SigRegex().IsMatch(tokens[3]))
             {
                 skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedSig token", RawLine = rawLine });
             }
 
             recv.ReceivedMsg = tokens[4];
-            if (!msgRegex.IsMatch(tokens[4]))
+            if (!MsgRegex().IsMatch(tokens[4]))
             {
                 skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedMsg token", RawLine = rawLine });
             }
@@ -440,12 +438,12 @@ public class CabrilloLogProcessor : ILogProcessor
             if (p < tokens.Length)
             {
                 sent.SentSig = tokens[p++];
-                if (!sigRegex.IsMatch(sent.SentSig)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentSig token", RawLine = rawLine });
+                if (!SigRegex().IsMatch(sent.SentSig)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentSig token", RawLine = rawLine });
             }
             if (p < tokens.Length)
             {
                 sent.SentMsg = tokens[p++];
-                if (!msgRegex.IsMatch(sent.SentMsg)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentMsg token", RawLine = rawLine });
+                if (!MsgRegex().IsMatch(sent.SentMsg)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid SentMsg token", RawLine = rawLine });
             }
 
             if (p < tokens.Length)
@@ -454,25 +452,25 @@ public class CabrilloLogProcessor : ILogProcessor
                 if (IsLikelyCallsign(tokens[p]))
                 {
                     theirCall = tokens[p++];
-                    if (!callRegex.IsMatch(theirCall)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
+                    if (!CallRegex().IsMatch(theirCall)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
                 }
                 else if (tokens[p].Any(ch => char.IsLetter(ch)))
                 {
                     // contains letters — likely not a pure numeric signal, treat as theirCall
                     theirCall = tokens[p++];
-                    if (!callRegex.IsMatch(theirCall)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
+                    if (!CallRegex().IsMatch(theirCall)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid TheirCall token", RawLine = rawLine });
                 }
             }
 
             if (p < tokens.Length)
             {
                 recv.ReceivedSig = tokens[p++];
-                if (!sigRegex.IsMatch(recv.ReceivedSig)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedSig token", RawLine = rawLine });
+                if (!SigRegex().IsMatch(recv.ReceivedSig)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedSig token", RawLine = rawLine });
             }
             if (p < tokens.Length)
             {
                 recv.ReceivedMsg = tokens[p++];
-                if (!msgRegex.IsMatch(recv.ReceivedMsg)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedMsg token", RawLine = rawLine });
+                if (!MsgRegex().IsMatch(recv.ReceivedMsg)) skipped.Add(new SkippedEntryInfo { SourceLineNumber = sourceLineNumber, Reason = "Invalid ReceivedMsg token", RawLine = rawLine });
             }
         }
 
@@ -1213,4 +1211,14 @@ public class CabrilloLogProcessor : ILogProcessor
             return OperationResult.Failure<Unit>("Failed to export file.", ResponseStatus.Error, ex);
         }
     }
+
+    // Source-generated regex helpers (faster at runtime and AOT/trimming friendly)
+    [System.Text.RegularExpressions.GeneratedRegex("^(?:[1-5][0-9]{1,2}|[1-5][nN]{1,2})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex SigRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex("^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex MsgRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{1,5}/)?[A-Za-z0-9]{1,5}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex CallRegex();
 }
