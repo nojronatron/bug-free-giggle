@@ -9,16 +9,27 @@ namespace ContestLogProcessor.Console.Interactive.Handlers;
 public class ViewCommandHandler : ICommandHandler
 {
     public string Name => "view";
-    public string? HelpText => "View loaded log entries in canonical format; optional page size";
+    public string? HelpText => "View loaded log entries in canonical format; optional page size. Add [--use-band] to show band token in frequency slot.";
 
     public async Task HandleAsync(string[] parts, ICommandContext ctx)
     {
         try
         {
             int pageSize = 10;
-            if (parts.Length >= 2 && int.TryParse(parts[1], out int parsed))
+            bool useBand = false;
+            // Accept optional --use-band flag and optional pageSize argument
+            for (int i = 1; i < parts.Length; i++)
             {
-                pageSize = Math.Max(1, parsed);
+                if (string.Equals(parts[i], "--use-band", StringComparison.OrdinalIgnoreCase))
+                {
+                    useBand = true;
+                    continue;
+                }
+
+                if (int.TryParse(parts[i], out int parsed))
+                {
+                    pageSize = Math.Max(1, parsed);
+                }
             }
 
             OperationResult<IEnumerable<LogEntry>> readOp = ctx.Processor.ReadEntriesResult();
@@ -48,14 +59,21 @@ public class ViewCommandHandler : ICommandHandler
                 for (int idx = start; idx < end; idx++)
                 {
                     LogEntry e = entries[idx];
-                    if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line))
+                    string outLine;
+                    if (useBand)
                     {
-                        ctx.Console.WriteLine(line);
+                        outLine = e.ToCabrilloLine(preferBandToken: true);
+                    }
+                    else if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line))
+                    {
+                        outLine = line;
                     }
                     else
                     {
-                        ctx.Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
+                        outLine = e.RawLine ?? e.CallSign ?? "(no data)";
                     }
+
+                    ctx.Console.WriteLine(outLine);
                 }
             }
 
@@ -104,14 +122,21 @@ public class ViewCommandHandler : ICommandHandler
                     for (int idx = 0; idx < total; idx++)
                     {
                         LogEntry e = entries[idx];
-                        if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line))
+                        string outLine;
+                        if (useBand)
                         {
-                            ctx.Console.WriteLine(line);
+                            outLine = e.ToCabrilloLine(preferBandToken: true);
+                        }
+                        else if (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line))
+                        {
+                            outLine = line;
                         }
                         else
                         {
-                            ctx.Console.WriteLine(e.RawLine ?? e.CallSign ?? "(no data)");
+                            outLine = e.RawLine ?? e.CallSign ?? "(no data)";
                         }
+
+                        ctx.Console.WriteLine(outLine);
                     }
                     continue;
                 }
