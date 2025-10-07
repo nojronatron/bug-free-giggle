@@ -14,11 +14,32 @@ public class ExportCommandHandler : ICommandHandler
     {
         if (parts.Length < 2)
         {
-            ctx.Console.WriteLine("Usage: export <path>");
+            ctx.Console.WriteLine("Usage: export [--use-band] <path>");
             return;
         }
 
-        string path = string.Join(' ', parts, 1, parts.Length - 1).Trim('"');
+        // Support an optional flag --use-band which tells the exporter to prefer the Band token
+        // in the frequency slot when exporting (for example "40m"). The flag may appear before
+        // or after the path; remove it from the path construction when present.
+        bool useBand = false;
+    System.Collections.Generic.List<string> pathParts = new System.Collections.Generic.List<string>();
+        for (int i = 1; i < parts.Length; i++)
+        {
+            if (string.Equals(parts[i], "--use-band", StringComparison.OrdinalIgnoreCase))
+            {
+                useBand = true;
+                continue;
+            }
+            pathParts.Add(parts[i]);
+        }
+
+        if (pathParts.Count == 0)
+        {
+            ctx.Console.WriteLine("Usage: export [--use-band] <path>");
+            return;
+        }
+
+        string path = string.Join(' ', pathParts).Trim('"');
 
         // Normalize for overwrite check
         string checkPath = path;
@@ -47,7 +68,7 @@ public class ExportCommandHandler : ICommandHandler
                 }
             }
 
-            OperationResult<Unit> res = ctx.Processor.ExportFileResult(path);
+            OperationResult<Unit> res = ctx.Processor.ExportFileResult(path, useCanonicalFormat: true, useBandToken: useBand);
             if (res.IsSuccess)
             {
                 ctx.Console.WriteLine($"Exported: {path}");
