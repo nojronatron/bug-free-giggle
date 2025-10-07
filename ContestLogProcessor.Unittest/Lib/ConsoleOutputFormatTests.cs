@@ -12,9 +12,13 @@ namespace ContestLogProcessor.Unittest.Lib
             string project = "f:\\Projects\\Ham Contest Log Processor\\ContestLogProcessor\\ContestLogProcessor.Console\\ContestLogProcessor.Console.csproj";
             string logfile = "f:\\Projects\\Ham Contest Log Processor\\ContestLogProcessor\\ContestLogProcessor.Unittest\\Lib\\TestData\\K7XXX_Test_WithDX.log";
 
+            // Run the already-built console DLL directly to avoid triggering a build during the test run.
+            string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(project) ?? string.Empty, "bin", "Release", "net9.0", "ContestLogProcessor.Console.dll");
+
             ProcessStartInfo psi = new ProcessStartInfo("dotnet")
             {
-                Arguments = $"run --project \"{project}\" -- \"--score\" \"{logfile}\"",
+                // When invoking dotnet <dll> we pass the application args directly (no extra '--' separator)
+                Arguments = $"\"{dllPath}\" \"--score\" \"{logfile}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

@@ -8,7 +8,7 @@ namespace ContestLogProcessor.Console.Interactive.Handlers;
 public class ExportCommandHandler : ICommandHandler
 {
     public string Name => "export";
-    public string? HelpText => "Export current in-memory log to <filepath>.log";
+    public string? HelpText => "Export current in-memory log to <filepath>.log [--use-band]";
 
     public async Task HandleAsync(string[] parts, ICommandContext ctx)
     {
