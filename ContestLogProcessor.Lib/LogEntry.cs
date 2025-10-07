@@ -107,13 +107,22 @@ public class LogEntry
     /// If a field is missing, an empty placeholder is used to preserve token positions where possible.
     /// Example: "QSO: 14000 CW 2025-09-26 2100 K7RMZ 001 WA OR 59" (simplified example)
     /// </summary>
-    public string ToCabrilloLine()
+    public string ToCabrilloLine(bool preferBandToken = false)
     {
         // Date/time formatting per spec: yyyy-MM-dd and HHmm in UTC.
     string datePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("yyyy-MM-dd");
     string timePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("HHmm");
 
-        string freq = Frequency ?? string.Empty;
+        string freq;
+        if (preferBandToken)
+        {
+            // Prefer Band token when requested. If Band is null, fall back to Frequency if present; otherwise empty.
+            freq = !string.IsNullOrWhiteSpace(Band) ? Band! : (Frequency ?? string.Empty);
+        }
+        else
+        {
+            freq = Frequency ?? string.Empty;
+        }
         string mode = Mode ?? string.Empty;
         string call = CallSign ?? string.Empty;
 

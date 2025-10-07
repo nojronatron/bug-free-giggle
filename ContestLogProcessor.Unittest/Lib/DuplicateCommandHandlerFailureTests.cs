@@ -14,8 +14,8 @@ public class DuplicateCommandHandlerFailureTests
     {
         public event EventHandler<string>? EntryDeleted;
 
-        OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
-        OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat) => OperationResult.Failure<Unit>("not implemented");
+    OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
+    OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat, bool useBandToken) => OperationResult.Failure<Unit>("not implemented");
 
         OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
 
@@ -25,6 +25,8 @@ public class DuplicateCommandHandlerFailureTests
         {
             return OperationResult.Failure<IEnumerable<LogEntry>>("Read failed", ResponseStatus.Error, new InvalidOperationException("boom"));
         }
+        OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesByBandResult(string band, Func<LogEntry, object>? orderBy, int? skip, int? take)
+            => OperationResult.Failure<IEnumerable<LogEntry>>("not implemented");
         OperationResult<LogEntry> ILogProcessor.GetEntryByIdResult(string id) => OperationResult.Failure<LogEntry>("not implemented");
 
         OperationResult<Unit> ILogProcessor.UpdateEntryResult(string id, Action<LogEntry> editAction) => OperationResult.Failure<Unit>("not implemented");
@@ -47,14 +49,15 @@ public class DuplicateCommandHandlerFailureTests
     private class NotFoundGetProcessor : ILogProcessor
     {
         public event EventHandler<string>? EntryDeleted;
-        OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
-        OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat) => OperationResult.Failure<Unit>("not implemented");
+    OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
+    OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat, bool useBandToken) => OperationResult.Failure<Unit>("not implemented");
 
         OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
 
         OperationResult<LogEntry> ILogProcessor.DuplicateEntryResult(string id, ILogProcessor.DuplicateField field, string? newValue) => OperationResult.Failure<LogEntry>("not implemented");
 
-        OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesResult(Func<LogEntry, bool>? filter, Func<LogEntry, object>? orderBy, int? skip, int? take) => OperationResult.Success<IEnumerable<LogEntry>>(new List<LogEntry>());
+    OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesResult(Func<LogEntry, bool>? filter, Func<LogEntry, object>? orderBy, int? skip, int? take) => OperationResult.Success<IEnumerable<LogEntry>>(new List<LogEntry>());
+    OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesByBandResult(string band, Func<LogEntry, object>? orderBy, int? skip, int? take) => OperationResult.Success<IEnumerable<LogEntry>>(new List<LogEntry>());
 
         OperationResult<LogEntry> ILogProcessor.GetEntryByIdResult(string id) => OperationResult.Failure<LogEntry>("not found", ResponseStatus.NotFound);
 
@@ -81,8 +84,8 @@ public class DuplicateCommandHandlerFailureTests
     private class FailingDuplicateProcessor : ILogProcessor
     {
         public event EventHandler<string>? EntryDeleted;
-        OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
-        OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat) => OperationResult.Failure<Unit>("not implemented");
+    OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
+    OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat, bool useBandToken) => OperationResult.Failure<Unit>("not implemented");
 
         OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
 
@@ -90,6 +93,8 @@ public class DuplicateCommandHandlerFailureTests
             => OperationResult.Failure<LogEntry>("duplicate failed", ResponseStatus.Error, new InvalidOperationException("dupboom"));
 
         OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesResult(Func<LogEntry, bool>? filter, Func<LogEntry, object>? orderBy, int? skip, int? take)
+            => OperationResult.Success<IEnumerable<LogEntry>>(new List<LogEntry> { new LogEntry { Id = "1", CallSign = "K" } });
+        OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesByBandResult(string band, Func<LogEntry, object>? orderBy, int? skip, int? take)
             => OperationResult.Success<IEnumerable<LogEntry>>(new List<LogEntry> { new LogEntry { Id = "1", CallSign = "K" } });
 
         OperationResult<LogEntry> ILogProcessor.GetEntryByIdResult(string id) => OperationResult.Success(new LogEntry { Id = id, CallSign = "K" });

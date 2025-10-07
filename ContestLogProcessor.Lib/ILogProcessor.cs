@@ -26,8 +26,17 @@ public interface ILogProcessor
     OperationResult<Unit> ImportFileResult(string filePath);
     /// <summary>
     /// Export the in-memory log to a file. New API returns an OperationResult indicating success/failure.
+    /// When <paramref name="useBandToken"/> is true, the exported QSO lines will prefer the Band token
+    /// in the frequency slot when available (for example "40m"), otherwise the frequency token is used.
     /// </summary>
-    OperationResult<Unit> ExportFileResult(string filePath, bool useCanonicalFormat = true);
+    OperationResult<Unit> ExportFileResult(string filePath, bool useCanonicalFormat = true, bool useBandToken = false);
+
+    /// <summary>
+    /// Read log entries filtered by a canonical band token (for example "40m"). Returns a success
+    /// OperationResult with the enumerable of defensive clones, or a failure OperationResult when an
+    /// unexpected error occurs. If <paramref name="band"/> is null or empty, behavior matches ReadEntriesResult.
+    /// </summary>
+    OperationResult<IEnumerable<LogEntry>> ReadEntriesByBandResult(string band, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
 
     // CRUD operations
     /// <summary>

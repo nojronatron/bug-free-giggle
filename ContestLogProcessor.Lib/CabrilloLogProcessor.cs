@@ -631,6 +631,36 @@ public partial class CabrilloLogProcessor : ILogProcessor
         return result.Select(e => e.Clone());
     }
 
+    // Helper to determine if an entry belongs to the specified band.
+    // Band must match the canonical list (e.g., "40m"). Comparison is case-insensitive.
+    private static bool EntryMatchesBand(LogEntry entry, string band)
+    {
+        if (entry == null || string.IsNullOrWhiteSpace(band)) return false;
+        string normalized = band.Trim();
+        // Require band in the form '40m', '20m', etc. Do not accept '40' (per user request).
+        // Normalize casing for comparison.
+        string target = normalized.ToLowerInvariant();
+
+        // If entry.Band is present, compare directly.
+        if (!string.IsNullOrWhiteSpace(entry.Band))
+        {
+            return string.Equals(entry.Band!.Trim(), target, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Otherwise, try to map frequency to band.
+        if (!string.IsNullOrWhiteSpace(entry.Frequency))
+        {
+            int? freq = ParseFrequencyToken(entry.Frequency);
+            if (freq.HasValue)
+            {
+                string? mapped = MapFrequencyToBand(freq.Value);
+                return mapped != null && string.Equals(mapped, target, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Return a sequence of defensive clones of stored <see cref="LogEntry"/> items.
     /// The returned sequence respects optional filtering, ordering and simple paging parameters.
@@ -665,6 +695,30 @@ public partial class CabrilloLogProcessor : ILogProcessor
         catch (Exception ex)
         {
             return OperationResult.Failure<IEnumerable<LogEntry>>("Failed to read entries.", ResponseStatus.Error, ex);
+        }
+    }
+
+    /// <summary>
+    /// Read entries that match the specified band (e.g., "40m"). Band comparison requires the canonical
+    /// band token (including the trailing 'm') and is case-insensitive. Returns defensive clones.
+    /// </summary>
+    public OperationResult<IEnumerable<LogEntry>> ReadEntriesByBandResult(string band, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(band)) return OperationResult.Failure<IEnumerable<LogEntry>>("Band must not be null or whitespace.", ResponseStatus.BadFormat);
+
+            IEnumerable<LogEntry> entries = ReadEntries(entry => EntryMatchesBand(entry, band), orderBy, skip, take);
+            List<LogEntry> materialized = entries.ToList();
+            return OperationResult.Success<IEnumerable<LogEntry>>(materialized);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure<IEnumerable<LogEntry>>("Failed to read entries by band.", ResponseStatus.Error, ex);
         }
     }
 
@@ -1132,7 +1186,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
     /// <param name="useCanonicalFormat">If <c>true</c>, write canonical, padded Cabrillo QSO lines; otherwise prefer raw lines when available.</param>
     /// <exception cref="InvalidOperationException">Thrown when no log data is available to export.</exception>
     /// <exception cref="DirectoryNotFoundException">Thrown when the destination directory does not exist.</exception>
-    private void ExportFile(string filePath, bool useCanonicalFormat = true)
+    private void ExportFile(string filePath, bool useCanonicalFormat = true, bool useBandToken = false)
     {
         if (_logFile == null || _logFile.Entries == null || _logFile.Entries.Count == 0)
         {
@@ -1165,13 +1219,13 @@ public partial class CabrilloLogProcessor : ILogProcessor
         {
             if (useCanonicalFormat)
             {
-                lines.Add(entry.ToCabrilloLine());
+                lines.Add(entry.ToCabrilloLine(useBandToken));
             }
             else
             {
                 // If no raw line is available (we drop RawLine for parsed entries to save memory),
                 // fall back to canonical formatting so exported files remain valid.
-                lines.Add(entry.RawLine ?? entry.ToCabrilloLine());
+                lines.Add(entry.RawLine ?? entry.ToCabrilloLine(useBandToken));
             }
         }
 
@@ -1187,11 +1241,11 @@ public partial class CabrilloLogProcessor : ILogProcessor
     /// <summary>
     /// OperationResult-based wrapper for ExportFile to support the new API on ILogProcessor.
     /// </summary>
-    public OperationResult<Unit> ExportFileResult(string filePath, bool useCanonicalFormat = true)
+    public OperationResult<Unit> ExportFileResult(string filePath, bool useCanonicalFormat = true, bool useBandToken = false)
     {
         try
         {
-            ExportFile(filePath, useCanonicalFormat);
+            ExportFile(filePath, useCanonicalFormat, useBandToken);
             return OperationResult.Success(Unit.Value);
         }
         catch (ArgumentNullException an)
