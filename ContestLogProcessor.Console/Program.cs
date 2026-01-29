@@ -3,15 +3,22 @@ using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
+using ContestLogProcessor.SalmonRun;
+using ContestLogProcessor.WinterFieldDay;
 
 // Minimal CLI entrypoint. Command implementations live in handler classes under
 // ContestLogProcessor.Console.Interactive. Program.cs only wires up the root command
 // and provides a simple interactive bootstrap that forwards input to the interactive
 // shell handlers.
+
+ServiceCollection services = new ServiceCollection();
+ConfigureServices(services);
+ServiceProvider serviceProvider = services.BuildServiceProvider();
 
 Option<bool> debugOption = new Option<bool>("--debug", description: "Enable debug output");
 Option<string?> importOption = new Option<string?>(new[] { "-i", "--import" }, description: "Import a Cabrillo .log file") { ArgumentHelpName = "logfile" };
@@ -36,7 +43,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
     if (interactive)
     {
-        await RunInteractive(processor, debug);
+        await RunInteractive(processor, debug, serviceProvider);
         return;
     }
 
@@ -90,48 +97,54 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
                             log.Entries = entriesForScore;
 
-                    SalmonRunScoringService svc = new SalmonRunScoringService();
-                    OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScoreResult(log);
-                    if (!scoreOp.IsSuccess)
-                    {
-                        Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
-                        if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
-                        return;
-                    }
+                            // Detect contest type and get appropriate scoring service
+                            IContestDetector detector = serviceProvider.GetRequiredService<IContestDetector>();
+                            IContestRegistry registry = serviceProvider.GetRequiredService<IContestRegistry>();
 
-                    SalmonRunScoreResult res = scoreOp.Value!;
+                            OperationResult<string> contestDetection = detector.DetectContestType(log);
+                            if (!contestDetection.IsSuccess)
+                            {
+                                Console.WriteLine($"Contest detection failed: {contestDetection.ErrorMessage}");
+                                if (debug && contestDetection.Diagnostic != null) Console.WriteLine(contestDetection.Diagnostic.ToString());
+                                return;
+                            }
 
-                    string headerBorder = "+----------------------------------------+";
-                    string headerTitle = "|          Salmon Run Score Report      |";
-                    Console.WriteLine(headerBorder);
-                    Console.WriteLine(headerTitle);
-                    Console.WriteLine(headerBorder);
-                    Console.WriteLine($" Final score : {res.FinalScore}");
-                    Console.WriteLine($" QSO points  : {res.QsoPoints}");
-                    Console.WriteLine($" Multiplier   : {res.Multiplier}");
-                    Console.WriteLine($" W7DX bonus   : {res.W7DxBonusPoints}");
-                    Console.WriteLine("------------------------------------------");
+                            string contestType = contestDetection.Value!;
+                            Console.WriteLine($"Detected contest: {contestType}");
 
-                    int innerWidth = Math.Max(10, headerBorder.Length - 2);
-                    ReportRenderer.PrintWrappedList("Washington Counties", res.UniqueWashingtonCounties, innerWidth, 2, false, res.UniqueWashingtonCounties.Count.ToString());
-                    ReportRenderer.PrintWrappedList("US States", res.UniqueUSStates, innerWidth, 2, false, res.UniqueUSStates.Count.ToString());
-                    ReportRenderer.PrintWrappedList("Canadian Provinces", res.UniqueCanadianProvinces, innerWidth, 2, false, res.UniqueCanadianProvinces.Count.ToString());
-                    ReportRenderer.PrintWrappedList("DXCC Entities", res.UniqueDxccEntities, innerWidth, 2, false, $"{res.UniqueDxccEntities.Count} / 10");
+                            if (contestType == "SALMON-RUN")
+                            {
+                                SalmonRunScoringService svc = serviceProvider.GetRequiredService<SalmonRunScoringService>();
+                                OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScore(log);
+                                if (!scoreOp.IsSuccess)
+                                {
+                                    Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                                    if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                                    return;
+                                }
 
-                    Console.WriteLine("------------------------------------------");
-                    Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
-                    int show = Math.Min(10, res.SkippedEntries.Count);
-                    for (int i = 0; i < show; i++)
-                    {
-                        SkippedEntryInfo s = res.SkippedEntries[i];
-                        foreach (string outLine in ReportRenderer.FormatSkippedEntry(s)) Console.WriteLine(outLine);
-                    }
-                    if (res.SkippedEntries.Count > show)
-                    {
-                        Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
-                    }
+                                SalmonRunScoreResult res = scoreOp.Value!;
+                                PrintSalmonRunScore(res);
+                            }
+                            else if (contestType == "WFD")
+                            {
+                                WinterFieldDayScoringService svc = serviceProvider.GetRequiredService<WinterFieldDayScoringService>();
+                                OperationResult<WinterFieldDayScoreResult> scoreOp = svc.CalculateScore(log);
+                                if (!scoreOp.IsSuccess)
+                                {
+                                    Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                                    if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                                    return;
+                                }
 
-                    Console.WriteLine(headerBorder);
+                                WinterFieldDayScoreResult res = scoreOp.Value!;
+                                PrintWinterFieldDayScore(res);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Scoring not implemented for contest type: {contestType}");
+                                return;
+                            }
                 }
                 catch (Exception ex)
                 {
@@ -186,7 +199,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
 return await root.InvokeAsync(args);
 
-static async Task RunInteractive(ILogProcessor processor, bool debug)
+static async Task RunInteractive(ILogProcessor processor, bool debug, ServiceProvider serviceProvider)
 {
     Console.WriteLine("Entering interactive mode. Type 'help' for available commands.");
 
@@ -243,4 +256,83 @@ static async Task RunInteractive(ILogProcessor processor, bool debug)
             }
         }
     }
+}
+
+static void PrintSalmonRunScore(SalmonRunScoreResult res)
+{
+    string headerBorder = "+----------------------------------------+";
+    string headerTitle = "|          Salmon Run Score Report      |";
+    Console.WriteLine(headerBorder);
+    Console.WriteLine(headerTitle);
+    Console.WriteLine(headerBorder);
+    Console.WriteLine($" Final score : {res.FinalScore}");
+    Console.WriteLine($" QSO points  : {res.QsoPoints}");
+    Console.WriteLine($" Multiplier   : {res.Multiplier}");
+    Console.WriteLine($" W7DX bonus   : {res.W7DxBonusPoints}");
+    Console.WriteLine("------------------------------------------");
+
+    int innerWidth = Math.Max(10, headerBorder.Length - 2);
+    ReportRenderer.PrintWrappedList("Washington Counties", res.UniqueWashingtonCounties, innerWidth, 2, false, res.UniqueWashingtonCounties.Count.ToString());
+    ReportRenderer.PrintWrappedList("US States", res.UniqueUSStates, innerWidth, 2, false, res.UniqueUSStates.Count.ToString());
+    ReportRenderer.PrintWrappedList("Canadian Provinces", res.UniqueCanadianProvinces, innerWidth, 2, false, res.UniqueCanadianProvinces.Count.ToString());
+    ReportRenderer.PrintWrappedList("DXCC Entities", res.UniqueDxccEntities, innerWidth, 2, false, $"{res.UniqueDxccEntities.Count} / 10");
+
+    Console.WriteLine("------------------------------------------");
+    Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
+    int show = Math.Min(10, res.SkippedEntries.Count);
+    for (int i = 0; i < show; i++)
+    {
+        SkippedEntryInfo s = res.SkippedEntries[i];
+        foreach (string outLine in ReportRenderer.FormatSkippedEntry(s)) Console.WriteLine(outLine);
+    }
+    if (res.SkippedEntries.Count > show)
+    {
+        Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
+    }
+
+    Console.WriteLine(headerBorder);
+}
+
+static void PrintWinterFieldDayScore(WinterFieldDayScoreResult res)
+{
+    string headerBorder = "+----------------------------------------+";
+    string headerTitle = "|       Winter Field Day Score Report   |";
+    Console.WriteLine(headerBorder);
+    Console.WriteLine(headerTitle);
+    Console.WriteLine(headerBorder);
+    Console.WriteLine($" Final score : {res.FinalScore}");
+    Console.WriteLine($" QSO points  : {res.QsoPoints}");
+    Console.WriteLine($" Phone QSOs  : {res.PhoneQsos} x 1pt = {res.PhoneQsos}");
+    Console.WriteLine($" CW/Digital  : {res.CwDigitalQsos} x 2pts = {res.CwDigitalQsos * 2}");
+    Console.WriteLine("------------------------------------------");
+    
+    int innerWidth = Math.Max(10, headerBorder.Length - 2);
+    ReportRenderer.PrintWrappedList("Station Categories", res.UniqueStationCategories, innerWidth, 2, false, res.UniqueStationCategories.Count.ToString());
+    ReportRenderer.PrintWrappedList("Locations", res.UniqueLocations, innerWidth, 2, false, res.UniqueLocations.Count.ToString());
+    
+    Console.WriteLine("------------------------------------------");
+    Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
+    int show = Math.Min(10, res.SkippedEntries.Count);
+    for (int i = 0; i < show; i++)
+    {
+        SkippedEntryInfo s = res.SkippedEntries[i];
+        foreach (string outLine in ReportRenderer.FormatSkippedEntry(s)) Console.WriteLine(outLine);
+    }
+    if (res.SkippedEntries.Count > show)
+    {
+        Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
+    }
+
+    Console.WriteLine(headerBorder);
+}
+
+static void ConfigureServices(ServiceCollection services)
+{
+    // Register contest registry and detection services
+    services.AddSingleton<IContestRegistry, ContestRegistry>();
+    services.AddSingleton<IContestDetector, ContestDetector>();
+    
+    // Register contest-specific services using their bootstrap extensions
+    services.RegisterSalmonRunContest();
+    services.RegisterWinterFieldDayContest();
 }
