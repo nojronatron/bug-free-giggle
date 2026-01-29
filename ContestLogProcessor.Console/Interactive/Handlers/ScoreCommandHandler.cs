@@ -35,9 +35,27 @@ public class ScoreCommandHandler : ICommandHandler
             }
 
             CabrilloLogFile log = new CabrilloLogFile();
-            // Try to infer CALLSIGN from entries when header access isn't available on the processor interface
-            string? inferred = entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
-            if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
+            
+            // Try to access the full log file with headers if processor supports it
+            if (processor is CabrilloLogProcessor cabrilloProcessor)
+            {
+                CabrilloLogFileSnapshot? snapshot = cabrilloProcessor.GetReadOnlyLogFile();
+                if (snapshot != null)
+                {
+                    // Copy all headers from the snapshot
+                    foreach (KeyValuePair<string, string> header in snapshot.Headers)
+                    {
+                        log.Headers[header.Key] = header.Value;
+                    }
+                }
+            }
+            
+            // Fallback: Try to infer CALLSIGN from entries when header access isn't available
+            if (!log.Headers.ContainsKey("CALLSIGN"))
+            {
+                string? inferred = entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+                if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
+            }
 
             log.Entries = entries;
 

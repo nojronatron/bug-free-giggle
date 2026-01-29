@@ -19,6 +19,7 @@ public class ScoreCommandHandlerTests
         System.IO.File.WriteAllLines(tmp, new[] {
             "START-OF-LOG: 3.0",
             "CALLSIGN: K7XXX",
+            "CONTEST: WA-SALMON-RUN",
             "QSO: 7265 PH 2025-09-20 0019 K7XXX 59 OKA N7UK 59 ADA",
             "QSO: 14000 PH 2025-09-20 0300 K7XXX 59 OKA W7DX 59 ON",
             "END-OF-LOG:"
@@ -47,6 +48,7 @@ public class ScoreCommandHandlerTests
         System.IO.File.WriteAllLines(tmp2, new[] {
             "START-OF-LOG: 3.0",
             "CALLSIGN: K7XXX",
+            "CONTEST: WA-SALMON-RUN",
             // PH W7DX
             "QSO: 14000 PH 2025-09-20 0100 K7XXX 59 OKA W7DX 59 ON",
             // PH same band duplicate - should not count
@@ -67,7 +69,7 @@ public class ScoreCommandHandlerTests
     string output = string.Join("\n", testConsole.Outputs);
         // Expect W7DX bonus line to show 1000 (two modes counted)
         Assert.Contains("W7DX bonus", output);
-        Assert.Matches(@"W7DX bonus\s*:\s*1?0?0?0", output);
+        Assert.Matches(@"W7DX bonus\s*:\s*1000", output);
     }
 
     [Fact]
