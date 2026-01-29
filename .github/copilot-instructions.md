@@ -5,8 +5,8 @@ This project library will examine a supplied Cabrillo formatted amateur radio lo
 ## Folder Structure
 
 - `/docs`: Contains solution-wide documentation.
-- `/ContestLogProcessor.Console`: A .NET Console application useful for command-line operation.
-- `/ContestLogProcessor.Lib`: The core, shared abstractions and implementations needed by the Console and other Projects (to be added later).
+- `/ContestLogProcessor.Console`: A .NET Console application that processes user input and commands.
+- `/ContestLogProcessor.Lib`: The core, shared abstractions and implementations.
 - `/ContestLogProcessor.Unittest`: xUnit test project. Add a directory to match the project to be tested (for example: `/Lib` for `ContestLogProcessor.Lib` unit tests).
 - `/LogExamples`: Folder contains log file examples and should not be directly imported or copied to code nor checked in to git repository.
 - `/Rules`: Additional specifications and descriptions of contest rules, cabrillo specifications, and special handling rules.
@@ -14,13 +14,6 @@ This project library will examine a supplied Cabrillo formatted amateur radio lo
 When it is time to create additional projects in this Solution:
 
 - Follow the same naming pattern as existing projects, using "Website" for an ASP.NET Core webapp, "WebClient" for WASM, "Server" for an API server, etc
-
-## References
-
-- [Salmon Run Cabrillo Log Standards](../Rules/README_SalmonRunCabrilloLogStandards.md)
-- [Preserve Data Import Order Assertions](../Rules/README_PreserveDataImportOrderAssertions.md)
-- [Salmon Run Scoring Rules](../Rules/README_SalmonRunScoringRules.md)
-- [Salmon Run Scoring](../Rules/README_SalmonRunScoring.md)
 
 ## Coding Standards 
 
@@ -37,12 +30,12 @@ When it is time to create additional projects in this Solution:
 - Prefer file-scoped namespaces: `namespace ContestLogProcessor.Lib;`
 - Use object initializer syntax with data: `Student Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };`
 - Use empty initialization syntax when no initialization data is needed: `Car Subaru = new();`
-- Use collection expression syntax `List<string> = []` (supported in C# 12 and later)
+- Use collection expression syntax supported in C# 12 and later
 - Always add braces around If-then-else statement code blocks
 - Use explicit types instead of var: `Backpack EmptyGenericBackpack = new();` and `Student? FoundStudent = _entries.Find(match);`
 - Lambdas should use descriptive naming conventions including any arguments:
-  - Avoid highly abbreviated or abstract naming conventions: `...(e => e.Length >= 13)`
-  - Prefer representative argument naming: `...(entry => entry.Length >= 13)`
+  - Avoid highly abbreviated or abstract naming conventions: `Entry entries.Where(e => e.Length >= 13)`
+  - Prefer representative argument naming: `public List<Entry> Get(string name)` and `Enumerable<Entry> redCars = cars.Where(car => car.Red)`
 
 ## Libraries and Frameworks
 
@@ -159,3 +152,33 @@ Options:
 - `filter-dupe`  Search entries and optionally duplicate selected/all matches
 - `score`        Score the currently loaded log and show a brief report (also available non-interactively via `--score <file>`)
 - `exit`         Exit interactive session
+
+### Code Examples Section
+Add a dedicated section with more code examples:
+
+```csharp
+// Preferred: Explicit types
+List<string> callsigns = ["K7XXX", "W7TMT"];
+LogEntry entry = new() { Call = "K7XXX" };
+
+// Preferred: Descriptive lambda parameters
+var validEntries = entries.Where(logEntry => logEntry.IsValid);
+
+// Preferred: File-scoped namespace
+namespace ContestLogProcessor.Lib;
+
+// Preferred: Object Initializer syntax
+Student Student1 = new Student { FirstName = "Anony", LastName = "Mouse" };
+
+// Preferred: Empty Initializer syntax when no arguments are needed
+Car Subaru = new();
+
+// Preferred: Collection Expression syntax
+List<Car> Cars = []
+
+// Preferred: Use explicit types instead of var
+Backpack EmptyGenericBackpack = new();
+
+// Preferred: Nullable explicit type instead of var
+Student? FoundStudent = _entries.Find(match);
+```
