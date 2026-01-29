@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace ContestLogProcessor.Lib;
@@ -71,10 +73,15 @@ public class InMemoryLocationLookup : ILocationLookup
         abbreviation = null!;
         if (string.IsNullOrWhiteSpace(token)) return false;
         string t = token.Trim();
-        if (_dxcc.Contains(t))
+        
+        // Check for exact matches preserving case for slashes
+        foreach (string candidate in _dxcc)
         {
-            abbreviation = t.ToUpperInvariant();
-            return true;
+            if (string.Equals(candidate, t, StringComparison.OrdinalIgnoreCase))
+            {
+                abbreviation = candidate; // Return the canonical form preserving case
+                return true;
+            }
         }
         return false;
     }

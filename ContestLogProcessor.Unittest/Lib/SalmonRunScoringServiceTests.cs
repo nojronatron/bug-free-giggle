@@ -1,6 +1,7 @@
 using System;
 using Xunit;
 using ContestLogProcessor.Lib;
+using ContestLogProcessor.SalmonRun;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -10,11 +11,11 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_MissingCallsignHeader_Throws()
     {
         // Arrange
-        var log = new ContestLogProcessor.Lib.CabrilloLogFile();
-        var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        var log = new CabrilloLogFile();
+        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
     // Act & Assert: expect a BadFormat failure via the new OperationResult wrapper
-    var failed = svc.CalculateScoreResult(log);
+    var failed = svc.CalculateScore(log);
     Assert.False(failed.IsSuccess);
     Assert.Equal(ResponseStatus.BadFormat, failed.Status);
     }
@@ -23,75 +24,75 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_BasicHappyPath_ReturnsResult()
     {
         // Arrange - small synthetic log
-        var log = new ContestLogProcessor.Lib.CabrilloLogFile();
+        var log = new CabrilloLogFile();
         log.Headers["CALLSIGN"] = "K7XXX";
 
         // Entry 1: 40m PH, TheirCall N7UK, ReceivedMsg ADA (WA)
-        var e1 = new ContestLogProcessor.Lib.LogEntry
+        var e1 = new LogEntry
         {
             Frequency = "7265",
             Mode = "PH",
             QsoDateTime = new DateTime(2025, 9, 20, 0, 19, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "N7UK",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "ADA" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "ADA" },
             SourceLineNumber = 1,
             RawLine = "QSO: 7265 PH 2025-09-20 0019 K7XXX 59 OKA N7UK 59 ADA"
         };
 
         // Entry 2: 40m CW, same TheirCall N7UK -> different Mode so counts separately
-        var e2 = new ContestLogProcessor.Lib.LogEntry
+        var e2 = new LogEntry
         {
             Frequency = "7073",
             Mode = "CW",
             QsoDateTime = new DateTime(2025, 9, 20, 1, 23, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "N7UK",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "ADA" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "ADA" },
             SourceLineNumber = 2,
             RawLine = "QSO: 7073 CW 2025-09-20 0123 K7XXX 59 OKA N7UK 59 ADA"
         };
 
         // Entry 3: 80m CW, TheirCall W7M, ReceivedMsg CA (US)
-        var e3 = new ContestLogProcessor.Lib.LogEntry
+        var e3 = new LogEntry
         {
             Frequency = "3655",
             Mode = "CW",
             QsoDateTime = new DateTime(2025, 9, 20, 2, 30, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "W7M",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "CA" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "CA" },
             SourceLineNumber = 3,
             RawLine = "QSO: 3655 CW 2025-09-20 0230 K7XXX 59 OKA W7M 59 CA"
         };
 
         // Entry 4: 20m PH, TheirCall W7DX (bonus), ReceivedMsg ON (Canada)
-        var e4 = new ContestLogProcessor.Lib.LogEntry
+        var e4 = new LogEntry
         {
             Frequency = "14000",
             Mode = "PH",
             QsoDateTime = new DateTime(2025, 9, 20, 3, 0, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "W7DX",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
             SourceLineNumber = 4,
             RawLine = "QSO: 14000 PH 2025-09-20 0300 K7XXX 59 OKA W7DX 59 ON"
         };
 
         // Entry 5: 10m PH, TheirCall K1ABC, ReceivedMsg F (DXCC)
-        var e5 = new ContestLogProcessor.Lib.LogEntry
+        var e5 = new LogEntry
         {
             Frequency = "28000",
             Mode = "PH",
             QsoDateTime = new DateTime(2025, 9, 20, 4, 0, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "K1ABC",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "F" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "F" },
             SourceLineNumber = 5,
             RawLine = "QSO: 28000 PH 2025-09-20 0400 K7XXX 59 OKA K1ABC 59 F"
         };
@@ -102,10 +103,10 @@ public class SalmonRunScoringServiceTests
         log.Entries.Add(e4);
         log.Entries.Add(e5);
 
-        var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
     // Act
-    var resultOp = svc.CalculateScoreResult(log);
+    var resultOp = svc.CalculateScore(log);
     Assert.True(resultOp.IsSuccess);
     var result = resultOp.Value!;
 
@@ -126,7 +127,7 @@ public class SalmonRunScoringServiceTests
         Assert.Contains("ADA", result.UniqueWashingtonCounties);
         Assert.Contains("CA", result.UniqueUSStates);
         Assert.Contains("ON", result.UniqueCanadianProvinces);
-    Assert.Contains("F", result.UniqueDxccEntities);
+        Assert.Contains("F", result.UniqueDxccEntities);
 
         // No skipped entries for this happy path
         Assert.Empty(result.SkippedEntries);
@@ -136,71 +137,71 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_W7DX_BonusRules()
     {
         // Arrange - create several W7DX entries to exercise bonus rules
-        var log = new ContestLogProcessor.Lib.CabrilloLogFile();
+        var log = new CabrilloLogFile();
         log.Headers["CALLSIGN"] = "K7XXX";
 
         // First W7DX PH - eligible and should count for PH
-        var w1 = new ContestLogProcessor.Lib.LogEntry
+        var w1 = new LogEntry
         {
             Frequency = "14000",
             Mode = "PH",
             QsoDateTime = new DateTime(2025, 9, 20, 1, 0, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "W7DX",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
             SourceLineNumber = 10,
         };
 
         // Second W7DX PH (same mode and same band) - should NOT count for bonus or QSO points
-        var w2 = new ContestLogProcessor.Lib.LogEntry
+        var w2 = new LogEntry
         {
             Frequency = "14050",
             Mode = "PH",
             QsoDateTime = new DateTime(2025, 9, 20, 2, 0, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "W7DX",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
             SourceLineNumber = 11,
         };
 
         // Third W7DX CW - eligible and should count for CW (different mode)
-        var w3 = new ContestLogProcessor.Lib.LogEntry
+        var w3 = new LogEntry
         {
             Frequency = "7073",
             Mode = "CW",
             QsoDateTime = new DateTime(2025, 9, 20, 3, 0, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "W7DX",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "ADA" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "ADA" },
             SourceLineNumber = 12,
         };
 
         // Fourth W7DX CW but missing ReceivedMsg -> ineligible and should be skipped
-        var w4 = new ContestLogProcessor.Lib.LogEntry
+        var w4 = new LogEntry
         {
             Frequency = "7075",
             Mode = "CW",
             QsoDateTime = new DateTime(2025, 9, 20, 4, 0, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "W7DX",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = null },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = null },
             SourceLineNumber = 13,
         };
 
         // Fifth W7DX PH but marked X-QSO -> ignored/skipped
-        var w5 = new ContestLogProcessor.Lib.LogEntry
+        var w5 = new LogEntry
         {
             Frequency = "14020",
             Mode = "PH",
             QsoDateTime = new DateTime(2025, 9, 20, 5, 0, 0, DateTimeKind.Utc),
             CallSign = "K7XXX",
             TheirCall = "W7DX",
-            SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-            ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
+            SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+            ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "ON" },
             SourceLineNumber = 14,
             IsXQso = true,
         };
@@ -211,12 +212,12 @@ public class SalmonRunScoringServiceTests
         log.Entries.Add(w4);
         log.Entries.Add(w5);
 
-        var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
-    var resultOp = svc.CalculateScoreResult(log);
-    Assert.True(resultOp.IsSuccess);
-    var result = resultOp.Value!;
+        var resultOp = svc.CalculateScore(log);
+        Assert.True(resultOp.IsSuccess);
+        var result = resultOp.Value!;
 
         // Assert: both modes (PH and CW) should have been counted once => 2 * 500 = 1000
         Assert.Equal(1000, result.W7DxBonusPoints);
@@ -239,34 +240,34 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_DxccCapOfTen_IsEnforced()
     {
         // Arrange - create 12 unique DXCC ReceivedMsg entries; only first 10 should be counted
-        var log = new ContestLogProcessor.Lib.CabrilloLogFile();
+        var log = new CabrilloLogFile();
         log.Headers["CALLSIGN"] = "K7XXX";
 
         string[] dxccs = new[] { "1A","3A","3B6","3B8","3B9","3C","3C0","3D2","3DA","3V","3W","3X" };
 
         for (int i = 0; i < dxccs.Length; i++)
         {
-            var e = new ContestLogProcessor.Lib.LogEntry
+            var e = new LogEntry
             {
                 Frequency = "28000",
                 Mode = "PH",
                 QsoDateTime = new DateTime(2025, 9, 21, 0, i, 0, DateTimeKind.Utc),
                 CallSign = "K7XXX",
                 TheirCall = $"DX{i}",
-                SentExchange = new ContestLogProcessor.Lib.Exchange { SentSig = "59", SentMsg = "OKA" },
-                ReceivedExchange = new ContestLogProcessor.Lib.Exchange { ReceivedSig = "59", ReceivedMsg = dxccs[i] },
+                SentExchange = new Exchange { SentSig = "59", SentMsg = "OKA" },
+                ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = dxccs[i] },
                 SourceLineNumber = i + 1,
             };
 
             log.Entries.Add(e);
         }
 
-        var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
-    var resultOp = svc.CalculateScoreResult(log);
-    Assert.True(resultOp.IsSuccess);
-    var result = resultOp.Value!;
+        var resultOp = svc.CalculateScore(log);
+        Assert.True(resultOp.IsSuccess);
+        var result = resultOp.Value!;
 
         // Assert: only first 10 DXCC entries were counted
         Assert.Equal(10, result.UniqueDxccEntities.Count);

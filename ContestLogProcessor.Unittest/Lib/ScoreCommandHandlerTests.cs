@@ -3,13 +3,14 @@ using Xunit;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Unittest.Lib;
+using System.Threading.Tasks;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
 public class ScoreCommandHandlerTests
 {
     [Fact]
-    public async System.Threading.Tasks.Task ScoreHandler_HappyPath_PrintsReport()
+    public async Task ScoreHandler_HappyPath_PrintsReport()
     {
         // Arrange
         var proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
@@ -39,7 +40,7 @@ public class ScoreCommandHandlerTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task ScoreHandler_W7DxBonus_CountsPerMode()
+    public async Task ScoreHandler_W7DxBonus_CountsPerMode()
     {
         var proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
         string tmp2 = System.IO.Path.GetTempFileName();
@@ -88,12 +89,12 @@ public class ScoreCommandHandlerTests
     var importRes3 = proc.ImportFileResult(tmp3);
     Assert.True(importRes3.IsSuccess);
 
-    var svc = new ContestLogProcessor.Lib.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+    var svc = new ContestLogProcessor.SalmonRun.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
     var log = new ContestLogProcessor.Lib.CabrilloLogFile();
     log.Headers["CALLSIGN"] = "K7XXX";
     log.Entries = proc.ReadEntriesResult().Value!.ToList();
 
-    var resOp = svc.CalculateScoreResult(log);
+    var resOp = svc.CalculateScore(log);
     Assert.True(resOp.IsSuccess);
     var res = resOp.Value!;
 

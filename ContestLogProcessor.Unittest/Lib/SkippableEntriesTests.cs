@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Xunit;
+using ContestLogProcessor.SalmonRun;
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Unittest.Lib;
@@ -61,8 +62,8 @@ public class SkippableEntriesTests
 
     log.Entries = p.ReadEntriesResult().Value!.ToList();
 
-    SalmonRunScoringService svc = new SalmonRunScoringService();
-    var resOp = svc.CalculateScoreResult(log);
+    SalmonRunScoringService svc = new();
+    var resOp = svc.CalculateScore(log);
     Assert.True(resOp.IsSuccess);
     SalmonRunScoreResult res = resOp.Value!;
 

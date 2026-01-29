@@ -7,13 +7,13 @@ namespace ContestLogProcessor.SalmonRun;
 
 public class SalmonRunScoringService : IContestScoringService<SalmonRunScoreResult>
 {
-    private readonly ILocationLookup _lookup;
+    private readonly ContestLogProcessor.Lib.ILocationLookup _lookup;
 
     public string ContestId => "SALMON-RUN";
 
-    public SalmonRunScoringService(ILocationLookup? lookup = null)
+    public SalmonRunScoringService(ContestLogProcessor.Lib.ILocationLookup? lookup = null)
     {
-        _lookup = lookup ?? new InMemoryLocationLookup();
+        _lookup = lookup ?? new ContestLogProcessor.Lib.InMemoryLocationLookup();
     }
 
     [Obsolete("Use CalculateScore(CabrilloLogFile) which returns an OperationResult<SalmonRunScoreResult> for recoverable failures.")]
