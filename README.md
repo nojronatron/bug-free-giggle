@@ -6,6 +6,16 @@ A vast majority of code was was written by GitHub Copilot in Agent mode, using G
 
 ## Features
 
+v2.0.0 (28 January 2026)
+
+- Add ability to introduce other contests
+- Modularize contest log registration
+- Detect contest using provided header information
+- Add Winter Field Day processor and validation logic
+- Update README
+- Add full Cabrillo v3.x (late 2025) definition
+- Enable importing ADIF file (but is not validated or processed at all)
+
 v1.0.0 (7 October 2025)
 
 - Interactive console and non-interactive console interfaces, both with with on-screen help
