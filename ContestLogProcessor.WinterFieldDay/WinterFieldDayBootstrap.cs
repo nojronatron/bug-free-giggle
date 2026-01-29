@@ -1,0 +1,24 @@
+using Microsoft.Extensions.DependencyInjection;
+using ContestLogProcessor.Lib;
+
+namespace ContestLogProcessor.WinterFieldDay;
+
+/// <summary>
+/// Bootstrap extensions for registering Winter Field Day contest services.
+/// </summary>
+public static class WinterFieldDayBootstrap
+{
+    /// <summary>
+    /// Register Winter Field Day contest services with the DI container.
+    /// </summary>
+    /// <param name="services">Service collection to register services with</param>
+    /// <returns>The service collection for method chaining</returns>
+    public static IServiceCollection RegisterWinterFieldDayContest(this IServiceCollection services)
+    {
+        // Register Winter Field Day specific services
+        services.AddSingleton<WinterFieldDayExchangeParser>();
+        services.AddSingleton<IContestScoringService<WinterFieldDayScoreResult>, WinterFieldDayScoringService>();
+
+        return services;
+    }
+}
