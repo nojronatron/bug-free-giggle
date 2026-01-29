@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using ContestLogProcessor.Lib;
 
-namespace ContestLogProcessor.Lib;
+namespace ContestLogProcessor.SalmonRun;
 
 public class SalmonRunScoreResult
 {
@@ -15,11 +16,4 @@ public class SalmonRunScoreResult
     public List<string> UniqueDxccEntities { get; } = new();
 
     public List<SkippedEntryInfo> SkippedEntries { get; } = new();
-}
-
-public class SkippedEntryInfo
-{
-    public int? SourceLineNumber { get; set; }
-    public string? Reason { get; set; }
-    public string? RawLine { get; set; }
 }
