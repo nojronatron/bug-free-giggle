@@ -39,20 +39,18 @@ When it is time to create additional projects in this Solution:
 
 ## Libraries and Frameworks
 
-- Use .NET 9
+- Use .NET 10
 - Only Blazor or ASP.NET Core projects should utilize HTML, CSS, and JavaScript
 - Always ask before adding, updating, or removing NuGet packages
 - When writing unit tests use xUnit
 - Use a NuGet package like Moq to enable mocking only when necessary to implement and run a unit test
-- Projects within the solution (except the Unittest project) may be deployed to Docker containers for portability
 
 ## Architecture Guidelines
 
-- Projects should depend on ContestLogProcessor.Lib for core functionality
-- Projects should provide their own functionality that directly relates to their purpose and not depend on other projects besides `ContestLogProcessor.Lib`
+- Projects should depend on a Class Library project for core functionality
+- Projects should provide their own functionality that directly relates to their purpose and not depend on other projects with the exception of shared libraries in core Class Library
 - Projects should utilize Logging features (i.e. `<ILogger>`) and have a way to log output
-- ContestLogProcessor.Lib is the core processing component and other projects are for UI, testing, or other purposes
-- Each project should have a Docker container, except for `ContestLogProcessor.Lib` which is a dependency of the other projects
+- ContestLogProcessor Console should be compatible with deployment to a Docker container for portability
 
 ### Exception handling and Result contract
 
@@ -101,20 +99,20 @@ Key policies (high level):
 See [Result object specification](../ContestLogProcessor.Lib/Docs/ResultObjectDefinition.md) for exact fields,
 invariants, and usage examples.
 
-### ContestLogProcessor.Console
+### Console
 
 - Should NOT output logging information unless a debug argument is included on the command line
 - Should output logging information to the standard output (console screen) when a debug argument is included
 - Should accept input in a human-readable and concise format such as: `-debug` to add logging, `-add`, `-update`, `-remove` to perform operations on the data in memory, `-export` to dump data in memory to a file, etc
 
-### ContestLogProcessor.Lib
+### Core Library
 
 - Prefer synchronous functions over asynchronous
 - Methods that provide API access to the Library should be public
 - Methods that support functionality and processing should not be publicly accessible by dependent projects
 - Abstraction should be used to hide complexity from calling methods while enabling functionality
 
-### ContestLogProcessor.Unittest
+### Unittests
 
 - xUnit test project for the entire solution
 - Follow the folder structure instructions
@@ -122,6 +120,26 @@ invariants, and usage examples.
 - Focus unit tests on specific, basic functional goals
 - Avoid writing extensive edge-case unit tests
 - Use data in `./LogExamples` directory to derive realistic test case data but do not copy the data exactly
+
+## Build, Run, and Test
+
+```PowerShell
+# build solution: debug
+dotnet build ContestLogProcessor.slnx -c Debug -v Detailed
+
+# test solution: debug
+dotnet test .\ContestLogProcessor.slnx -c Debug
+
+# execute individual tests
+$testsName = "Header Sanitizer Tests"
+dotnet test .\ContestLogProcessor.Unittest\ContestLogProcessor.Unittest.csproj -filter $testsName
+
+# build Console: debug
+dotnet build ContestLogProcessor.Console\ContestLogProcessor.Console.csproj -c Debug -v Detailed
+
+# build Console: release
+dotnet publish ContestLogProcessor.Console\ContestLogProcessor.Console.csproj -c Release --self-contained --output ..\ReleaseArtifacts -v Detailed
+```
 
 ## User Interactions
 
