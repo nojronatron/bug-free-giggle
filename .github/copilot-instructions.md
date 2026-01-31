@@ -5,7 +5,7 @@ This project library will examine a supplied Cabrillo formatted amateur radio lo
 `/docs`: Contains solution-wide documentation.
 `/ContestLogProcessor.Console`: A .NET Console application that processes user input and commands.
 `/ContestLogProcessor.Lib`: The core, shared abstractions and implementations.
-`/ContestLogProcessor.Unittest`: xUnit test project. Add a directory to match the project to be tested (for example: `/Lib` for `ContestLogProcessor.Lib` unit tests).
+`/ContestLogProcessor.Unittest`: xUnit test project. Add a subdirectory to match the project to be tested (examples: `/Lib` for `ContestLogProcessor.Lib` unit tests, `/SalmonRun` for `ContestLogProcessor.SalmonRun` unit tests).
 `/LogExamples`: Folder contains log file examples and should not be directly imported or copied to code nor checked in to git repository.
 `/Rules`: Additional specifications and descriptions of contest rules, cabrillo specifications, and special handling rules.
 
