@@ -322,22 +322,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
                             // Only apply sanitizer to a conservative list of header keys that may contain
                             // long string values. The sanitizer itself is conservative and will no-op for
                             // short values (<= 13 chars). Keys are compared case-insensitively.
-                            HashSet<string> sanitizable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                "LOCATION",
-                                "CALLSIGN",
-                                "CLUB",
-                                "NAME",
-                                "ADDRESS",
-                                "ADDRESS-CITY",
-                                "ADDRESS-POSTALCODE",
-                                "ADDRESS-COUNTRY",
-                                "EMAIL",
-                                "CREATED-BY",
-                                "SOAPBOX"
-                            };
-
-                            if (sanitizable.Contains(key))
+                            if (SanitizableHeaderExtensions.IsSanitizable(key))
                             {
                                 headers[key] = SanitizeHeaderValue(value, key);
                             }
@@ -1373,11 +1358,11 @@ public partial class CabrilloLogProcessor : ILogProcessor
         {
             "CATEGORY-TIME" => ValidateCategoryTime(value),
             "CATEGORY-OVERLAY" => ValidateCategoryOverlay(value),
-            "CATEGORY-ASSISTED" => ValidateFromSet(value, ["ASSISTED", "NON-ASSISTED"], "CATEGORY-ASSISTED"),
+            "CATEGORY-ASSISTED" => ValidateFromSet(value, CategoryAssistedExtensions.GetAllValidValues(), "CATEGORY-ASSISTED"),
             "CATEGORY-BAND" => ValidateFromSet(value, ["ALL", "160M", "80M", "40M", "20M", "15M", "10M", "6M", "4M", "2M", "222", "432", "902", "1.2G", "2.3G", "3.4G", "5.7G", "10G", "24G", "47G", "75G", "122G", "134G", "241G", "LIGHT", "VHF-3-BAND", "VHF-FM-ONLY"], "CATEGORY-BAND"),
-            "CATEGORY-MODE" => ValidateFromSet(value, ["CW", "DIGI", "FM", "RTTY", "SSB", "MIXED"], "CATEGORY-MODE"),
-            "CATEGORY-OPERATOR" => ValidateFromSet(value, ["SINGLE-OP", "MULTI-OP", "CHECKLOG"], "CATEGORY-OPERATOR"),
-            "CATEGORY-POWER" => ValidateFromSet(value, ["HIGH", "LOW", "QRP"], "CATEGORY-POWER"),
+            "CATEGORY-MODE" => ValidateFromSet(value, CategoryModeExtensions.GetAllValidValues(), "CATEGORY-MODE"),
+            "CATEGORY-OPERATOR" => ValidateFromSet(value, CategoryOperatorExtensions.GetAllValidValues(), "CATEGORY-OPERATOR"),
+            "CATEGORY-POWER" => ValidateFromSet(value, CategoryPowerExtensions.GetAllValidValues(), "CATEGORY-POWER"),
             "CATEGORY-STATION" => ValidateFromSet(value, ["DISTRIBUTED", "FIXED", "MOBILE", "PORTABLE", "ROVER", "ROVER-LIMITED", "ROVER-UNLIMITED", "EXPEDITION", "HQ", "SCHOOL", "EXPLORER"], "CATEGORY-STATION"),
             "CATEGORY-TRANSMITTER" => ValidateFromSet(value, ["ONE", "TWO", "LIMITED", "UNLIMITED", "SWL"], "CATEGORY-TRANSMITTER"),
             _ => OperationResult.Success(Unit.Value) // No validation required for other headers
@@ -1386,18 +1371,16 @@ public partial class CabrilloLogProcessor : ILogProcessor
 
     private static OperationResult<Unit> ValidateCategoryTime(string value)
     {
-        HashSet<string> validTimes = ["6-HOURS", "8-HOURS", "12-HOURS", "24-HOURS"];
-        return validTimes.Contains(value.ToUpperInvariant())
+        return CategoryTimeExtensions.TryParse(value, out CategoryTime _)
             ? OperationResult.Success(Unit.Value)
-            : OperationResult.Failure<Unit>($"Invalid CATEGORY-TIME value '{value}'. Must be one of: {string.Join(", ", validTimes)}", ResponseStatus.BadFormat);
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-TIME value '{value}'. Must be one of: {string.Join(", ", CategoryTimeExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
     }
 
     private static OperationResult<Unit> ValidateCategoryOverlay(string value)
     {
-        HashSet<string> validOverlays = ["CLASSIC", "ROOKIE", "TB-WIRES", "YOUTH", "NOVICE-TECH", "YL"];
-        return validOverlays.Contains(value.ToUpperInvariant())
+        return CategoryOverlayExtensions.TryParse(value, out CategoryOverlay _)
             ? OperationResult.Success(Unit.Value)
-            : OperationResult.Failure<Unit>($"Invalid CATEGORY-OVERLAY value '{value}'. Must be one of: {string.Join(", ", validOverlays)}", ResponseStatus.BadFormat);
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-OVERLAY value '{value}'. Must be one of: {string.Join(", ", CategoryOverlayExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
     }
 
     private static OperationResult<Unit> ValidateFromSet(string value, string[] validValues, string headerName)
