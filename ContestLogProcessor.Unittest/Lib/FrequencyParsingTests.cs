@@ -146,8 +146,8 @@ public class FrequencyParsingTests
             "CALLSIGN: K7RMZ",
             // Numeric within 55-1000 should be excluded
             "QSO: 100 PH 2025-09-20 1330 K7RMZ 59 OKA W7IB 59 WHA",
-            // Numeric above the allowed max (54000) should be excluded
-            "QSO: 60000 PH 2025-09-20 1340 K7RMZ 59 OKA N7KN 59 ISL",
+            // Numeric above the allowed max (300GHz = 300000000 kHz) should be excluded
+            "QSO: 400000000 PH 2025-09-20 1340 K7RMZ 59 OKA N7KN 59 ISL",
             "END-OF-LOG:"
         };
 
@@ -164,7 +164,7 @@ public class FrequencyParsingTests
             Assert.False(entries[0].FrequencyIsValid, "Frequency 100 (in excluded low range) should be invalid");
             Assert.Null(entries[0].Band);
 
-            Assert.False(entries[1].FrequencyIsValid, "Frequency 60000 (above allowed max) should be invalid");
+            Assert.False(entries[1].FrequencyIsValid, "Frequency 400000000 (above allowed max) should be invalid");
             Assert.Null(entries[1].Band);
         }
         finally

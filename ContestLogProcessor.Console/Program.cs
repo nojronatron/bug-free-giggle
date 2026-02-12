@@ -95,6 +95,19 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
                             string? inferred = entriesForScore.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
                             if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
 
+                            // Get headers from the processor for contest detection
+                            if (scProc is CabrilloLogProcessor cabrilloProc)
+                            {
+                                if (cabrilloProc.TryGetHeader("CONTEST", out string? contestHeader))
+                                {
+                                    log.Headers["CONTEST"] = contestHeader!;
+                                }
+                                if (cabrilloProc.TryGetHeader("CALLSIGN", out string? callsignHeader) && !string.IsNullOrWhiteSpace(callsignHeader))
+                                {
+                                    log.Headers["CALLSIGN"] = callsignHeader!;
+                                }
+                            }
+
                             log.Entries = entriesForScore;
 
                             // Detect contest type and get appropriate scoring service

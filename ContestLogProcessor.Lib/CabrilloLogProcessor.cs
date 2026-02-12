@@ -245,7 +245,15 @@ public partial class CabrilloLogProcessor : ILogProcessor
                                 // If the original token was a band mapping, we may have returned the mapped frequency
                                 entry.Band = MapFrequencyToBand(freqKHz.Value) ?? entry.Band;
                                 // Normalize Frequency string to the integer kHz representation so downstream code can rely on numeric values
-                                entry.Frequency = freqKHz.Value.ToString();
+                                // EXCEPTION: Special tokens like "LIGHT" should preserve their original form
+                                if (entry.Frequency.Equals("LIGHT", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    entry.Frequency = "LIGHT"; // Preserve special token
+                                }
+                                else
+                                {
+                                    entry.Frequency = freqKHz.Value.ToString();
+                                }
                             }
                             else
                             {
@@ -280,6 +288,9 @@ public partial class CabrilloLogProcessor : ILogProcessor
                             theirCall = SanitizeHeaderValue(theirCall!, "THEIRCALL");
                         }
                         entry.TheirCall = theirCall;
+                        
+                        // Parse optional transmitter ID (Cabrillo v3 spec: 0 or 1)
+                        entry.TransmitterId = ParseTransmitterId(parts, sentExch, recvExch, theirCall);
 
                         if (string.IsNullOrWhiteSpace(entry.Id))
                         {
@@ -333,6 +344,18 @@ public partial class CabrilloLogProcessor : ILogProcessor
                             else
                             {
                                 headers[key] = value;
+                            }
+
+                            // Validate Cabrillo v3 enumerated header values
+                            OperationResult<Unit> validationResult = ValidateHeaderEnumeratedValue(key, value, lineIndex);
+                            if (!validationResult.IsSuccess)
+                            {
+                                skipped.Add(new SkippedEntryInfo
+                                {
+                                    SourceLineNumber = lineIndex,
+                                    Reason = $"Invalid header value: {validationResult.ErrorMessage}",
+                                    RawLine = line
+                                });
                             }
                         }
                 }
@@ -510,13 +533,32 @@ public partial class CabrilloLogProcessor : ILogProcessor
     }
 
     /// <summary>
-    /// Parse a frequency token into an integer kHz value when possible.
-    /// Accepts integer or floating values; truncates fractional part. Returns null when token is invalid per Salmon Run rules.
+    /// Parse a frequency token to support both legacy and modern Cabrillo frequency patterns.
+    /// Supports official frequency values, integer kHz values, and band tokens for backward compatibility.
+    /// Returns frequency in kHz or a mapped value for validation purposes.
     /// </summary>
+    /// <param name="token">The frequency token to parse</param>
+    /// <param name="logFile">The log file context (optional, for future extensibility)</param>
     private static int? ParseFrequencyToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         token = token.Trim();
+
+        // Handle official Cabrillo frequency patterns (both legacy and v3)
+        Dictionary<string, int> officialFrequencies = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "1800", 1800 }, { "3500", 3500 }, { "7000", 7000 }, { "14000", 14000 }, 
+            { "21000", 21000 }, { "28000", 28000 }, { "50", 50000 }, { "70", 70000 },
+            { "144", 144000 }, { "222", 222000 }, { "432", 432000 }, { "902", 902000 },
+            { "1.2G", 1200000 }, { "2.3G", 2300000 }, { "3.4G", 3400000 }, { "5.7G", 5700000 },
+            { "10G", 10000000 }, { "24G", 24000000 }, { "47G", 47000000 }, { "75G", 75000000 },
+            { "122G", 122000000 }, { "134G", 134000000 }, { "241G", 241000000 }, { "LIGHT", 999999999 }
+        };
+
+        if (officialFrequencies.TryGetValue(token, out int officialFreq))
+        {
+            return officialFreq;
+        }
 
         // If token looks like a band token (e.g., "40m"), map to the band's lowest frequency kHz value
         Match m = Regex.Match(token, "^(\\d{1,3})m$", RegexOptions.IgnoreCase);
@@ -530,32 +572,36 @@ public partial class CabrilloLogProcessor : ILogProcessor
             return null;
         }
 
-        // Reject tokens containing letter 'G' or unit suffixes other than a trailing 'm' handled above
-        if (token.IndexOf('G', StringComparison.OrdinalIgnoreCase) >= 0)
-        {
-            return null;
-        }
-
-        // Reject the literal LIGHT
-        if (string.Equals(token, "LIGHT", StringComparison.OrdinalIgnoreCase)) return null;
-
-        // Try parse as double to support floating formats like 7.053
+        // For backward compatibility with Salmon Run, try parse as double for floating formats
         if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d))
         {
             // Only consider whole-number portion (truncate) per rules
             int whole = (int)Math.Truncate(d);
-            // Reject ranges outside allowed bounds
-            if (whole < 1800 || whole > 54000) return null;
-            // Also reject the 55..1000 range per rules
+            
+            // Extended range validation - support HF through microwave frequencies
+            if (whole < 1800) return null; // Below HF band
+            
+            // Reject the 55..1000 range per Salmon Run rules (invalid for any amateur frequency)
             if (whole >= 55 && whole <= 1000) return null;
+            
+            // Support extended microwave frequencies (up to 300 GHz)
+            if (whole > 300000000) return null; // Above 300 GHz limit
+            
             return whole;
         }
 
-        // Try parse integer without decimals
+        // Try parse integer without decimals for backward compatibility
         if (int.TryParse(token, out int i))
         {
-            if (i < 1800 || i > 54000) return null;
+            // Extended range validation - support HF through microwave frequencies
+            if (i < 1800) return null; // Below HF band
+            
+            // Reject the 55..1000 range per Salmon Run rules
             if (i >= 55 && i <= 1000) return null;
+            
+            // Support extended microwave frequencies (up to 300 GHz)
+            if (i > 300000000) return null; // Above 300 GHz limit
+            
             return i;
         }
 
@@ -650,7 +696,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
         // Otherwise, try to map frequency to band.
         if (!string.IsNullOrWhiteSpace(entry.Frequency))
         {
-            int? freq = ParseFrequencyToken(entry.Frequency);
+            int? freq = ParseFrequencyToken(entry.Frequency); // Use standard parsing for static method
             if (freq.HasValue)
             {
                 string? mapped = MapFrequencyToBand(freq.Value);
@@ -1264,6 +1310,91 @@ public partial class CabrilloLogProcessor : ILogProcessor
         {
             return OperationResult.Failure<Unit>("Failed to export file.", ResponseStatus.Error, ex);
         }
+    }
+
+    /// <summary>
+    /// Parse optional transmitter ID from QSO line tokens.
+    /// Per Cabrillo v3 spec, transmitter ID is 0 or 1 and appears at the end of the QSO line.
+    /// Returns null if not present or invalid.
+    /// </summary>
+    private static int? ParseTransmitterId(string[] parts, Exchange? sentExch, Exchange? recvExch, string? theirCall)
+    {
+        // Calculate expected position: QSO: freq mode date time mycall + exchanges + transmitterId
+        // Minimum tokens: QSO: freq mode date time mycall (5 base tokens + exchanges)
+        int expectedMinTokens = 6; // Base tokens
+        if (sentExch != null) expectedMinTokens += CountNonEmptyExchangeFields(sentExch);
+        if (!string.IsNullOrWhiteSpace(theirCall)) expectedMinTokens += 1;
+        if (recvExch != null) expectedMinTokens += CountNonEmptyExchangeFields(recvExch);
+        
+        // Check if there's one more token that could be transmitter ID
+        if (parts.Length > expectedMinTokens)
+        {
+            string lastToken = parts[parts.Length - 1];
+            if (int.TryParse(lastToken, out int transmitterId) && (transmitterId == 0 || transmitterId == 1))
+            {
+                return transmitterId;
+            }
+        }
+        
+        return null;
+    }
+
+    /// <summary>
+    /// Count non-empty exchange fields to help calculate token positions.
+    /// </summary>
+    private static int CountNonEmptyExchangeFields(Exchange exchange)
+    {
+        int count = 0;
+        if (!string.IsNullOrWhiteSpace(exchange.SentSig)) count++;
+        if (!string.IsNullOrWhiteSpace(exchange.SentMsg)) count++;
+        if (!string.IsNullOrWhiteSpace(exchange.ReceivedSig)) count++;
+        if (!string.IsNullOrWhiteSpace(exchange.ReceivedMsg)) count++;
+        return count;
+    }
+
+    /// <summary>
+    /// Validate header value against Cabrillo v3 enumerated requirements.
+    /// Returns validation result with error message if invalid.
+    /// </summary>
+    private static OperationResult<Unit> ValidateHeaderEnumeratedValue(string key, string value, int lineNumber)
+    {
+        return key.ToUpperInvariant() switch
+        {
+            "CATEGORY-TIME" => ValidateCategoryTime(value),
+            "CATEGORY-OVERLAY" => ValidateCategoryOverlay(value),
+            "CATEGORY-ASSISTED" => ValidateFromSet(value, ["ASSISTED", "NON-ASSISTED"], "CATEGORY-ASSISTED"),
+            "CATEGORY-BAND" => ValidateFromSet(value, ["ALL", "160M", "80M", "40M", "20M", "15M", "10M", "6M", "4M", "2M", "222", "432", "902", "1.2G", "2.3G", "3.4G", "5.7G", "10G", "24G", "47G", "75G", "122G", "134G", "241G", "LIGHT", "VHF-3-BAND", "VHF-FM-ONLY"], "CATEGORY-BAND"),
+            "CATEGORY-MODE" => ValidateFromSet(value, ["CW", "DIGI", "FM", "RTTY", "SSB", "MIXED"], "CATEGORY-MODE"),
+            "CATEGORY-OPERATOR" => ValidateFromSet(value, ["SINGLE-OP", "MULTI-OP", "CHECKLOG"], "CATEGORY-OPERATOR"),
+            "CATEGORY-POWER" => ValidateFromSet(value, ["HIGH", "LOW", "QRP"], "CATEGORY-POWER"),
+            "CATEGORY-STATION" => ValidateFromSet(value, ["DISTRIBUTED", "FIXED", "MOBILE", "PORTABLE", "ROVER", "ROVER-LIMITED", "ROVER-UNLIMITED", "EXPEDITION", "HQ", "SCHOOL", "EXPLORER"], "CATEGORY-STATION"),
+            "CATEGORY-TRANSMITTER" => ValidateFromSet(value, ["ONE", "TWO", "LIMITED", "UNLIMITED", "SWL"], "CATEGORY-TRANSMITTER"),
+            _ => OperationResult.Success(Unit.Value) // No validation required for other headers
+        };
+    }
+
+    private static OperationResult<Unit> ValidateCategoryTime(string value)
+    {
+        HashSet<string> validTimes = ["6-HOURS", "8-HOURS", "12-HOURS", "24-HOURS"];
+        return validTimes.Contains(value.ToUpperInvariant())
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-TIME value '{value}'. Must be one of: {string.Join(", ", validTimes)}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateCategoryOverlay(string value)
+    {
+        HashSet<string> validOverlays = ["CLASSIC", "ROOKIE", "TB-WIRES", "YOUTH", "NOVICE-TECH", "YL"];
+        return validOverlays.Contains(value.ToUpperInvariant())
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-OVERLAY value '{value}'. Must be one of: {string.Join(", ", validOverlays)}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateFromSet(string value, string[] validValues, string headerName)
+    {
+        HashSet<string> validSet = new HashSet<string>(validValues, StringComparer.OrdinalIgnoreCase);
+        return validSet.Contains(value)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid {headerName} value '{value}'. Must be one of: {string.Join(", ", validValues)}", ResponseStatus.BadFormat);
     }
 
     // Source-generated regex helpers (faster at runtime and AOT/trimming friendly)

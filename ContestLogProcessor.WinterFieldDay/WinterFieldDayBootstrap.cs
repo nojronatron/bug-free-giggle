@@ -17,6 +17,7 @@ public static class WinterFieldDayBootstrap
     {
         // Register Winter Field Day specific services
         services.AddSingleton<WinterFieldDayExchangeParser>();
+        services.AddSingleton<WinterFieldDayScoringService>();
         services.AddSingleton<IContestScoringService<WinterFieldDayScoreResult>, WinterFieldDayScoringService>();
 
         return services;

@@ -103,6 +103,12 @@ public class LogEntry
     public int? SourceLineNumber { get; set; }
 
     /// <summary>
+    /// Transmitter ID used to identify RUN/MULT, RUN1/RUN2 stations in multi-transmitter categories.
+    /// Valid values are 0 or 1 per Cabrillo v3 specification. Null if not applicable or missing.
+    /// </summary>
+    public int? TransmitterId { get; set; }
+
+    /// <summary>
     /// Produce a canonical Cabrillo QSO line from the structured fields.
     /// If a field is missing, an empty placeholder is used to preserve token positions where possible.
     /// Example: "QSO: 14000 CW 2025-09-26 2100 K7RMZ 001 WA OR 59" (simplified example)
@@ -157,7 +163,8 @@ public class LogEntry
             FrequencyIsValid = this.FrequencyIsValid,
             IsXQso = this.IsXQso,
             TheirCall = this.TheirCall,
-            SourceLineNumber = this.SourceLineNumber
+            SourceLineNumber = this.SourceLineNumber,
+            TransmitterId = this.TransmitterId
         };
 
         if (this.SentExchange != null) copy.SentExchange = this.SentExchange.Clone();

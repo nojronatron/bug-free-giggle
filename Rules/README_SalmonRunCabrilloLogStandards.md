@@ -1,5 +1,9 @@
 # Cabrillo Log File Standards
 
+Note: Cabrillo v3 creator created two pages of specification which should be considered authoritative: [Cabrillo v3 Headers](../docs/README_Cabrillo-Spec-v3-Header.md), [Cabrillo v3 QSO Data](../docs/README_Cabrillo-Spec-v3-QSO-Data.md).
+
+The following was intended to help bootstrap parsing, validating, and scoring Salmon Run contest specifically.
+
 ## Table of Contents
 
 - [Cabrillo Tags](#cabrillo-tags)

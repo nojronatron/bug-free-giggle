@@ -15,12 +15,16 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
 
     public OperationResult<WfdInfoSent> ParseSentExchange(string sentSig, string sentMsg)
     {
+        // Handle both combined format ("3O OR") and separated Cabrillo format where 
+        // sentSig="59" sentMsg="3O OR", or sentMsg="3O" with location in next field
         return ParseSentExchange(sentSig, sentMsg, (raw, category, classId, location) => 
             new WfdInfoSent(raw, category, classId, location));
     }
 
     public OperationResult<WfdInfoReceived> ParseReceivedExchange(string receivedSig, string receivedMsg)
     {
+        // Handle both combined format ("1A CT") and separated Cabrillo format where 
+        // receivedSig="59" receivedMsg="1A CT", or receivedMsg="1A" with location in next field
         return ParseReceivedExchange(receivedSig, receivedMsg, (raw, category, classId, location) => 
             new WfdInfoReceived(raw, category, classId, location));
     }
@@ -52,7 +56,12 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
 
         string categoryClassPart = parts[0];
         string locationPart = parts[1];
+        
+        return ValidateAndCreateResult(factory, msg.Trim(), categoryClassPart, locationPart);
+    }
 
+    private OperationResult<T> ValidateAndCreateResult<T>(Func<string, int, char, string, T> factory, string rawExchange, string categoryClassPart, string locationPart)
+    {
         // Validate category+class format: [0-9]{1,2}(?:H|I|O|M)
         Match categoryMatch = CategoryClassRegex.Match(categoryClassPart);
         if (!categoryMatch.Success)
@@ -81,7 +90,6 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
         // Parse class identifier
         char classId = char.ToUpper(categoryMatch.Groups[2].Value[0]);
 
-        string rawExchange = msg.Trim();
         T result = factory(rawExchange, category, classId, locationPart.ToUpperInvariant());
         
         return OperationResult.Success(result);
