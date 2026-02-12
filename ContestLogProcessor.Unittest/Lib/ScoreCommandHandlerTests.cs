@@ -93,7 +93,9 @@ public class ScoreCommandHandlerTests
 
     var svc = new ContestLogProcessor.SalmonRun.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
     var log = new ContestLogProcessor.Lib.CabrilloLogFile();
+    log.Headers["START-OF-LOG"] = "3.0";
     log.Headers["CALLSIGN"] = "K7XXX";
+    log.Headers["END-OF-LOG"] = "";
     log.Entries = proc.ReadEntriesResult().Value!.ToList();
 
     var resOp = svc.CalculateScore(log);

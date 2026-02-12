@@ -220,6 +220,17 @@ public class SalmonRunScoringService : IContestScoringService<SalmonRunScoreResu
                 return OperationResult.Failure<SalmonRunScoreResult>("Log file is null", ResponseStatus.BadFormat);
             }
 
+            // Validate required Cabrillo v3 markers
+            if (!log.HasStartOfLog)
+            {
+                return OperationResult.Failure<SalmonRunScoreResult>("Missing required START-OF-LOG marker", ResponseStatus.BadFormat);
+            }
+
+            if (!log.HasEndOfLog)
+            {
+                return OperationResult.Failure<SalmonRunScoreResult>("Missing required END-OF-LOG marker", ResponseStatus.BadFormat);
+            }
+
             // Validate CALLSIGN header exists and that at least one entry matches a header CALLSIGN
             if (!log.Headers.TryGetValue("CALLSIGN", out string? headerCall) || string.IsNullOrWhiteSpace(headerCall))
             {

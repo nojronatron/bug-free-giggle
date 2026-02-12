@@ -50,6 +50,8 @@ public class SkippableEntriesTests
     Assert.True(imp.IsSuccess);
 
         var log = new CabrilloLogFile();
+        log.Headers["START-OF-LOG"] = "3.0";
+        log.Headers["END-OF-LOG"] = "";
         if (p.TryGetHeader("CALLSIGN", out string? call) && !string.IsNullOrWhiteSpace(call))
         {
             log.Headers["CALLSIGN"] = call!;

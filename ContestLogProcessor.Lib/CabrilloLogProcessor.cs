@@ -371,6 +371,17 @@ public partial class CabrilloLogProcessor : ILogProcessor
             _entries.Clear();
             _entries.AddRange(entries);
 
+            // Validate required Cabrillo v3 markers
+            if (!_logFile.HasStartOfLog)
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = null, Reason = "Missing required START-OF-LOG marker", RawLine = null });
+            }
+
+            if (!_logFile.HasEndOfLog)
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = null, Reason = "Missing required END-OF-LOG marker", RawLine = null });
+            }
+
             // If there are parsed QSO entries but no CALLSIGN header, record a skipped-header item so callers
             // can inspect problems. Do not throw here to keep import tolerant for unit tests and tools.
             if (_logFile.Entries.Count > 0)

@@ -25,7 +25,9 @@ public class SalmonRunScoringServiceTests
     {
         // Arrange - small synthetic log
         var log = new CabrilloLogFile();
+        log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["CALLSIGN"] = "K7XXX";
+        log.Headers["END-OF-LOG"] = "";
 
         // Entry 1: 40m PH, TheirCall N7UK, ReceivedMsg ADA (WA)
         var e1 = new LogEntry
@@ -138,7 +140,9 @@ public class SalmonRunScoringServiceTests
     {
         // Arrange - create several W7DX entries to exercise bonus rules
         var log = new CabrilloLogFile();
+        log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["CALLSIGN"] = "K7XXX";
+        log.Headers["END-OF-LOG"] = "";
 
         // First W7DX PH - eligible and should count for PH
         var w1 = new LogEntry
@@ -241,7 +245,9 @@ public class SalmonRunScoringServiceTests
     {
         // Arrange - create 12 unique DXCC ReceivedMsg entries; only first 10 should be counted
         var log = new CabrilloLogFile();
+        log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["CALLSIGN"] = "K7XXX";
+        log.Headers["END-OF-LOG"] = "";
 
         string[] dxccs = new[] { "1A","3A","3B6","3B8","3B9","3C","3C0","3D2","3DA","3V","3W","3X" };
 

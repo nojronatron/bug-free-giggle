@@ -32,6 +32,21 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
 
         WinterFieldDayScoreResult result = new WinterFieldDayScoreResult();
 
+        // Validate required Cabrillo v3 markers
+        if (!log.HasStartOfLog)
+        {
+            return OperationResult.Failure<WinterFieldDayScoreResult>(
+                "Missing required START-OF-LOG marker",
+                ResponseStatus.BadFormat);
+        }
+
+        if (!log.HasEndOfLog)
+        {
+            return OperationResult.Failure<WinterFieldDayScoreResult>(
+                "Missing required END-OF-LOG marker",
+                ResponseStatus.BadFormat);
+        }
+
         // Validate CALLSIGN header exists
         if (!log.Headers.TryGetValue("CALLSIGN", out string? headerCall) || string.IsNullOrWhiteSpace(headerCall))
         {
