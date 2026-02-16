@@ -16,14 +16,16 @@ public class Exchange
 
     /// <summary>
     /// Sent exchange message. Contest-specific data such as serial number, section, county, etc.
-    /// Valid pattern: ^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$ (1-5 alphanumeric, optional slash + 1-5 more)
-    /// Examples: "WA", "KING", "001", "3O", "WA/OR"
+    /// Per Cabrillo v3: 1-6 characters total.
+    /// Valid pattern: ^(?:[A-Za-z0-9]{1,6}|[A-Za-z0-9]{1,2}/[A-Za-z0-9]{1,3})$
+    /// Examples: "WA", "KING", "001", "3O", "OR/WA"
     /// </summary>
     public string? SentMsg { get; set; }
 
     /// <summary>
     /// Their callsign (the contacted station's call). May include prefix/suffix with slashes.
-    /// Valid pattern: ^(?:[A-Za-z0-9]{2,5}/)?[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{2,5})?$
+    /// Per Cabrillo v3: 3-13 characters total with possible '/' characters.
+    /// Valid pattern: ^(?:[A-Za-z0-9]{2,3}/)?[A-Za-z0-9]{3,5}(?:/[A-Za-z0-9]{2,3})?$
     /// Examples: "K7XXX", "W7/K7XXX", "K7XXX/W7"
     /// </summary>
     public string? TheirCall { get; set; }
@@ -36,7 +38,8 @@ public class Exchange
 
     /// <summary>
     /// Received exchange message. Contest-specific data such as serial number, section, county, etc.
-    /// Valid pattern: ^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$ (1-5 alphanumeric, optional slash + 1-5 more)
+    /// Per Cabrillo v3: 1-6 characters total.
+    /// Valid pattern: ^(?:[A-Za-z0-9]{1,6}|[A-Za-z0-9]{1,2}/[A-Za-z0-9]{1,3})$
     /// Examples: "OR", "KING", "042", "1A", "CT/MA"
     /// </summary>
     public string? ReceivedMsg { get; set; }

@@ -1395,12 +1395,15 @@ public partial class CabrilloLogProcessor : ILogProcessor
     }
 
     // Source-generated regex helpers (faster at runtime and AOT/trimming friendly)
+    // Per Cabrillo v3 spec: RST is 2-3 characters
     [System.Text.RegularExpressions.GeneratedRegex("^(?:[1-5][0-9]{1,2}|[1-5][nN]{1,2})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex SigRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex("^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    // Per Cabrillo v3 spec: Exchange is 1-6 characters (with optional slash but total <= 6)
+    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{1,6}|[A-Za-z0-9]{1,2}/[A-Za-z0-9]{1,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex MsgRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{2,5}/)?[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{2,5})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    // Per Cabrillo v3 spec: Callsign is 3-13 characters with possible '/' (max total 13 with all parts)
+    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{2,3}/)?[A-Za-z0-9]{3,5}(?:/[A-Za-z0-9]{2,3})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex CallRegex();
 }
