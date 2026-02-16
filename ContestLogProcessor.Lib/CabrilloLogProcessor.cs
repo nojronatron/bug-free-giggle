@@ -287,7 +287,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
                         entry.TheirCall = theirCall;
                         
                         // Parse optional transmitter ID (Cabrillo v3 spec: 0 or 1)
-                        entry.TransmitterId = ParseTransmitterId(parts, sentExch, recvExch, theirCall);
+                        entry.TransmitterId = ParseTransmitterId(parts);
 
                         if (string.IsNullOrWhiteSpace(entry.Id))
                         {
@@ -1314,41 +1314,27 @@ public partial class CabrilloLogProcessor : ILogProcessor
     /// <summary>
     /// Parse optional transmitter ID from QSO line tokens.
     /// Per Cabrillo v3 spec, transmitter ID is 0 or 1 and appears at the end of the QSO line.
+    /// This is a basic/permissive parser - contest-specific scoring services should apply
+    /// stricter validation based on their rules (e.g., whether transmitter ID is expected).
     /// Returns null if not present or invalid.
     /// </summary>
-    private static int? ParseTransmitterId(string[] parts, Exchange? sentExch, Exchange? recvExch, string? theirCall)
+    private static int? ParseTransmitterId(string[] parts)
     {
-        // Calculate expected position: QSO: freq mode date time mycall + exchanges + transmitterId
-        // Minimum tokens: QSO: freq mode date time mycall (5 base tokens + exchanges)
-        int expectedMinTokens = 6; // Base tokens
-        if (sentExch != null) expectedMinTokens += CountNonEmptyExchangeFields(sentExch);
-        if (!string.IsNullOrWhiteSpace(theirCall)) expectedMinTokens += 1;
-        if (recvExch != null) expectedMinTokens += CountNonEmptyExchangeFields(recvExch);
-        
-        // Check if there's one more token that could be transmitter ID
-        if (parts.Length > expectedMinTokens)
+        if (parts == null || parts.Length < 2)
         {
-            string lastToken = parts[parts.Length - 1];
-            if (int.TryParse(lastToken, out int transmitterId) && (transmitterId == 0 || transmitterId == 1))
-            {
-                return transmitterId;
-            }
+            return null;
+        }
+
+        // Transmitter ID is always the last token when present
+        string lastToken = parts[parts.Length - 1];
+        
+        // Valid transmitter ID is exactly "0" or "1"
+        if (int.TryParse(lastToken, out int transmitterId) && (transmitterId == 0 || transmitterId == 1))
+        {
+            return transmitterId;
         }
         
         return null;
-    }
-
-    /// <summary>
-    /// Count non-empty exchange fields to help calculate token positions.
-    /// </summary>
-    private static int CountNonEmptyExchangeFields(Exchange exchange)
-    {
-        int count = 0;
-        if (!string.IsNullOrWhiteSpace(exchange.SentSig)) count++;
-        if (!string.IsNullOrWhiteSpace(exchange.SentMsg)) count++;
-        if (!string.IsNullOrWhiteSpace(exchange.ReceivedSig)) count++;
-        if (!string.IsNullOrWhiteSpace(exchange.ReceivedMsg)) count++;
-        return count;
     }
 
     /// <summary>
