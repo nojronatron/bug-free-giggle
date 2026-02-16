@@ -526,12 +526,48 @@ public partial class CabrilloLogProcessor : ILogProcessor
     }
 
     /// <summary>
+    /// Validate that a frequency in kHz falls within defined amateur radio band ranges.
+    /// Returns true if the frequency is within a recognized amateur band; otherwise false.
+    /// </summary>
+    private static bool IsValidAmateurFrequency(int freqKHz)
+    {
+        // HF Bands
+        if (freqKHz >= 1800 && freqKHz <= 2000) return true;   // 160m
+        if (freqKHz >= 3500 && freqKHz <= 4000) return true;   // 80m
+        if (freqKHz >= 7000 && freqKHz <= 7300) return true;   // 40m
+        if (freqKHz >= 10100 && freqKHz <= 10150) return true; // 30m
+        if (freqKHz >= 14000 && freqKHz <= 14350) return true; // 20m
+        if (freqKHz >= 18068 && freqKHz <= 18168) return true; // 17m
+        if (freqKHz >= 21000 && freqKHz <= 21450) return true; // 15m
+        if (freqKHz >= 24890 && freqKHz <= 24990) return true; // 12m
+        if (freqKHz >= 28000 && freqKHz <= 29700) return true; // 10m
+        
+        // VHF Bands
+        if (freqKHz >= 50000 && freqKHz <= 54000) return true;   // 6m
+        if (freqKHz >= 144000 && freqKHz <= 148000) return true; // 2m
+        
+        // UHF Bands
+        if (freqKHz >= 222000 && freqKHz <= 225000) return true; // 1.25m
+        if (freqKHz >= 420000 && freqKHz <= 450000) return true; // 70cm
+        if (freqKHz >= 902000 && freqKHz <= 928000) return true; // 33cm
+        
+        // Microwave Bands (in kHz)
+        if (freqKHz >= 1240000 && freqKHz <= 1300000) return true;  // 23cm
+        if (freqKHz >= 2300000 && freqKHz <= 2450000) return true;  // 13cm
+        if (freqKHz >= 3300000 && freqKHz <= 3500000) return true;  // 9cm
+        if (freqKHz >= 5650000 && freqKHz <= 5925000) return true;  // 6cm
+        if (freqKHz >= 10000000 && freqKHz <= 10500000) return true; // 3cm
+        if (freqKHz >= 24000000 && freqKHz <= 24250000) return true; // 1.25cm
+        
+        return false;
+    }
+
+    /// <summary>
     /// Parse a frequency token to support both legacy and modern Cabrillo frequency patterns.
-    /// Supports official frequency values, integer kHz values, and band tokens for backward compatibility.
-    /// Returns frequency in kHz or a mapped value for validation purposes.
+    /// Supports official frequency values, integer kHz values, and band tokens.
+    /// Returns frequency in kHz when valid; otherwise null.
     /// </summary>
     /// <param name="token">The frequency token to parse</param>
-    /// <param name="logFile">The log file context (optional, for future extensibility)</param>
     private static int? ParseFrequencyToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
@@ -555,37 +591,17 @@ public partial class CabrilloLogProcessor : ILogProcessor
             return null;
         }
 
-        // For backward compatibility with Salmon Run, try parse as double for floating formats
+        // Try parse as double for floating-point formats, then validate against band ranges
         if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d))
         {
-            // Only consider whole-number portion (truncate) per rules
             int whole = (int)Math.Truncate(d);
-            
-            // Extended range validation - support HF through microwave frequencies
-            if (whole < 1800) return null; // Below HF band
-            
-            // Reject the 55..1000 range per Salmon Run rules (invalid for any amateur frequency)
-            if (whole >= 55 && whole <= 1000) return null;
-            
-            // Support extended microwave frequencies (up to 300 GHz)
-            if (whole > 300000000) return null; // Above 300 GHz limit
-            
-            return whole;
+            return IsValidAmateurFrequency(whole) ? whole : null;
         }
 
-        // Try parse integer without decimals for backward compatibility
+        // Try parse integer, then validate against band ranges
         if (int.TryParse(token, out int i))
         {
-            // Extended range validation - support HF through microwave frequencies
-            if (i < 1800) return null; // Below HF band
-            
-            // Reject the 55..1000 range per Salmon Run rules
-            if (i >= 55 && i <= 1000) return null;
-            
-            // Support extended microwave frequencies (up to 300 GHz)
-            if (i > 300000000) return null; // Above 300 GHz limit
-            
-            return i;
+            return IsValidAmateurFrequency(i) ? i : null;
         }
 
         return null;
