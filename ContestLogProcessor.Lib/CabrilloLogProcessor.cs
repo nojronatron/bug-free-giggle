@@ -81,10 +81,8 @@ public partial class CabrilloLogProcessor : ILogProcessor
         if (trimmed.Length <= 13) return trimmed;
 
         // Patterns that are likely to indicate code or commands. Keep the patterns simple and case-insensitive.
-        string[] suspicious = new[] { "select * from", "drop table", "--", ";--", "exec ", "rm -rf", "curl ", "powershell -", "invoke-" };
-
         string lowered = trimmed.ToLowerInvariant();
-        foreach (string pat in suspicious)
+        foreach (string pat in CabrilloConstants.SuspiciousPatterns)
         {
             int idx = lowered.IndexOf(pat, StringComparison.Ordinal);
             if (idx >= 0)
@@ -192,9 +190,8 @@ public partial class CabrilloLogProcessor : ILogProcessor
                             string datePart = parts[3];
                             string timePart = parts[4];
                             string combined = datePart + " " + timePart;
-                            string[] formats = new[] { "yyyy-MM-dd HHmm", "yyyy-MM-dd HH:mm", "yyyy-MM-dd H:mm", "yyyy-MM-dd Hm", "yyyyMMdd HHmm" };
                             DateTime parsed = default;
-                            bool parsedOk = DateTime.TryParseExact(combined, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed);
+                            bool parsedOk = DateTime.TryParseExact(combined, CabrilloConstants.DateTimeFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed);
                             if (!parsedOk)
                             {
                                 // Fallback to a permissive parse; ensure we treat parsed times as UTC
@@ -541,17 +538,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
         token = token.Trim();
 
         // Handle official Cabrillo frequency patterns (both legacy and v3)
-        Dictionary<string, int> officialFrequencies = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "1800", 1800 }, { "3500", 3500 }, { "7000", 7000 }, { "14000", 14000 }, 
-            { "21000", 21000 }, { "28000", 28000 }, { "50", 50000 }, { "70", 70000 },
-            { "144", 144000 }, { "222", 222000 }, { "432", 432000 }, { "902", 902000 },
-            { "1.2G", 1200000 }, { "2.3G", 2300000 }, { "3.4G", 3400000 }, { "5.7G", 5700000 },
-            { "10G", 10000000 }, { "24G", 24000000 }, { "47G", 47000000 }, { "75G", 75000000 },
-            { "122G", 122000000 }, { "134G", 134000000 }, { "241G", 241000000 }, { "LIGHT", 999999999 }
-        };
-
-        if (officialFrequencies.TryGetValue(token, out int officialFreq))
+        if (CabrilloConstants.OfficialFrequencies.TryGetValue(token, out int officialFreq))
         {
             return officialFreq;
         }
@@ -1359,12 +1346,12 @@ public partial class CabrilloLogProcessor : ILogProcessor
             "CATEGORY-TIME" => ValidateCategoryTime(value),
             "CATEGORY-OVERLAY" => ValidateCategoryOverlay(value),
             "CATEGORY-ASSISTED" => ValidateFromSet(value, CategoryAssistedExtensions.GetAllValidValues(), "CATEGORY-ASSISTED"),
-            "CATEGORY-BAND" => ValidateFromSet(value, ["ALL", "160M", "80M", "40M", "20M", "15M", "10M", "6M", "4M", "2M", "222", "432", "902", "1.2G", "2.3G", "3.4G", "5.7G", "10G", "24G", "47G", "75G", "122G", "134G", "241G", "LIGHT", "VHF-3-BAND", "VHF-FM-ONLY"], "CATEGORY-BAND"),
+            "CATEGORY-BAND" => ValidateFromSet(value, CabrilloConstants.CategoryBandValues, "CATEGORY-BAND"),
             "CATEGORY-MODE" => ValidateFromSet(value, CategoryModeExtensions.GetAllValidValues(), "CATEGORY-MODE"),
             "CATEGORY-OPERATOR" => ValidateFromSet(value, CategoryOperatorExtensions.GetAllValidValues(), "CATEGORY-OPERATOR"),
             "CATEGORY-POWER" => ValidateFromSet(value, CategoryPowerExtensions.GetAllValidValues(), "CATEGORY-POWER"),
-            "CATEGORY-STATION" => ValidateFromSet(value, ["DISTRIBUTED", "FIXED", "MOBILE", "PORTABLE", "ROVER", "ROVER-LIMITED", "ROVER-UNLIMITED", "EXPEDITION", "HQ", "SCHOOL", "EXPLORER"], "CATEGORY-STATION"),
-            "CATEGORY-TRANSMITTER" => ValidateFromSet(value, ["ONE", "TWO", "LIMITED", "UNLIMITED", "SWL"], "CATEGORY-TRANSMITTER"),
+            "CATEGORY-STATION" => ValidateCategoryStation(value),
+            "CATEGORY-TRANSMITTER" => ValidateCategoryTransmitter(value),
             _ => OperationResult.Success(Unit.Value) // No validation required for other headers
         };
     }
@@ -1381,6 +1368,20 @@ public partial class CabrilloLogProcessor : ILogProcessor
         return CategoryOverlayExtensions.TryParse(value, out CategoryOverlay _)
             ? OperationResult.Success(Unit.Value)
             : OperationResult.Failure<Unit>($"Invalid CATEGORY-OVERLAY value '{value}'. Must be one of: {string.Join(", ", CategoryOverlayExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateCategoryStation(string value)
+    {
+        return CategoryStationExtensions.TryParse(value, out CategoryStation _)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-STATION value '{value}'. Must be one of: {string.Join(", ", CategoryStationExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateCategoryTransmitter(string value)
+    {
+        return CategoryTransmitterExtensions.TryParse(value, out CategoryTransmitter _)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-TRANSMITTER value '{value}'. Must be one of: {string.Join(", ", CategoryTransmitterExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
     }
 
     private static OperationResult<Unit> ValidateFromSet(string value, string[] validValues, string headerName)
