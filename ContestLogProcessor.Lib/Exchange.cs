@@ -1,20 +1,45 @@
 namespace ContestLogProcessor.Lib;
 
 /// <summary>
-/// A structured representation of the five exchange elements used in many Cabrillo QSO formats.
-/// The Cabrillo spec defines five space-separated elements for the exchange; the semantic meaning
-/// varies by contest but commonly includes a serial number, state/section/club code, locator or name, etc.
-/// All elements are stored as strings to keep the original formatting and to avoid rejecting borderline values.
+/// A structured representation of the five exchange elements used in Cabrillo v3 QSO formats.
+/// Per Cabrillo v3 spec, the QSO line contains: mycall, sent-rst, sent-exch, theircall, rcvd-rst, rcvd-exch.
+/// All elements are stored as strings to preserve original formatting and maintain tolerance to borderline values.
+/// Validation is performed separately by parser regex patterns and contest-specific scoring services.
 /// </summary>
 public class Exchange
 {
-    // Using string properties keeps the model tolerant to malformed input; validation/parsing to numeric types
-    // should be done by caller code when strict typing is required.
-    public string? SentSig { get; set; } // up to 3 whole numbers (sent signal report 59, 599, 5NN, etc)
-    public string? SentMsg { get; set; } // up to 5 alpha characters (sent message e.g. county ID, serial number, etc)
-    public string? TheirCall { get; set; } // up to 15 alphanumeric incl optional '/' (call sign with or without slant)
-    public string? ReceivedSig { get; set; } // up to 3 whole numbers (received signal report 59, 599, 5NN, etc)
-    public string? ReceivedMsg { get; set; } // up to 5 alpha characters (received message e.g. county ID, serial number, etc)
+    /// <summary>
+    /// Sent signal report (RST). Typically "59", "599", "5NN" or similar 2-3 character pattern.
+    /// Valid pattern: ^(?:[1-5][0-9]{1,2}|[1-5][nN]{1,2})$
+    /// </summary>
+    public string? SentSig { get; set; }
+
+    /// <summary>
+    /// Sent exchange message. Contest-specific data such as serial number, section, county, etc.
+    /// Valid pattern: ^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$ (1-5 alphanumeric, optional slash + 1-5 more)
+    /// Examples: "WA", "KING", "001", "3O", "WA/OR"
+    /// </summary>
+    public string? SentMsg { get; set; }
+
+    /// <summary>
+    /// Their callsign (the contacted station's call). May include prefix/suffix with slashes.
+    /// Valid pattern: ^(?:[A-Za-z0-9]{2,5}/)?[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{2,5})?$
+    /// Examples: "K7XXX", "W7/K7XXX", "K7XXX/W7"
+    /// </summary>
+    public string? TheirCall { get; set; }
+
+    /// <summary>
+    /// Received signal report (RST). Typically "59", "599", "5NN" or similar 2-3 character pattern.
+    /// Valid pattern: ^(?:[1-5][0-9]{1,2}|[1-5][nN]{1,2})$
+    /// </summary>
+    public string? ReceivedSig { get; set; }
+
+    /// <summary>
+    /// Received exchange message. Contest-specific data such as serial number, section, county, etc.
+    /// Valid pattern: ^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$ (1-5 alphanumeric, optional slash + 1-5 more)
+    /// Examples: "OR", "KING", "042", "1A", "CT/MA"
+    /// </summary>
+    public string? ReceivedMsg { get; set; }
 
     public override string ToString()
     {
