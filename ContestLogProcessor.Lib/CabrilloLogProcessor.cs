@@ -1399,6 +1399,6 @@ public partial class CabrilloLogProcessor : ILogProcessor
     [System.Text.RegularExpressions.GeneratedRegex("^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex MsgRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{1,5}/)?[A-Za-z0-9]{1,5}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{2,5}/)?[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{2,5})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex CallRegex();
 }
