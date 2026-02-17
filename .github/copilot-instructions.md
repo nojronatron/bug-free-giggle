@@ -8,6 +8,7 @@ This project library will examine a supplied Cabrillo formatted amateur radio lo
 `/ContestLogProcessor.Unittest`: xUnit test project. Add a subdirectory to match the project to be tested (examples: `/Lib` for `ContestLogProcessor.Lib` unit tests, `/SalmonRun` for `ContestLogProcessor.SalmonRun` unit tests).
 `/LogExamples`: Folder contains log file examples and should not be directly imported or copied to code nor checked in to git repository.
 `/Rules`: Additional specifications and descriptions of contest rules, cabrillo specifications, and special handling rules.
+`/ContestLogProcessor.{ContestName}`: Contest-specific code including parsers, processors, validators, etc
 
 ## Adding Projects
 Follow the same naming pattern as existing projects.
@@ -55,11 +56,14 @@ Design public APIs and classes so that invalid inputs are detected and rejected 
 Prefer RegEx for user-generated inputs or input streams from untrusted sources like user-provided files.
 
 ## Recoverable vs programmer/runtime errors
-Recoverable errors: return a failure OperationResult<T>. The OperationResult carries a machine-friendly ResponseStatus, a concise user-facing ErrorMessage, and an optional Diagnostic (Exception) for logging.
-Programmer/runtime errors (null reference, failed invariants, corrupted internal state): throw an exception These indicate bugs that should be fixed rather than normal runtime conditions.
-Void-like operations: return OperationResult<Unit> rather than throwing for expected, recoverable error conditions. This keeps the public API surface consistent and easy to compose.
-Catch only what you can handle. Avoid blanket catches of System.Exception in library code; instead let higher-level callers (for example the Console app) catch and decide how to convert to OperationResult or log.
-Converting exceptions to OperationResult: do this at well-defined boundaries. When you catch an exception to convert it into a failure OperationResult, populate ErrorMessage (user-facing) and Diagnostic (developer-facing) so callers can log the diagnostic when appropriate (for example when a --debug flag is set).
+Recoverable errors: return a failure OperationResult<T>
+OperationResult carries a machine-friendly ResponseStatus, a concise user-facing ErrorMessage, and an optional Diagnostic (Exception) for logging.
+Programmer/runtime errors (null reference, failed invariants, corrupted internal state): throw an exception because these indicate bugs that should be fixed
+Void-like operations: return OperationResult<Unit> rather than throwing for expected, recoverable error conditions to keep public API surface consistent and easy to compose
+Avoid blanket catches of System.Exception in library code
+Allow higher-level callers (for example the Console app) catch and decide how to convert to OperationResult or log
+Convert exceptions to OperationResult at well-defined boundaries.
+When you catch an exception to convert it into a failure OperationResult, populate ErrorMessage (user-facing) and Diagnostic (developer-facing) so callers can log the diagnostic when appropriate (for example when a --debug flag is set).
 
 See [Result object specification](../ContestLogProcessor.Lib/Docs/ResultObjectDefinition.md) for exact fields,
 invariants, and usage examples.
@@ -122,9 +126,7 @@ dotnet build ContestLogProcessor.Console\ContestLogProcessor.Console.csproj -c D
 dotnet publish ContestLogProcessor.Console\ContestLogProcessor.Console.csproj -c Release --self-contained --output ..\ReleaseArtifacts -v Detailed
 ```
 
-## User Interactions
-
-### ContestLogProcessor.Console Non-interactive terminal execution features
+## ContestLogProcessor.Console Non-interactive terminal execution features
 Usage: `.\ContestLogProcessor.Console [options...]`
 Options:
 `--debug`                 Enable debug output
@@ -134,21 +136,21 @@ Options:
 `--interactive`           Start an interactive session
 `--score <logfile>`       Score a Cabrillo .log file and print a brief report (lists any non-compliant log entries too)
 
-#### ContestLogProcessor.Console Interactive terminal execution features
+## ContestLogProcessor.Console Interactive terminal execution features
 Usage: `.\ContestLogProcessor.Console`
 Options:
-`help`         Show available interactive commands
-`import`       Import a Cabrillo `.log` file into memory
-`export`       Export current in-memory log to `<filepath>.log` (prompts on overwrite)
+`help`            Show available interactive commands
+`import`          Import a Cabrillo `.log` file into memory
+`export`          Export current in-memory log to `<filepath>.log` (prompts on overwrite)
 `view [pageSize]` View loaded log entries in canonical format; optional page size and simple navigation
-`add`          Add a new log entry interactively (TheirCall required)
-`duplicate`    Duplicate entries by index or by filter (supports `--index <n>` or `--filter "text"`)
-`filter`       Search entries and list matches (read-only)
-`filter-dupe`  Search entries and optionally duplicate selected/all matches
-`score`        Score the currently loaded log and show a brief report (also available non-interactively via `--score <file>`)
-`exit`         Exit interactive session
+`add`             Add a new log entry interactively (TheirCall required)
+`duplicate`       Duplicate entries by index or by filter (supports `--index <n>` or `--filter "text"`)
+`filter`          Search entries and list matches (read-only)
+`filter-dupe`     Search entries and optionally duplicate selected/all matches
+`score`           Score the currently loaded log and show a brief report (also available non-interactively via `--score <file>`)
+`exit`            Exit interactive session
 
-### Code Examples Section
+## Code Examples
 Add a dedicated section with more code examples:
 
 ```csharp
