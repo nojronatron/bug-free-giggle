@@ -341,11 +341,13 @@ static void PrintWinterFieldDayScore(WinterFieldDayScoreResult res)
 
 static void ConfigureServices(ServiceCollection services)
 {
-    // Register contest registry and detection services
-    services.AddSingleton<IContestRegistry, ContestRegistry>();
-    services.AddSingleton<IContestDetector, ContestDetector>();
+    // Register core contest infrastructure (registry, detector, exchange strategy registry)
+    services.RegisterContestInfrastructure();
     
     // Register contest-specific services using their bootstrap extensions
     services.RegisterSalmonRunContest();
     services.RegisterWinterFieldDayContest();
+    
+    // Configure exchange strategy registry with registered strategies
+    services.ConfigureExchangeStrategyRegistry();
 }

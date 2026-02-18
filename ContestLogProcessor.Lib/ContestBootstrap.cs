@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ContestLogProcessor.Lib;
@@ -20,6 +22,9 @@ public static class ContestBootstrap
         // Register core contest registry and detector
         services.AddSingleton<IContestRegistry, ContestRegistry>();
         services.AddSingleton<IContestDetector, ContestDetector>();
+        
+        // Register exchange strategy registry
+        services.AddSingleton<ContestExchangeStrategyRegistry>();
 
         return services;
     }
@@ -46,6 +51,46 @@ public static class ContestBootstrap
             IContestRegistryConfigurator configurator = provider.GetRequiredService<IContestRegistryConfigurator>();
             configureRegistry(configurator);
             return provider.GetRequiredService<IContestRegistry>();
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configure the contest exchange strategy registry with available strategies.
+    /// This method should be called after all contest-specific services are registered.
+    /// </summary>
+    /// <param name="services">Service collection to configure</param>
+    /// <returns>The service collection for method chaining</returns>
+    public static IServiceCollection ConfigureExchangeStrategyRegistry(this IServiceCollection services)
+    {
+        // Remove the existing registration to avoid circular dependency
+        ServiceDescriptor? existingDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ContestExchangeStrategyRegistry));
+        if (existingDescriptor != null)
+        {
+            services.Remove(existingDescriptor);
+        }
+        
+        services.AddSingleton<ContestExchangeStrategyRegistry>(provider =>
+        {
+            // Create new instance directly instead of calling GetRequiredService to avoid circular dependency
+            ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
+            
+            // Get all registered exchange strategies from DI and register them with the strategy registry
+            IEnumerable<IContestExchangeStrategy> strategies = provider.GetServices<IContestExchangeStrategy>();
+            
+            foreach (IContestExchangeStrategy strategy in strategies)
+            {
+                registry.RegisterStrategy(strategy.ContestId, () => 
+                {
+                    // Create new instance from DI container each time
+                    return provider.GetServices<IContestExchangeStrategy>()
+                        .FirstOrDefault(s => s.ContestId == strategy.ContestId)
+                        ?? throw new InvalidOperationException($"Strategy for contest '{strategy.ContestId}' not found in DI container");
+                });
+            }
+            
+            return registry;
         });
 
         return services;
