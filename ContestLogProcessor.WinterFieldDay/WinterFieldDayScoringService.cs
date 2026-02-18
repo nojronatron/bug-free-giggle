@@ -88,12 +88,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             // Skip X-QSO entries
             if (entry.IsXQso)
             {
-                result.SkippedEntries.Add(new SkippedEntryInfo
-                {
-                    SourceLineNumber = entry.SourceLineNumber,
-                    Reason = "X-QSO (ignored)",
-                    RawLine = entry.RawLine
-                });
+                result.SkippedEntries.Add(CreateExcludedEntryError(entry));
                 continue;
             }
 
@@ -101,12 +96,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             OperationResult<Unit> eligibilityResult = ValidateEntryEligibility(entry, allowableCalls);
             if (!eligibilityResult.IsSuccess)
             {
-                result.SkippedEntries.Add(new SkippedEntryInfo
-                {
-                    SourceLineNumber = entry.SourceLineNumber,
-                    Reason = eligibilityResult.ErrorMessage,
-                    RawLine = entry.RawLine
-                });
+                result.SkippedEntries.Add(CreateEligibilityError(entry, eligibilityResult.ErrorMessage));
                 continue;
             }
 
@@ -119,12 +109,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             if (seenContacts.Contains(contactKey))
             {
                 duplicates++;
-                result.SkippedEntries.Add(new SkippedEntryInfo
-                {
-                    SourceLineNumber = entry.SourceLineNumber,
-                    Reason = $"Duplicate contact with {theirCall} on {band} using {mode}",
-                    RawLine = entry.RawLine
-                });
+                result.SkippedEntries.Add(CreateDuplicateError(entry, theirCall, band, mode));
                 continue;
             }
 
@@ -431,4 +416,179 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
 
         return msg;
     }
+
+    #region Structured Error Reporting Helpers
+
+    /// <summary>
+    /// Create a structured error entry for an excluded (X-QSO) entry.
+    /// </summary>
+    private static SkippedEntryInfo CreateExcludedEntryError(LogEntry entry)
+    {
+        return new SkippedEntryInfo
+        {
+            SourceLineNumber = entry.SourceLineNumber,
+            Reason = "X-QSO (ignored)",
+            RawLine = entry.RawLine,
+            Category = ErrorCategory.Excluded,
+            Severity = ErrorSeverity.Info
+        };
+    }
+
+    /// <summary>
+    /// Create a structured error entry for eligibility validation failures.
+    /// Parses the error message to determine the specific category and populate structured fields.
+    /// </summary>
+    private static SkippedEntryInfo CreateEligibilityError(LogEntry entry, string? errorMessage)
+    {
+        string reason = errorMessage ?? "Entry failed eligibility validation";
+        ErrorCategory category = ErrorCategory.Validation;
+        string? fieldName = null;
+        string? invalidValue = null;
+        string? expectedFormat = null;
+
+        // Parse error message to determine category and extract structured information
+        if (reason.Contains("Missing required fields", StringComparison.OrdinalIgnoreCase))
+        {
+            category = ErrorCategory.MissingData;
+        }
+        else if (reason.Contains("Unsupported mode", StringComparison.OrdinalIgnoreCase))
+        {
+            category = ErrorCategory.Validation;
+            fieldName = "Mode";
+            // Extract mode from message like "Unsupported mode: XX"
+            int colonIndex = reason.IndexOf(':');
+            if (colonIndex >= 0 && colonIndex < reason.Length - 1)
+            {
+                invalidValue = reason.Substring(colonIndex + 1).Trim();
+            }
+            expectedFormat = "Valid WFD modes: PH, CW, DG, RY, FM";
+        }
+        else if (reason.Contains("Call does not match CALLSIGN header", StringComparison.OrdinalIgnoreCase))
+        {
+            category = ErrorCategory.Validation;
+            fieldName = "CallSign";
+            invalidValue = entry.CallSign;
+        }
+        else if (reason.Contains("exchange", StringComparison.OrdinalIgnoreCase))
+        {
+            category = ErrorCategory.Exchange;
+            bool isSent = reason.Contains("sent", StringComparison.OrdinalIgnoreCase);
+            fieldName = isSent ? "SentExchange" : "ReceivedExchange";
+            expectedFormat = "WFD format: <participants><category> <location> (e.g., '3O OR' or '1I NY')";
+        }
+
+        return new SkippedEntryInfo
+        {
+            SourceLineNumber = entry.SourceLineNumber,
+            Reason = reason,
+            RawLine = entry.RawLine,
+            Category = category,
+            Severity = ErrorSeverity.Error,
+            FieldName = fieldName,
+            InvalidValue = invalidValue,
+            ExpectedFormat = expectedFormat
+        };
+    }
+
+    /// <summary>
+    /// Create a structured error entry for missing required fields.
+    /// </summary>
+    private static SkippedEntryInfo CreateMissingDataError(LogEntry entry, string reason, string? fieldName = null)
+    {
+        SkippedEntryInfo error = new SkippedEntryInfo
+        {
+            SourceLineNumber = entry.SourceLineNumber,
+            Reason = reason,
+            RawLine = entry.RawLine,
+            Category = ErrorCategory.MissingData,
+            Severity = ErrorSeverity.Error,
+            FieldName = fieldName
+        };
+
+        return error;
+    }
+
+    /// <summary>
+    /// Create a structured error entry for validation failures.
+    /// </summary>
+    private static SkippedEntryInfo CreateValidationError(
+        LogEntry entry, 
+        string reason, 
+        string? fieldName = null,
+        string? invalidValue = null,
+        string? expectedFormat = null)
+    {
+        return new SkippedEntryInfo
+        {
+            SourceLineNumber = entry.SourceLineNumber,
+            Reason = reason,
+            RawLine = entry.RawLine,
+            Category = ErrorCategory.Validation,
+            Severity = ErrorSeverity.Error,
+            FieldName = fieldName,
+            InvalidValue = invalidValue,
+            ExpectedFormat = expectedFormat
+        };
+    }
+
+    /// <summary>
+    /// Create a structured error entry for exchange parsing failures.
+    /// </summary>
+    private static SkippedEntryInfo CreateExchangeError(
+        LogEntry entry,
+        string reason,
+        bool isSentExchange,
+        string? invalidValue = null,
+        List<string>? details = null)
+    {
+        SkippedEntryInfo error = new SkippedEntryInfo
+        {
+            SourceLineNumber = entry.SourceLineNumber,
+            Reason = reason,
+            RawLine = entry.RawLine,
+            Category = ErrorCategory.Exchange,
+            Severity = ErrorSeverity.Error,
+            FieldName = isSentExchange ? "SentExchange" : "ReceivedExchange",
+            InvalidValue = invalidValue,
+            ExpectedFormat = "WFD format: <participants><category> <location> (e.g., '3O OR' or '1I NY')"
+        };
+
+        if (details != null)
+        {
+            foreach (string detail in details)
+            {
+                error.Details.Add(detail);
+            }
+        }
+
+        return error;
+    }
+
+    /// <summary>
+    /// Create a structured error entry for duplicate contacts.
+    /// </summary>
+    private static SkippedEntryInfo CreateDuplicateError(
+        LogEntry entry,
+        string theirCall,
+        string band,
+        string mode)
+    {
+        SkippedEntryInfo error = new SkippedEntryInfo
+        {
+            SourceLineNumber = entry.SourceLineNumber,
+            Reason = $"Duplicate contact with {theirCall} on {band} using {mode}",
+            RawLine = entry.RawLine,
+            Category = ErrorCategory.Duplicate,
+            Severity = ErrorSeverity.Warning,
+            RuleReference = "WFD-ONE-CONTACT-PER-STATION-BAND-MODE"
+        };
+
+        error.Details.Add($"Station: {theirCall}");
+        error.Details.Add($"Band: {band}");
+        error.Details.Add($"Mode: {mode}");
+
+        return error;
+    }
+
+    #endregion
 }
