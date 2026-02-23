@@ -254,9 +254,13 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         // For WFD, parse the exchange directly from the raw line to handle the space-separated format correctly
         (string sentExchange, string receivedExchange) = ParseWfdExchangesFromRawLine(entry);
 
+        string? normalizedSentSignal = NormalizeSignalReportToken(entry.SentExchange?.SentSig);
+        string? normalizedReceivedSignal = NormalizeSignalReportToken(entry.ReceivedExchange?.ReceivedSig);
+
         // Use the exchange strategy for validation
+        // Note: Signal reports are optional in WFD, pass actual value or null (don't default to "59")
         OperationResult<bool> sentResult = _exchangeStrategy.ValidateSentExchange(
-            entry.SentExchange?.SentSig ?? "59",
+            normalizedSentSignal,
             sentExchange);
         
         if (!sentResult.IsSuccess)
@@ -267,7 +271,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         }
 
         OperationResult<bool> receivedResult = _exchangeStrategy.ValidateReceivedExchange(
-            entry.ReceivedExchange?.ReceivedSig ?? "59",
+            normalizedReceivedSignal,
             receivedExchange);
         
         if (!receivedResult.IsSuccess)
@@ -335,6 +339,19 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         string receivedSig = entry.ReceivedExchange?.ReceivedSig ?? string.Empty;
         string receivedMsg = entry.ReceivedExchange?.ReceivedMsg ?? string.Empty;
 
+        bool noSignalFormatWasParsedIntoSignalSlots =
+            IsCategoryClassToken(entry.SentExchange?.SentSig ?? string.Empty) &&
+            IsLikelyLocationToken(sentMsg) &&
+            IsCategoryClassToken(receivedSig) &&
+            IsLikelyLocationToken(receivedMsg);
+
+        if (noSignalFormatWasParsedIntoSignalSlots)
+        {
+            string reconstructedSent = $"{entry.SentExchange!.SentSig} {sentMsg}";
+            string reconstructedReceived = $"{receivedSig} {receivedMsg}";
+            return (reconstructedSent, reconstructedReceived);
+        }
+
         // Pattern 1: Detect if sent exchange was split (category+class in SentMsg, location in TheirCall)
         bool sentExchangeWasSplit = 
             System.Text.RegularExpressions.Regex.IsMatch(sentMsg, @"^[0-9]{1,2}[HIOM]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) &&
@@ -381,53 +398,68 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
     private (string sentExchange, string receivedExchange) ParseFromRawQsoLine(string rawLine)
     {
         string[] tokens = rawLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-        
-        // WFD QSO format: QSO: freq mode date time mycall sentSig sentExchange theirCall recvSig recvExchange  
-        // We know sentSig is at position 6, and we need to find theirCall
-        if (tokens.Length < 10)
+
+        // WFD QSO format after fixed fields:
+        // - Without signal reports: sentCategoryClass sentLocation theirCall recvCategoryClass recvLocation
+        // - With signal reports:    sentSig sentCategoryClass sentLocation theirCall recvSig recvCategoryClass recvLocation
+        if (tokens.Length < 11)
         {
             return (string.Empty, string.Empty);
         }
-        
-        // Look for the most likely call sign in the middle section
-        // For "QSO: 7000 PH 2026-01-25 2000 K7RMZ 59 3O OR W1AW 59 1A CT"
-        // Tokens: [QSO:, 7000, PH, 2026-01-25, 2000, K7RMZ, 59, 3O, OR, W1AW, 59, 1A, CT]
-        // Positions: 0     1     2   3           4     5      6   7   8   9     10  11  12
-        
+        string[] payloadTokens = tokens.Skip(6).ToArray();
+        if (payloadTokens.Length < 5)
+        {
+            return (string.Empty, string.Empty);
+        }
+
         int theirCallIndex = -1;
         int maxScore = 0;
-        
-        // Search for call sign between position 8 and near the end
-        for (int i = 8; i < tokens.Length - 2; i++)
+
+        // Search for the most likely call sign in payload: must leave at least 2 tokens before and after.
+        for (int i = 2; i <= payloadTokens.Length - 3; i++)
         {
-            int score = GetCallSignScore(tokens[i]);
+            int score = GetCallSignScore(payloadTokens[i]);
             if (score > maxScore)
             {
                 maxScore = score;
                 theirCallIndex = i;
             }
         }
-        
-        if (theirCallIndex <= 7 || maxScore < 3)
+
+        if (theirCallIndex < 2 || maxScore < 3)
         {
             return (string.Empty, string.Empty);
         }
-        
-        // Extract sent exchange (from position 7 to just before theirCall)
-        List<string> sentParts = new List<string>();
-        for (int i = 7; i < theirCallIndex; i++)
+
+        string[] sentParts = payloadTokens.Take(theirCallIndex).ToArray();
+        string[] receivedParts = payloadTokens.Skip(theirCallIndex + 1).ToArray();
+
+        string sentExchange = BuildExchangeFromTokenParts(sentParts);
+        string receivedExchange = BuildExchangeFromTokenParts(receivedParts);
+
+        if (string.IsNullOrWhiteSpace(sentExchange) || string.IsNullOrWhiteSpace(receivedExchange))
         {
-            sentParts.Add(tokens[i]);
+            return (string.Empty, string.Empty);
         }
-        
-        // Extract received exchange (from 2 positions after theirCall to end)
-        List<string> receivedParts = new List<string>();
-        for (int i = theirCallIndex + 2; i < tokens.Length; i++)
+
+        return (sentExchange, receivedExchange);
+    }
+
+    private static string BuildExchangeFromTokenParts(string[] tokenParts)
+    {
+        if (tokenParts.Length < 2)
         {
-            receivedParts.Add(tokens[i]);
+            return string.Empty;
         }
-        
-        return (string.Join(" ", sentParts), string.Join(" ", receivedParts));
+
+        // With signal report: [sig, category+class, location]
+        if (tokenParts.Length >= 3 && IsSignalReportToken(tokenParts[0]))
+        {
+            return $"{tokenParts[1]} {tokenParts[2]}";
+        }
+
+        // Without signal report: [category+class, location]
+        return $"{tokenParts[0]} {tokenParts[1]}";
     }
 
     /// <summary>
@@ -459,6 +491,90 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             score += 1;
 
         return score;
+    }
+
+    private static string? NormalizeSignalReportToken(string? signalToken)
+    {
+        if (string.IsNullOrWhiteSpace(signalToken))
+        {
+            return null;
+        }
+
+        string trimmedSignal = signalToken.Trim();
+
+        // If parser placed category+class in the signal slot (e.g. 1M), treat as missing signal report.
+        if (IsCategoryClassToken(trimmedSignal))
+        {
+            return null;
+        }
+
+        return trimmedSignal;
+    }
+
+    private static bool IsCategoryClassToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token) || token.Length < 2 || token.Length > 3)
+        {
+            return false;
+        }
+
+        char classCharacter = char.ToUpperInvariant(token[token.Length - 1]);
+        if (classCharacter != 'H' && classCharacter != 'I' && classCharacter != 'O' && classCharacter != 'M')
+        {
+            return false;
+        }
+
+        string numericPart = token.Substring(0, token.Length - 1);
+        if (numericPart.Length < 1 || numericPart.Length > 2)
+        {
+            return false;
+        }
+
+        return numericPart.All(char.IsDigit);
+    }
+
+    private static bool IsSignalReportToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token) || token.Length < 2 || token.Length > 3)
+        {
+            return false;
+        }
+
+        char firstCharacter = token[0];
+        if (firstCharacter < '1' || firstCharacter > '5')
+        {
+            return false;
+        }
+
+        for (int i = 1; i < token.Length; i++)
+        {
+            char currentCharacter = token[i];
+            if (!char.IsDigit(currentCharacter) && char.ToUpperInvariant(currentCharacter) != 'N')
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsLikelyLocationToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token) || token.Length > 5)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < token.Length; i++)
+        {
+            char currentCharacter = token[i];
+            if (!char.IsLetterOrDigit(currentCharacter) && currentCharacter != '_')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

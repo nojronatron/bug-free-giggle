@@ -51,13 +51,13 @@ public class WfdExchangeStrategyTests
     [InlineData(null, "3O WA")]
     [InlineData("", "3O WA")]
     [InlineData("   ", "3O WA")]
-    public void ValidateSentExchange_WithNullOrEmptySignal_ReturnsFailure(string? sig, string msg)
+    public void ValidateSentExchange_WithNullOrEmptySignal_ReturnsSuccess(string? sig, string msg)
     {
+        // Signal reports are optional in WFD (not scored)
         var result = _strategy.ValidateSentExchange(sig, msg);
         
-        Assert.False(result.IsSuccess);
-        Assert.Equal(ResponseStatus.BadFormat, result.Status);
-        Assert.Contains("signal report cannot be null or empty", result.ErrorMessage);
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value);
     }
 
     [Theory]

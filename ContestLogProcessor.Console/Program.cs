@@ -98,6 +98,14 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
                             // Get headers from the processor for contest detection
                             if (scProc is CabrilloLogProcessor cabrilloProc)
                             {
+                                if (cabrilloProc.TryGetHeader("START-OF-LOG", out string? startOfLogHeader) && !string.IsNullOrWhiteSpace(startOfLogHeader))
+                                {
+                                    log.Headers["START-OF-LOG"] = startOfLogHeader!;
+                                }
+                                if (cabrilloProc.TryGetHeader("END-OF-LOG", out string? endOfLogHeader))
+                                {
+                                    log.Headers["END-OF-LOG"] = endOfLogHeader ?? string.Empty;
+                                }
                                 if (cabrilloProc.TryGetHeader("CONTEST", out string? contestHeader))
                                 {
                                     log.Headers["CONTEST"] = contestHeader!;

@@ -6,8 +6,9 @@ namespace ContestLogProcessor.WinterFieldDay;
 
 /// <summary>
 /// Winter Field Day exchange strategy for validating category+class+location exchanges.
-/// Per WFD rules: Exchange consists of signal report + category (1-2 digits) + class (H/I/O/M) + location (1-5 chars).
-/// Examples: "59 3O WA", "599 1A CT", "5NN 2M OR"
+/// Per WFD rules: Exchange consists of optional signal report + category (1-2 digits) + class (H/I/O/M) + location (1-5 chars).
+/// Signal reports are informational only and not scored, so they may be omitted.
+/// Examples: "59 3O WA", "1A CT", "5NN 2M OR", "3O WWA"
 /// </summary>
 public class WfdExchangeStrategy : IContestExchangeStrategy
 {
@@ -69,24 +70,22 @@ public class WfdExchangeStrategy : IContestExchangeStrategy
 
     public string GetExchangeFormatDescription()
     {
-        return "Winter Field Day exchange: Signal report (2-3 chars: 59, 599, 5NN) + Category (1-2 digits) + Class (H/I/O/M) + Location (1-5 chars: ARRL/RAC section). Examples: '59 3O WA', '599 1A CT', '5NN 2M OR'";
+        return "Winter Field Day exchange: Signal report (optional: 59, 599, 5NN) + Category (1-2 digits) + Class (H/I/O/M) + Location (1-5 chars: ARRL/RAC section). Examples: '59 3O WA', '1A CT', '5NN 2M OR', '3O WWA'";
     }
 
     private OperationResult<bool> ValidateExchangeInternal(string? sig, string? msg, string direction)
     {
-        // Validate signal report
-        if (string.IsNullOrWhiteSpace(sig))
+        // Signal reports are optional in WFD (not scored, informational only)
+        // If a signal report is provided, validate it; otherwise skip validation
+        if (!string.IsNullOrWhiteSpace(sig))
         {
-            return OperationResult.Failure<bool>(
-                $"WFD {direction} signal report cannot be null or empty",
-                ResponseStatus.BadFormat);
-        }
-
-        if (!SignalReportRegex.IsMatch(sig.Trim()))
-        {
-            return OperationResult.Failure<bool>(
-                $"WFD {direction} signal report '{sig}' is invalid. Must be 2-3 characters matching pattern: [1-5][0-9]{{1,2}} or [1-5][nN]{{1,2}}",
-                ResponseStatus.BadFormat);
+            string trimmedSig = sig.Trim();
+            if (!SignalReportRegex.IsMatch(trimmedSig))
+            {
+                return OperationResult.Failure<bool>(
+                    $"WFD {direction} signal report '{sig}' is invalid. Must be 2-3 characters matching pattern: [1-5][0-9]{{1,2}} or [1-5][nN]{{1,2}}",
+                    ResponseStatus.BadFormat);
+            }
         }
 
         // Validate exchange message (category+class location)
