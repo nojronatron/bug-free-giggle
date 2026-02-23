@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -36,20 +32,20 @@ public class OnlyBandsImportTest
         {
             File.Copy(source, tmp);
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
-            var imp = proc.ImportFileResult(tmp);
+            OperationResult<Unit> imp = proc.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
             List<LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
             Assert.NotEmpty(entries);
 
             // Check a few entries to ensure mapping
-            var first = entries.First();
+            LogEntry first = entries.First();
             Assert.Equal("6m", first.Band);
             Assert.True(first.FrequencyIsValid);
             Assert.Equal("50000", first.Frequency); // normalized to kHz
 
             // ensure some other band mapped
-            var last = entries.Last();
+            LogEntry last = entries.Last();
             Assert.Equal("10m", last.Band);
             Assert.True(last.FrequencyIsValid);
             Assert.Equal("28000", last.Frequency);

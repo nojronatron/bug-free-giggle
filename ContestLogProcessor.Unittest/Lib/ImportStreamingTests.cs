@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -33,14 +29,14 @@ public class ImportStreamingTests
             File.WriteAllLines(tmp, lines);
 
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
-            var imp = proc.ImportFileResult(tmp);
+            OperationResult<Unit> imp = proc.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
             // Only the QSO before END-OF-LOG should be imported
             List<LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
             Assert.Single(entries);
 
-            var first = entries[0];
+            LogEntry first = entries[0];
             Assert.Equal("K7XXX", first.CallSign);
             // SourceLineNumber should be 3 (1-based)
             Assert.Equal(3, first.SourceLineNumber);

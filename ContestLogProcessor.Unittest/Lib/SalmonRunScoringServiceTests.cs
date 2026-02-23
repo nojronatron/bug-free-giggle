@@ -1,5 +1,3 @@
-using System;
-
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.SalmonRun;
 
@@ -17,7 +15,7 @@ public class SalmonRunScoringServiceTests
         SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act & Assert: expect a BadFormat failure via the new OperationResult wrapper
-        var failed = svc.CalculateScore(log);
+        OperationResult<SalmonRunScoreResult> failed = svc.CalculateScore(log);
         Assert.False(failed.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, failed.Status);
     }
@@ -110,9 +108,9 @@ public class SalmonRunScoringServiceTests
         SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
-        var resultOp = svc.CalculateScore(log);
+        OperationResult<SalmonRunScoreResult> resultOp = svc.CalculateScore(log);
         Assert.True(resultOp.IsSuccess);
-        var result = resultOp.Value!;
+        SalmonRunScoreResult result = resultOp.Value!;
 
         // Assert expected points:
         // QSO points: e1=2 (PH), e2=3 (CW), e3=3 (CW), e4=2 (PH), e5=2 (PH) => total 12
@@ -221,9 +219,9 @@ public class SalmonRunScoringServiceTests
         SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
-        var resultOp = svc.CalculateScore(log);
+        OperationResult<SalmonRunScoreResult> resultOp = svc.CalculateScore(log);
         Assert.True(resultOp.IsSuccess);
-        var result = resultOp.Value!;
+        SalmonRunScoreResult result = resultOp.Value!;
 
         // Assert: both modes (PH and CW) should have been counted once => 2 * 500 = 1000
         Assert.Equal(1000, result.W7DxBonusPoints);
@@ -273,9 +271,9 @@ public class SalmonRunScoringServiceTests
         SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
-        var resultOp = svc.CalculateScore(log);
+        OperationResult<SalmonRunScoreResult> resultOp = svc.CalculateScore(log);
         Assert.True(resultOp.IsSuccess);
-        var result = resultOp.Value!;
+        SalmonRunScoreResult result = resultOp.Value!;
 
         // Assert: only first 10 DXCC entries were counted
         Assert.Equal(10, result.UniqueDxccEntities.Count);

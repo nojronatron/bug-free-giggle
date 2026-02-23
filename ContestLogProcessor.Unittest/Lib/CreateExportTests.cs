@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -16,7 +12,7 @@ public class CreateExportTests
     public void CreateEntry_AfterImport_IsVisibleInReadEntries()
     {
         CabrilloLogProcessor processor = new CabrilloLogProcessor();
-        var imp = processor.ImportFileResult(SampleLogPath);
+        OperationResult<Unit> imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
 
         string uniqueCall = "UNITTEST_CREATE_" + Guid.NewGuid().ToString("N");
@@ -30,12 +26,12 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-        var createdResult = processor.CreateEntryResult(newEntry);
+        OperationResult<LogEntry> createdResult = processor.CreateEntryResult(newEntry);
         Assert.True(createdResult.IsSuccess);
-        var created = createdResult.Value;
+        LogEntry? created = createdResult.Value;
         Assert.NotNull(created);
 
-        var found = processor.ReadEntriesResult().Value!.Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
+        bool found = processor.ReadEntriesResult().Value!.Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
         Assert.True(found, "Created entry should be visible via ReadEntries after import.");
     }
 
@@ -43,16 +39,16 @@ public class CreateExportTests
     public void DuplicateEntry_CopiesAndAllowsSentMsgOverride()
     {
         CabrilloLogProcessor processor = new CabrilloLogProcessor();
-        var imp = processor.ImportFileResult(SampleLogPath);
+        OperationResult<Unit> imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
 
-        var original = processor.ReadEntriesResult().Value!.FirstOrDefault();
+        LogEntry? original = processor.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(original);
 
         string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
-        var dupResult = processor.DuplicateEntryResult(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
+        OperationResult<LogEntry> dupResult = processor.DuplicateEntryResult(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
         Assert.True(dupResult.IsSuccess);
-        var dup = dupResult.Value;
+        LogEntry? dup = dupResult.Value;
 
         Assert.NotNull(dup);
         Assert.NotEqual(original.Id, dup.Id);
@@ -72,7 +68,7 @@ public class CreateExportTests
     public void ExportFile_AppendsLogExtension_And_IncludesCreatedEntry()
     {
         CabrilloLogProcessor processor = new CabrilloLogProcessor();
-        var imp2 = processor.ImportFileResult(SampleLogPath);
+        OperationResult<Unit> imp2 = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp2.IsSuccess);
 
         string uniqueCall = "EXPORTTEST_" + Guid.NewGuid().ToString("N");
@@ -86,9 +82,9 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-        var createdResult = processor.CreateEntryResult(newEntry);
+        OperationResult<LogEntry> createdResult = processor.CreateEntryResult(newEntry);
         Assert.True(createdResult.IsSuccess);
-        var created = createdResult.Value;
+        LogEntry? created = createdResult.Value;
 
         string tempDir = Path.GetTempPath();
         string basePath = Path.Combine(tempDir, "clp_export_test_" + Guid.NewGuid().ToString("N"));
@@ -99,12 +95,12 @@ public class CreateExportTests
             if (File.Exists(expectedFile)) File.Delete(expectedFile);
 
             // Call ExportFile with a path that lacks the .log extension
-            var r = processor.ExportFileResult(basePath);
+            OperationResult<Unit> r = processor.ExportFileResult(basePath);
             Assert.True(r.IsSuccess);
 
             Assert.True(File.Exists(expectedFile), "ExportFile should append .log when writing files.");
 
-            var lines = File.ReadAllLines(expectedFile);
+            string[] lines = File.ReadAllLines(expectedFile);
             Assert.Contains(lines, l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(lines, l => l.IndexOf(uniqueCall, StringComparison.OrdinalIgnoreCase) >= 0);
         }
@@ -122,7 +118,7 @@ public class CreateExportTests
         try
         {
             if (File.Exists(tmp)) File.Delete(tmp);
-            var fail = processor.ExportFileResult(tmp);
+            OperationResult<Unit> fail = processor.ExportFileResult(tmp);
             Assert.False(fail.IsSuccess);
             Assert.Equal(ResponseStatus.Error, fail.Status);
         }

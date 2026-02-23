@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -49,11 +45,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.Equal(expectedValid, entry.FrequencyIsValid);
             Assert.Equal(expectedBand, entry.Band);
@@ -99,11 +95,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.False(entry.FrequencyIsValid);
         }
@@ -129,11 +125,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.True(entry.FrequencyIsValid);
         }
@@ -165,11 +161,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.NotNull(entry.TransmitterId);
             Assert.Equal(int.Parse(transmitterId), entry.TransmitterId.Value);
@@ -196,11 +192,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.Null(entry.TransmitterId);
         }
@@ -230,11 +226,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.Null(entry.TransmitterId);
         }
@@ -274,11 +270,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var logFile = processor.GetReadOnlyLogFile();
+            CabrilloLogFileSnapshot? logFile = processor.GetReadOnlyLogFile();
             Assert.NotNull(logFile);
 
             if (!shouldBeValid)
@@ -319,11 +315,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var logFile = processor.GetReadOnlyLogFile();
+            CabrilloLogFileSnapshot? logFile = processor.GetReadOnlyLogFile();
             Assert.NotNull(logFile);
 
             if (!shouldBeValid && !string.IsNullOrEmpty(exchangeMsg))
@@ -365,11 +361,11 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var logFile = processor.GetReadOnlyLogFile();
+            CabrilloLogFileSnapshot? logFile = processor.GetReadOnlyLogFile();
             Assert.NotNull(logFile);
 
             if (!shouldBeValid)
@@ -414,7 +410,7 @@ public class CabrilloV3ComplianceTests
         }
 
         CabrilloLogProcessor processor = new CabrilloLogProcessor();
-        var result = processor.ImportFileResult(tmp);
+        OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
         Assert.True(result.IsSuccess);
 
@@ -422,7 +418,7 @@ public class CabrilloV3ComplianceTests
         Assert.NotEmpty(entries);
 
         // Verify first entry has valid structure
-        var firstEntry = entries.First();
+        LogEntry firstEntry = entries.First();
         Assert.NotNull(firstEntry.Frequency);
         Assert.True(firstEntry.FrequencyIsValid);
         Assert.NotNull(firstEntry.Mode);
@@ -458,7 +454,7 @@ public class CabrilloV3ComplianceTests
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var result = processor.ImportFileResult(tmp);
+            OperationResult<Unit> result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 

@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.WinterFieldDay;
 

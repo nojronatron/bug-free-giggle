@@ -1,9 +1,6 @@
-using System.Linq;
-
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
-using ContestLogProcessor.Unittest.Lib;
 
 using Xunit;
 
@@ -12,11 +9,11 @@ namespace ContestLogProcessor.Unittest.Lib
     public class DuplicateHandlerTests
     {
         [Fact]
-        public async System.Threading.Tasks.Task Duplicate_ByIndex_HappyPath()
+        public async Task Duplicate_ByIndex_HappyPath()
         {
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            var imp = proc.ImportFileResult(path);
+            OperationResult<Unit> imp = proc.ImportFileResult(path);
             Assert.True(imp.IsSuccess);
 
             // Before count
@@ -37,11 +34,11 @@ namespace ContestLogProcessor.Unittest.Lib
         }
 
         [Fact]
-        public async System.Threading.Tasks.Task Duplicate_ByFilter_All_HappyPath()
+        public async Task Duplicate_ByFilter_All_HappyPath()
         {
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            var imp2 = proc.ImportFileResult(path);
+            OperationResult<Unit> imp2 = proc.ImportFileResult(path);
             Assert.True(imp2.IsSuccess);
 
             int before = proc.ReadEntriesResult().Value!.ToList().Count;
@@ -61,11 +58,11 @@ namespace ContestLogProcessor.Unittest.Lib
         }
 
         [Fact]
-        public async System.Threading.Tasks.Task Duplicate_Index_OutOfRange()
+        public async Task Duplicate_Index_OutOfRange()
         {
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            var imp3 = proc.ImportFileResult(path);
+            OperationResult<Unit> imp3 = proc.ImportFileResult(path);
             Assert.True(imp3.IsSuccess);
 
             TestConsole console = new TestConsole(new string?[] { });

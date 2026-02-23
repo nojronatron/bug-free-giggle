@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 using ContestLogProcessor.Console.Interactive;
 
 namespace ContestLogProcessor.Unittest.Lib;
@@ -12,7 +9,7 @@ public class TestConsole : IConsole
 
     public TestConsole(IEnumerable<string?> inputs)
     {
-        foreach (var s in inputs) _inputs.Enqueue(s);
+        foreach (string? s in inputs) _inputs.Enqueue(s);
     }
 
     public Task<string?> ReadLineAsync()

@@ -1,7 +1,6 @@
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
-using ContestLogProcessor.Unittest.Lib;
 
 using Xunit;
 
@@ -14,7 +13,7 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = LocateTestData("K7XXX_Test_WithDX.log");
-            var imp = proc.ImportFileResult(path);
+            OperationResult<Unit> imp = proc.ImportFileResult(path);
             Assert.True(imp.IsSuccess);
 
             TestConsole console = new TestConsole(new string?[] { });
@@ -32,7 +31,7 @@ namespace ContestLogProcessor.Unittest.Lib
         {
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = LocateTestData("K7XXX_Test_WithDX.log");
-            var imp2 = proc.ImportFileResult(path);
+            OperationResult<Unit> imp2 = proc.ImportFileResult(path);
             Assert.True(imp2.IsSuccess);
             // Provide inputs: 'all' then choose '3' (TheirCall) then value 'ZZZ'
             TestConsole console = new TestConsole(new string?[] { "all", "3", "ZZZ" });

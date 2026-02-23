@@ -1,7 +1,6 @@
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
-using ContestLogProcessor.Unittest.Lib;
 
 using Xunit;
 

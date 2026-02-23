@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.SalmonRun;
 
@@ -33,7 +29,7 @@ public class SkippableEntriesTests
         Assert.True(File.Exists(source), "Test data file must exist");
 
         CabrilloLogProcessor p = new CabrilloLogProcessor();
-        var imp = p.ImportFileResult(source);
+        OperationResult<Unit> imp = p.ImportFileResult(source);
         Assert.True(imp.IsSuccess);
 
         List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
@@ -48,7 +44,7 @@ public class SkippableEntriesTests
         Assert.True(File.Exists(source), "Test data file must exist");
 
         CabrilloLogProcessor p = new CabrilloLogProcessor();
-        var imp = p.ImportFileResult(source);
+        OperationResult<Unit> imp = p.ImportFileResult(source);
         Assert.True(imp.IsSuccess);
 
         CabrilloLogFile log = new CabrilloLogFile();
@@ -67,7 +63,7 @@ public class SkippableEntriesTests
         log.Entries = p.ReadEntriesResult().Value!.ToList();
 
         SalmonRunScoringService svc = new();
-        var resOp = svc.CalculateScore(log);
+        OperationResult<SalmonRunScoreResult> resOp = svc.CalculateScore(log);
         Assert.True(resOp.IsSuccess);
         SalmonRunScoreResult res = resOp.Value!;
 

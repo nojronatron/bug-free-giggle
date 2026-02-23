@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -24,12 +20,12 @@ public class OrderPreservationTests
             "END-OF-LOG:"
         };
 
-        var tmp = Path.Combine(Path.GetTempPath(), "order_test_" + Guid.NewGuid() + ".log");
+        string tmp = Path.Combine(Path.GetTempPath(), "order_test_" + Guid.NewGuid() + ".log");
         try
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor p = new CabrilloLogProcessor();
-            var imp = p.ImportFileResult(tmp);
+            OperationResult<Unit> imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
             // Create a new entry with timestamp 2023-09-20 17:16 which should be inserted after the two 1716 entries
@@ -44,9 +40,10 @@ public class OrderPreservationTests
                 TheirCall = "F4KE"
             };
 
-            var createdResult = p.CreateEntryResult(newEntry);
+            OperationResult<LogEntry> createdResult = p.CreateEntryResult(newEntry);
             Assert.True(createdResult.IsSuccess);
-            var created = createdResult.Value;
+            LogEntry? created = createdResult.Value;
+            Assert.NotNull(created);
 
             List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
             // Expect the new entry to be after the two 1716 entries, which are at indexes 1 and 2 (0-based list: 0->1715,1->1716,2->1716,3->1717)
@@ -70,19 +67,20 @@ public class OrderPreservationTests
             "END-OF-LOG:"
         };
 
-        var tmp = Path.Combine(Path.GetTempPath(), "dup_test_" + Guid.NewGuid() + ".log");
+        string tmp = Path.Combine(Path.GetTempPath(), "dup_test_" + Guid.NewGuid() + ".log");
         try
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor p = new CabrilloLogProcessor();
-            var imp2 = p.ImportFileResult(tmp);
+            OperationResult<Unit> imp2 = p.ImportFileResult(tmp);
             Assert.True(imp2.IsSuccess);
 
             List<LogEntry> entriesBefore = p.ReadEntriesResult().Value!.ToList();
-            var source = entriesBefore[0];
-            var dupResult = p.DuplicateEntryResult(source.Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
+            LogEntry source = entriesBefore[0];
+            OperationResult<LogEntry> dupResult = p.DuplicateEntryResult(source.Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
             Assert.True(dupResult.IsSuccess);
-            var dup = dupResult.Value;
+            LogEntry? dup = dupResult.Value;
+            Assert.NotNull(dup);
 
             List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
             int sourceIndex = entries.FindIndex(e => e.Id == source.Id);
@@ -106,19 +104,19 @@ public class OrderPreservationTests
             "END-OF-LOG:"
         };
 
-        var tmp = Path.Combine(Path.GetTempPath(), "update_test_" + Guid.NewGuid() + ".log");
+        string tmp = Path.Combine(Path.GetTempPath(), "update_test_" + Guid.NewGuid() + ".log");
         try
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor p = new CabrilloLogProcessor();
-            var imp3 = p.ImportFileResult(tmp);
+            OperationResult<Unit> imp3 = p.ImportFileResult(tmp);
             Assert.True(imp3.IsSuccess);
 
             List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
-            var target = entries[1];
+            LogEntry target = entries[1];
             int beforeIndex = entries.IndexOf(target);
 
-            var updateResult = p.UpdateEntryResult(target.Id, e => { if (e.SentExchange != null) e.SentExchange.SentMsg = "CHE"; });
+            OperationResult<Unit> updateResult = p.UpdateEntryResult(target.Id, e => { if (e.SentExchange != null) e.SentExchange.SentMsg = "CHE"; });
             Assert.True(updateResult.IsSuccess);
 
             List<LogEntry> entriesAfter = p.ReadEntriesResult().Value!.ToList();
@@ -140,28 +138,28 @@ public class OrderPreservationTests
             "END-OF-LOG:"
         };
 
-        var tmp = Path.Combine(Path.GetTempPath(), "export_test_" + Guid.NewGuid() + ".log");
-        var outp = Path.Combine(Path.GetTempPath(), "export_out_" + Guid.NewGuid() + ".log");
+        string tmp = Path.Combine(Path.GetTempPath(), "export_test_" + Guid.NewGuid() + ".log");
+        string outp = Path.Combine(Path.GetTempPath(), "export_out_" + Guid.NewGuid() + ".log");
         try
         {
             File.WriteAllLines(tmp, lines);
             CabrilloLogProcessor p = new CabrilloLogProcessor();
-            var imp4 = p.ImportFileResult(tmp);
+            OperationResult<Unit> imp4 = p.ImportFileResult(tmp);
             Assert.True(imp4.IsSuccess);
 
             // Duplicate first entry so order becomes: orig1, dup1, orig2
             List<LogEntry> entriesBefore = p.ReadEntriesResult().Value!.ToList();
-            var dupResult2 = p.DuplicateEntryResult(entriesBefore[0].Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
+            OperationResult<LogEntry> dupResult2 = p.DuplicateEntryResult(entriesBefore[0].Id, ILogProcessor.DuplicateField.SentMsg, "CHE");
             Assert.True(dupResult2.IsSuccess);
-            var dup = dupResult2.Value;
+            LogEntry? dup = dupResult2.Value;
 
-            var exportResult = p.ExportFileResult(Path.Combine(Path.GetTempPath(), "export_out_" + Guid.NewGuid()));
+            OperationResult<Unit> exportResult = p.ExportFileResult(Path.Combine(Path.GetTempPath(), "export_out_" + Guid.NewGuid()));
             Assert.True(exportResult.IsSuccess);
             // read the last created file by matching prefix
-            var exported = Directory.GetFiles(Path.GetTempPath(), "export_out_*.log");
+            string[] exported = Directory.GetFiles(Path.GetTempPath(), "export_out_*.log");
             Assert.NotEmpty(exported);
-            var file = exported.OrderByDescending(f => File.GetLastWriteTimeUtc(f)).First();
-            var outLines = File.ReadAllLines(file);
+            string file = exported.OrderByDescending(f => File.GetLastWriteTimeUtc(f)).First();
+            string[] outLines = File.ReadAllLines(file);
 
             // Create expected canonical lines from in-memory entries
             List<LogEntry> mem = p.ReadEntriesResult().Value!.ToList();
@@ -179,10 +177,18 @@ public class OrderPreservationTests
         }
         finally
         {
-            if (File.Exists(tmp)) File.Delete(tmp);
-            foreach (var f in Directory.GetFiles(Path.GetTempPath(), "export_out_*.log"))
+            if (File.Exists(tmp)) 
             {
-                try { File.Delete(f); } catch { }
+                File.Delete(tmp);
+            }
+
+            foreach (string f in Directory.GetFiles(Path.GetTempPath(), "export_out_*.log"))
+            {
+                try 
+                { 
+                    File.Delete(f); 
+                } 
+                catch { }
             }
         }
     }

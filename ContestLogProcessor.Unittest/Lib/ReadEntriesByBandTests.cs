@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -19,7 +16,7 @@ public class ReadEntriesByBandTests
         Assert.True(proc.CreateEntryResult(e1).IsSuccess);
         Assert.True(proc.CreateEntryResult(e2).IsSuccess);
 
-        var res40 = proc.ReadEntriesByBandResult("40m");
+        OperationResult<IEnumerable<LogEntry>> res40 = proc.ReadEntriesByBandResult("40m");
         Assert.True(res40.IsSuccess);
         Assert.Single(res40.Value!);
         Assert.Equal("A", res40.Value!.First().CallSign);
@@ -35,7 +32,7 @@ public class ReadEntriesByBandTests
         Assert.True(proc.CreateEntryResult(e1).IsSuccess);
         Assert.True(proc.CreateEntryResult(e2).IsSuccess);
 
-        var r40 = proc.ReadEntriesByBandResult("40m");
+        OperationResult<IEnumerable<LogEntry>> r40 = proc.ReadEntriesByBandResult("40m");
         Assert.True(r40.IsSuccess);
         Assert.Single(r40.Value!);
         Assert.Equal("X", r40.Value!.First().CallSign);

@@ -1,7 +1,6 @@
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
-using ContestLogProcessor.Unittest.Lib;
 
 using Xunit;
 
@@ -10,7 +9,7 @@ namespace ContestLogProcessor.Unittest.Lib
     public class ExitHandlerTests
     {
         [Fact]
-        public async System.Threading.Tasks.Task ExitHandler_RequestsExit()
+        public async Task ExitHandler_RequestsExit()
         {
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
             TestConsole console = new TestConsole(new string?[] { });
@@ -24,7 +23,7 @@ namespace ContestLogProcessor.Unittest.Lib
         }
 
         [Fact]
-        public async System.Threading.Tasks.Task Shell_Stops_On_ExitHandler()
+        public async Task Shell_Stops_On_ExitHandler()
         {
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
             TestConsole console = new TestConsole(new string?[] { });

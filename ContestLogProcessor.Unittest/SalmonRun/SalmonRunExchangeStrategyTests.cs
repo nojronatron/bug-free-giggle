@@ -28,7 +28,7 @@ public class SalmonRunExchangeStrategyTests
     [InlineData("159", "BC")]
     public void ValidateSentExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -42,7 +42,7 @@ public class SalmonRunExchangeStrategyTests
     [InlineData("159", "B")]
     public void ValidateReceivedExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
-        var result = _strategy.ValidateReceivedExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateReceivedExchange(sig, msg);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -54,7 +54,7 @@ public class SalmonRunExchangeStrategyTests
     [InlineData("   ", "KING")]
     public void ValidateSentExchange_WithNullOrEmptySignal_ReturnsFailure(string? sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -67,7 +67,7 @@ public class SalmonRunExchangeStrategyTests
     [InlineData("59", "   ")]
     public void ValidateSentExchange_WithNullOrEmptyLocation_ReturnsFailure(string sig, string? msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -82,7 +82,7 @@ public class SalmonRunExchangeStrategyTests
     [InlineData("ABC", "KING")]   // Invalid: letters other than N
     public void ValidateSentExchange_WithInvalidSignalReport_ReturnsFailure(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -96,7 +96,7 @@ public class SalmonRunExchangeStrategyTests
     [InlineData("59", "")]          // Invalid: empty
     public void ValidateSentExchange_WithInvalidLocationLength_ReturnsFailure(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -109,7 +109,7 @@ public class SalmonRunExchangeStrategyTests
     [InlineData("59", "K@NG")]      // Invalid: contains special char
     public void ValidateSentExchange_WithInvalidLocationCharacters_ReturnsFailure(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -128,7 +128,7 @@ public class SalmonRunExchangeStrategyTests
             ReceivedMsg = "OR"
         };
 
-        var result = _strategy.ValidateExchange(exchange);
+        OperationResult<bool> result = _strategy.ValidateExchange(exchange);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -137,7 +137,7 @@ public class SalmonRunExchangeStrategyTests
     [Fact]
     public void ValidateExchange_WithNullExchange_ReturnsFailure()
     {
-        var result = _strategy.ValidateExchange(null!);
+        OperationResult<bool> result = _strategy.ValidateExchange(null!);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -156,7 +156,7 @@ public class SalmonRunExchangeStrategyTests
             ReceivedMsg = "OR"
         };
 
-        var result = _strategy.ValidateExchange(exchange);
+        OperationResult<bool> result = _strategy.ValidateExchange(exchange);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -174,7 +174,7 @@ public class SalmonRunExchangeStrategyTests
             ReceivedMsg = "TOOLONG"
         };
 
-        var result = _strategy.ValidateExchange(exchange);
+        OperationResult<bool> result = _strategy.ValidateExchange(exchange);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);

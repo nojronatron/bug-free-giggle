@@ -1,7 +1,4 @@
-using System;
 using System.Collections;
-using System.IO;
-using System.Linq;
 
 using ContestLogProcessor.Lib;
 
@@ -18,7 +15,7 @@ public class SnapshotImmutabilityTests
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCALLSIGN: K7XXX\r\nCREATED-BY: Test\r\nQSO: 7265 PH 2025-09-20 1715 K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
         CabrilloLogProcessor proc = new CabrilloLogProcessor();
-        var imp = proc.ImportFileResult(tmp);
+        OperationResult<Unit> imp = proc.ImportFileResult(tmp);
         Assert.True(imp.IsSuccess);
 
         // Take a snapshot and mutate it
@@ -29,13 +26,13 @@ public class SnapshotImmutabilityTests
         bool headerMutationRaised = false;
         try
         {
-            IDictionary? dict = snap!.Headers as System.Collections.IDictionary;
+            IDictionary? dict = snap!.Headers as IDictionary;
             if (dict != null)
             {
                 dict["CALLSIGN"] = "MUTATED";
             }
         }
-        catch (System.NotSupportedException)
+        catch (NotSupportedException)
         {
             headerMutationRaised = true;
         }

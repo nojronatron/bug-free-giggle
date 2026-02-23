@@ -28,7 +28,7 @@ public class WfdExchangeStrategyTests
     [InlineData("159", "1I BC")]
     public void ValidateSentExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -42,7 +42,7 @@ public class WfdExchangeStrategyTests
     [InlineData("159", "12H AZ")]
     public void ValidateReceivedExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
-        var result = _strategy.ValidateReceivedExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateReceivedExchange(sig, msg);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -55,7 +55,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithNullOrEmptySignal_ReturnsSuccess(string? sig, string msg)
     {
         // Signal reports are optional in WFD (not scored)
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -67,7 +67,7 @@ public class WfdExchangeStrategyTests
     [InlineData("59", "   ")]
     public void ValidateSentExchange_WithNullOrEmptyMessage_ReturnsFailure(string sig, string? msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -82,7 +82,7 @@ public class WfdExchangeStrategyTests
     [InlineData("ABC", "3O WA")]   // Invalid: letters other than N
     public void ValidateSentExchange_WithInvalidSignalReport_ReturnsFailure(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -96,7 +96,7 @@ public class WfdExchangeStrategyTests
     [InlineData("59", "WA")]         // Invalid: only one part
     public void ValidateSentExchange_WithInvalidPartCount_ReturnsFailure(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -110,7 +110,7 @@ public class WfdExchangeStrategyTests
     [InlineData("59", "3 WA")]       // Invalid: missing class letter
     public void ValidateSentExchange_WithInvalidCategoryClass_ReturnsFailure(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -124,7 +124,7 @@ public class WfdExchangeStrategyTests
     [InlineData("59", "3O W A")]      // Invalid: embedded space treated as separate part
     public void ValidateSentExchange_WithInvalidLocation_ReturnsFailure(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -142,7 +142,7 @@ public class WfdExchangeStrategyTests
             ReceivedMsg = "1I CT"
         };
 
-        var result = _strategy.ValidateExchange(exchange);
+        OperationResult<bool> result = _strategy.ValidateExchange(exchange);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -151,7 +151,7 @@ public class WfdExchangeStrategyTests
     [Fact]
     public void ValidateExchange_WithNullExchange_ReturnsFailure()
     {
-        var result = _strategy.ValidateExchange(null!);
+        OperationResult<bool> result = _strategy.ValidateExchange(null!);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -170,7 +170,7 @@ public class WfdExchangeStrategyTests
             ReceivedMsg = "1A CT"
         };
 
-        var result = _strategy.ValidateExchange(exchange);
+        OperationResult<bool> result = _strategy.ValidateExchange(exchange);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -188,7 +188,7 @@ public class WfdExchangeStrategyTests
             ReceivedMsg = "INVALID"
         };
 
-        var result = _strategy.ValidateExchange(exchange);
+        OperationResult<bool> result = _strategy.ValidateExchange(exchange);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -225,7 +225,7 @@ public class WfdExchangeStrategyTests
     [InlineData("59", "1h wa")]    // Lowercase valid
     public void ValidateSentExchange_WithAllValidClasses_ReturnsSuccess(string sig, string msg)
     {
-        var result = _strategy.ValidateSentExchange(sig, msg);
+        OperationResult<bool> result = _strategy.ValidateSentExchange(sig, msg);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);

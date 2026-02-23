@@ -77,7 +77,7 @@ public class ContestExchangeStrategyRegistryTests
 
         Assert.Equal(1, registry.Count);
 
-        var result = registry.ResolveStrategy("TEST");
+        OperationResult<IContestExchangeStrategy> result = registry.ResolveStrategy("TEST");
         Assert.True(result.IsSuccess);
         Assert.Equal("WFD", result.Value!.ContestId);
     }
@@ -88,7 +88,7 @@ public class ContestExchangeStrategyRegistryTests
         ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
 
-        var result = registry.ResolveStrategy("SALMON-RUN");
+        OperationResult<IContestExchangeStrategy> result = registry.ResolveStrategy("SALMON-RUN");
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
@@ -100,7 +100,7 @@ public class ContestExchangeStrategyRegistryTests
     {
         ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
-        var result = registry.ResolveStrategy("UNKNOWN");
+        OperationResult<IContestExchangeStrategy> result = registry.ResolveStrategy("UNKNOWN");
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.NotFound, result.Status);
@@ -112,7 +112,7 @@ public class ContestExchangeStrategyRegistryTests
     {
         ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
-        var result = registry.ResolveStrategy(null!);
+        OperationResult<IContestExchangeStrategy> result = registry.ResolveStrategy(null!);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -124,7 +124,7 @@ public class ContestExchangeStrategyRegistryTests
     {
         ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
-        var result = registry.ResolveStrategy("");
+        OperationResult<IContestExchangeStrategy> result = registry.ResolveStrategy("");
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
@@ -136,7 +136,7 @@ public class ContestExchangeStrategyRegistryTests
         ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("FAIL", () => throw new InvalidOperationException("Test error"));
 
-        var result = registry.ResolveStrategy("FAIL");
+        OperationResult<IContestExchangeStrategy> result = registry.ResolveStrategy("FAIL");
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.Error, result.Status);
@@ -204,8 +204,8 @@ public class ContestExchangeStrategyRegistryTests
         ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("TEST", () => new SalmonRunExchangeStrategy());
 
-        var result1 = registry.ResolveStrategy("TEST");
-        var result2 = registry.ResolveStrategy("TEST");
+        OperationResult<IContestExchangeStrategy> result1 = registry.ResolveStrategy("TEST");
+        OperationResult<IContestExchangeStrategy> result2 = registry.ResolveStrategy("TEST");
 
         Assert.True(result1.IsSuccess);
         Assert.True(result2.IsSuccess);
@@ -223,8 +223,8 @@ public class ContestExchangeStrategyRegistryTests
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
         registry.RegisterStrategy("WFD", () => new WfdExchangeStrategy());
 
-        var salmonResult = registry.ResolveStrategy("SALMON-RUN");
-        var wfdResult = registry.ResolveStrategy("WFD");
+        OperationResult<IContestExchangeStrategy> salmonResult = registry.ResolveStrategy("SALMON-RUN");
+        OperationResult<IContestExchangeStrategy> wfdResult = registry.ResolveStrategy("WFD");
 
         Assert.True(salmonResult.IsSuccess);
         Assert.True(wfdResult.IsSuccess);
@@ -238,7 +238,7 @@ public class ContestExchangeStrategyRegistryTests
         ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
 
-        var result = registry.ResolveStrategy("  SALMON-RUN  ");
+        OperationResult<IContestExchangeStrategy> result = registry.ResolveStrategy("  SALMON-RUN  ");
 
         Assert.True(result.IsSuccess);
         Assert.Equal("SALMON-RUN", result.Value!.ContestId);

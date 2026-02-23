@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;

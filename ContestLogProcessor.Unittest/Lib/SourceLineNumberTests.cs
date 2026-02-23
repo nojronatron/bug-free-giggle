@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -22,28 +18,31 @@ public class SourceLineNumberTests
             "END-OF-LOG:"
         };
 
-        var tmp = Path.Combine(Path.GetTempPath(), "sln_test_" + Guid.NewGuid() + ".log");
+        string tmp = Path.Combine(Path.GetTempPath(), "sln_test_" + Guid.NewGuid() + ".log");
         try
         {
             File.WriteAllLines(tmp, lines);
 
             CabrilloLogProcessor processor = new CabrilloLogProcessor();
-            var imp = processor.ImportFileResult(tmp);
+            OperationResult<Unit> imp = processor.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
             List<LogEntry> entries = processor.ReadEntriesResult().Value!.ToList();
             Assert.Equal(2, entries.Count);
 
             // The first QSO was on line 3 (1-based), the second on line 4
-            var first = entries[0];
-            var second = entries[1];
+            LogEntry first = entries[0];
+            LogEntry second = entries[1];
 
             Assert.Equal(3, first.SourceLineNumber);
             Assert.Equal(4, second.SourceLineNumber);
         }
         finally
         {
-            if (File.Exists(tmp)) File.Delete(tmp);
+            if (File.Exists(tmp))
+            {
+                File.Delete(tmp);
+            }
         }
     }
 }

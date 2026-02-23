@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
@@ -27,7 +25,7 @@ public class AddHandlerTests
         await handler.HandleAsync(new string[] { "add" }, ctx);
 
         // Assert
-        var entries = processor.ReadEntriesResult().Value!;
+        IEnumerable<LogEntry> entries = processor.ReadEntriesResult().Value!;
         Assert.Single(entries);
         string consoleOutput = string.Join('\n', testConsole.Outputs);
         Assert.Contains("Added entry with Id:", consoleOutput);

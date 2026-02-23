@@ -1,6 +1,3 @@
-using System.Linq;
-using System.Threading.Tasks;
-
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
@@ -17,7 +14,7 @@ public class ViewHandlerTests
         TestConsole console = new TestConsole(new string?[] { "q" });
         CabrilloLogProcessor proc = new CabrilloLogProcessor();
         // Add a few entries
-        for (int i = 0; i < 5; i++) { var r = proc.CreateEntryResult(new LogEntry { CallSign = "K7" + i, TheirCall = "N0" + i }); Assert.True(r.IsSuccess); }
+        for (int i = 0; i < 5; i++) { OperationResult<LogEntry> r = proc.CreateEntryResult(new LogEntry { CallSign = "K7" + i, TheirCall = "N0" + i }); Assert.True(r.IsSuccess); }
 
         CommandContext ctx = new CommandContext(proc, console, debug: false);
         ViewCommandHandler handler = new ViewCommandHandler();

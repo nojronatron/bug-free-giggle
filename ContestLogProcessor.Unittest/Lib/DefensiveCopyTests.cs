@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -15,25 +12,26 @@ namespace ContestLogProcessor.Unittest.Lib
             CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
             // Create an entry and get the stored id
-            var createdResult = proc.CreateEntryResult(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T1" });
+            OperationResult<LogEntry> createdResult = proc.CreateEntryResult(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T1" });
             Assert.True(createdResult.IsSuccess);
-            var created = createdResult.Value;
+            LogEntry? created = createdResult.Value;
+            Assert.NotNull(created);
             string id = created.Id;
 
             // Read via ReadEntries (returns clone). Mutating clone should not affect stored entry.
-            var cloneFromList = proc.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? cloneFromList = proc.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(cloneFromList);
             cloneFromList!.CallSign = "MUTATED_BY_CALLER";
 
-            var fresh = proc.GetEntryByIdResult(id).Value;
+            LogEntry? fresh = proc.GetEntryByIdResult(id).Value;
             Assert.NotNull(fresh);
             Assert.Equal("ORIGINAL", fresh!.CallSign);
 
             // Mutate clone returned by GetEntryById
-            var cloneById = proc.GetEntryByIdResult(id).Value;
+            LogEntry? cloneById = proc.GetEntryByIdResult(id).Value;
             cloneById!.CallSign = "MUTATED_BY_ID";
 
-            var fresh2 = proc.GetEntryByIdResult(id).Value;
+            LogEntry? fresh2 = proc.GetEntryByIdResult(id).Value;
             Assert.Equal("ORIGINAL", fresh2!.CallSign);
         }
 
@@ -50,14 +48,15 @@ namespace ContestLogProcessor.Unittest.Lib
                 e.CallSign = "CHANGED_IN_EVENT";
             };
 
-            var createdResult2 = proc.CreateEntryResult(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T2" });
+            OperationResult<LogEntry> createdResult2 = proc.CreateEntryResult(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T2" });
             Assert.True(createdResult2.IsSuccess);
-            var created2 = createdResult2.Value;
+            LogEntry? created2 = createdResult2.Value;
+            Assert.NotNull(created2);
             Assert.NotNull(eventEntry);
             Assert.Equal("CHANGED_IN_EVENT", eventEntry.CallSign);
 
             // Stored value should remain original
-            var stored = proc.GetEntryByIdResult(created2.Id).Value;
+            LogEntry? stored = proc.GetEntryByIdResult(created2.Id).Value;
             Assert.Equal("ORIGINAL", stored!.CallSign);
         }
     }

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
@@ -14,7 +10,11 @@ public class DuplicateCommandHandlerFailureTests
 {
     private class FailingReadProcessor : ILogProcessor
     {
-        public event EventHandler<string>? EntryDeleted;
+        public event EventHandler<string>? EntryDeleted
+        {
+            add { }
+            remove { }
+        }
 
         OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
         OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat, bool useBandToken) => OperationResult.Failure<Unit>("not implemented");
@@ -48,9 +48,13 @@ public class DuplicateCommandHandlerFailureTests
         Assert.Contains(console.Outputs, o => o.Contains("Operation failed: Read failed"));
     }
 
-    private class NotFoundGetProcessor : ILogProcessor
+    private class EmptyMatchesProcessor : ILogProcessor
     {
-        public event EventHandler<string>? EntryDeleted;
+        public event EventHandler<string>? EntryDeleted
+        {
+            add { }
+            remove { }
+        }
         OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
         OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat, bool useBandToken) => OperationResult.Failure<Unit>("not implemented");
 
@@ -69,9 +73,9 @@ public class DuplicateCommandHandlerFailureTests
     }
 
     [Fact]
-    public async Task DuplicateHandler_GetEntryNotFound_PrintsNotFound()
+    public async Task DuplicateHandler_FilterNoMatches_PrintsNoMatchesFound()
     {
-        NotFoundGetProcessor proc = new NotFoundGetProcessor();
+        EmptyMatchesProcessor proc = new EmptyMatchesProcessor();
         TestConsole console = new TestConsole(new string[] { "cancel" });
         CommandContext ctx = new CommandContext(proc, console, debug: false);
         DuplicateCommandHandler handler = new DuplicateCommandHandler();
@@ -83,9 +87,51 @@ public class DuplicateCommandHandlerFailureTests
         Assert.Contains(console.Outputs, o => o.Contains("No matches found for filter."));
     }
 
+    private class SingleEntryNotFoundGetProcessor : ILogProcessor
+    {
+        public event EventHandler<string>? EntryDeleted
+        {
+            add { }
+            remove { }
+        }
+        OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
+        OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat, bool useBandToken) => OperationResult.Failure<Unit>("not implemented");
+        OperationResult<LogEntry> ILogProcessor.CreateEntryResult(LogEntry entry) => OperationResult.Failure<LogEntry>("not implemented");
+        OperationResult<LogEntry> ILogProcessor.DuplicateEntryResult(string id, ILogProcessor.DuplicateField field, string? newValue) => OperationResult.Failure<LogEntry>("not implemented");
+
+        OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesResult(Func<LogEntry, bool>? filter, Func<LogEntry, object>? orderBy, int? skip, int? take)
+            => OperationResult.Success<IEnumerable<LogEntry>>(new List<LogEntry> { new LogEntry { Id = "1", CallSign = "K7XXX" } });
+
+        OperationResult<IEnumerable<LogEntry>> ILogProcessor.ReadEntriesByBandResult(string band, Func<LogEntry, object>? orderBy, int? skip, int? take)
+            => OperationResult.Success<IEnumerable<LogEntry>>(new List<LogEntry>());
+
+        OperationResult<LogEntry> ILogProcessor.GetEntryByIdResult(string id)
+            => OperationResult.Failure<LogEntry>("not found", ResponseStatus.NotFound);
+
+        OperationResult<Unit> ILogProcessor.UpdateEntryResult(string id, Action<LogEntry> editAction) => OperationResult.Failure<Unit>("not implemented");
+        OperationResult<Unit> ILogProcessor.DeleteEntryResult(string id) => OperationResult.Failure<Unit>("not implemented");
+    }
+
+    [Fact]
+    public async Task DuplicateHandler_GetEntryByIdNotFound_PrintsSelectedEntryNotFound()
+    {
+        SingleEntryNotFoundGetProcessor proc = new SingleEntryNotFoundGetProcessor();
+        TestConsole console = new TestConsole(new string?[] { "" });
+        CommandContext ctx = new CommandContext(proc, console, debug: false);
+        DuplicateCommandHandler handler = new DuplicateCommandHandler();
+
+        await handler.HandleAsync(new[] { "duplicate", "--index", "0" }, ctx);
+
+        Assert.Contains(console.Outputs, o => o.Contains("Selected entry not found."));
+    }
+
     private class FailingDuplicateProcessor : ILogProcessor
     {
-        public event EventHandler<string>? EntryDeleted;
+        public event EventHandler<string>? EntryDeleted
+        {
+            add { }
+            remove { }
+        }
         OperationResult<Unit> ILogProcessor.ImportFileResult(string filePath) => OperationResult.Failure<Unit>("not implemented");
         OperationResult<Unit> ILogProcessor.ExportFileResult(string filePath, bool useCanonicalFormat, bool useBandToken) => OperationResult.Failure<Unit>("not implemented");
 

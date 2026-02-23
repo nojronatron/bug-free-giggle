@@ -1,5 +1,3 @@
-using System;
-
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.Lib.Formatters;
 
@@ -24,10 +22,10 @@ public class FormatterTests
     [Fact]
     public void FormatterRegistry_Returns_CabrilloAndAdif()
     {
-        var all = FormatterRegistry.GetAll();
+        IReadOnlyList<ILogEntryFormatter> all = FormatterRegistry.GetAll();
         Assert.Contains(all, f => string.Equals(f.Name, "cabrillo", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(all, f => string.Equals(f.Name, "adif", StringComparison.OrdinalIgnoreCase));
-        Assert.True(FormatterRegistry.TryGet("cabrillo", out var cab));
+        Assert.True(FormatterRegistry.TryGet("cabrillo", out ILogEntryFormatter? cab));
         Assert.NotNull(cab);
     }
 }

@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -22,12 +18,12 @@ public class ExportUseBandTests
         string expected = temp + ".log";
         try
         {
-            var r = proc.ExportFileResult(temp, useCanonicalFormat: true, useBandToken: true);
+            OperationResult<Unit> r = proc.ExportFileResult(temp, useCanonicalFormat: true, useBandToken: true);
             Assert.True(r.IsSuccess);
             Assert.True(File.Exists(expected));
-            var lines = File.ReadAllLines(expected);
+            string[] lines = File.ReadAllLines(expected);
             // find the QSO line and verify the token after 'QSO:' starts with '40m'
-            var qso = lines.FirstOrDefault(l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
+            string? qso = lines.FirstOrDefault(l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(qso);
             string after = qso!.Substring(4).TrimStart();
             string firstToken = after.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
@@ -35,7 +31,14 @@ public class ExportUseBandTests
         }
         finally
         {
-            try { if (File.Exists(expected)) File.Delete(expected); } catch { }
+            try 
+            {
+                if (File.Exists(expected)) 
+                {
+                    File.Delete(expected);
+                }
+            }
+            catch { }
         }
     }
 
@@ -51,11 +54,11 @@ public class ExportUseBandTests
         string expected = temp + ".log";
         try
         {
-            var r = proc.ExportFileResult(temp, useCanonicalFormat: true, useBandToken: false);
+            OperationResult<Unit> r = proc.ExportFileResult(temp, useCanonicalFormat: true, useBandToken: false);
             Assert.True(r.IsSuccess);
             Assert.True(File.Exists(expected));
-            var lines = File.ReadAllLines(expected);
-            var qso = lines.FirstOrDefault(l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
+            string[] lines = File.ReadAllLines(expected);
+            string? qso = lines.FirstOrDefault(l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(qso);
             string after = qso!.Substring(4).TrimStart();
             string firstToken = after.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
@@ -63,7 +66,12 @@ public class ExportUseBandTests
         }
         finally
         {
-            try { if (File.Exists(expected)) File.Delete(expected); } catch { }
+            try 
+            {
+                if (File.Exists(expected)) File.Delete(expected);
+            }
+            catch
+            { }
         }
     }
 }

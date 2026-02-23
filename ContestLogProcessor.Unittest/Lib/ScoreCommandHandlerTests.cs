@@ -1,11 +1,7 @@
-using System;
-using System.Threading.Tasks;
-
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.SalmonRun;
-using ContestLogProcessor.Unittest.Lib;
 
 using Xunit;
 
@@ -28,7 +24,7 @@ public class ScoreCommandHandlerTests
             "QSO: 14000 PH 2025-09-20 0300 K7XXX 59 OKA W7DX 59 ON",
             "END-OF-LOG:"
         });
-        var importRes = proc.ImportFileResult(tmp);
+        OperationResult<Unit> importRes = proc.ImportFileResult(tmp);
         Assert.True(importRes.IsSuccess);
 
         TestConsole testConsole = new TestConsole(new string[0]);
@@ -61,7 +57,7 @@ public class ScoreCommandHandlerTests
             "QSO: 7073 CW 2025-09-20 0300 K7XXX 59 OKA W7DX 59 ADA",
             "END-OF-LOG:"
         });
-        var importRes2 = proc.ImportFileResult(tmp2);
+        OperationResult<Unit> importRes2 = proc.ImportFileResult(tmp2);
         Assert.True(importRes2.IsSuccess);
 
         TestConsole testConsole = new TestConsole(new string[0]);
@@ -92,7 +88,7 @@ public class ScoreCommandHandlerTests
             "QSO: 28000 PH 2025-09-20 0400 K7XXX 59 OKA K1ABC 59 F",
             "END-OF-LOG:"
         });
-        var importRes3 = proc.ImportFileResult(tmp3);
+        OperationResult<Unit> importRes3 = proc.ImportFileResult(tmp3);
         Assert.True(importRes3.IsSuccess);
 
         SalmonRunScoringService svc = new ContestLogProcessor.SalmonRun.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
@@ -102,9 +98,9 @@ public class ScoreCommandHandlerTests
         log.Headers["END-OF-LOG"] = "";
         log.Entries = proc.ReadEntriesResult().Value!.ToList();
 
-        var resOp = svc.CalculateScore(log);
+        OperationResult<SalmonRunScoreResult> resOp = svc.CalculateScore(log);
         Assert.True(resOp.IsSuccess);
-        var res = resOp.Value!;
+        SalmonRunScoreResult res = resOp.Value!;
 
         // QSO points expected: PH=2, CW=3, PH=2 => total 7
         Assert.Equal(7, res.QsoPoints);

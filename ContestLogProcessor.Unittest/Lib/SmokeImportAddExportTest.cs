@@ -1,11 +1,6 @@
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
-using ContestLogProcessor.Unittest.Lib;
 
 using Xunit;
 
@@ -59,39 +54,51 @@ public class SmokeImportAddExportTest
 
     private static string LocateTestData(string fileName)
     {
-        string baseDir = System.AppContext.BaseDirectory ?? System.IO.Directory.GetCurrentDirectory();
+        string baseDir = System.AppContext.BaseDirectory ?? Directory.GetCurrentDirectory();
 
         // First try a few common relative locations near the test assembly
         string[] candidates = new[] {
-            System.IO.Path.Combine(baseDir, "Lib", "TestData", fileName),
-            System.IO.Path.Combine(baseDir, "TestData", fileName),
-            System.IO.Path.Combine(baseDir, fileName)
+            Path.Combine(baseDir, "Lib", "TestData", fileName),
+            Path.Combine(baseDir, "TestData", fileName),
+            Path.Combine(baseDir, fileName)
         };
         foreach (string c in candidates)
         {
-            if (System.IO.File.Exists(c)) return c;
+            if (File.Exists(c))
+            {
+                return c;
+            }
         }
 
         // Walk up parents to find the repository root or the Unittest project folder
-        DirectoryInfo? dir = new System.IO.DirectoryInfo(baseDir);
+        DirectoryInfo? dir = new DirectoryInfo(baseDir);
         int depth = 0;
         while (dir != null && depth < 10)
         {
             // If this directory contains the solution file, check TestData under the Unittest project
-            string slnProbe = System.IO.Path.Combine(dir.FullName, "ContestLogProcessor.sln");
-            if (System.IO.File.Exists(slnProbe))
+            string slnProbe = Path.Combine(dir.FullName, "ContestLogProcessor.sln");
+            if (File.Exists(slnProbe))
             {
-                string repoProbe = System.IO.Path.Combine(dir.FullName, "ContestLogProcessor.Unittest", "Lib", "TestData", fileName);
-                if (System.IO.File.Exists(repoProbe)) return repoProbe;
+                string repoProbe = Path.Combine(dir.FullName, "ContestLogProcessor.Unittest", "Lib", "TestData", fileName);
+                if (File.Exists(repoProbe))
+                {
+                    return repoProbe;
+                }
             }
 
             // Check sibling layout patterns
-            string probe = System.IO.Path.Combine(dir.FullName, "ContestLogProcessor.Unittest", "Lib", "TestData", fileName);
-            if (System.IO.File.Exists(probe)) return probe;
+            string probe = Path.Combine(dir.FullName, "ContestLogProcessor.Unittest", "Lib", "TestData", fileName);
+            if (File.Exists(probe))
+            {
+                return probe;
+            }
 
             // Also check within this directory for a Lib/TestData path
-            string localProbe = System.IO.Path.Combine(dir.FullName, "Lib", "TestData", fileName);
-            if (System.IO.File.Exists(localProbe)) return localProbe;
+            string localProbe = Path.Combine(dir.FullName, "Lib", "TestData", fileName);
+            if (File.Exists(localProbe))
+            {
+                return localProbe;
+            }
 
             dir = dir.Parent;
             depth++;
@@ -100,11 +107,14 @@ public class SmokeImportAddExportTest
         // Final fallback: bounded recursive search from baseDir
         try
         {
-            var found = System.IO.Directory.GetFiles(baseDir, fileName, System.IO.SearchOption.AllDirectories).FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(found)) return found;
+            string? found = Directory.GetFiles(baseDir, fileName, SearchOption.AllDirectories).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(found)) 
+            {
+                return found;
+            }
         }
         catch { }
 
-        throw new System.IO.FileNotFoundException($"Test data file not found: {fileName}");
+        throw new FileNotFoundException($"Test data file not found: {fileName}");
     }
 }

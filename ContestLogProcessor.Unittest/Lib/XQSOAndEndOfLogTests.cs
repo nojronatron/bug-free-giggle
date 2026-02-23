@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
@@ -28,7 +24,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 File.WriteAllLines(tmp, lines);
 
                 CabrilloLogProcessor p = new CabrilloLogProcessor();
-                var imp = p.ImportFileResult(tmp);
+                OperationResult<Unit> imp = p.ImportFileResult(tmp);
                 Assert.True(imp.IsSuccess);
 
                 List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
@@ -60,7 +56,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 File.WriteAllLines(tmp, lines);
 
                 CabrilloLogProcessor p = new CabrilloLogProcessor();
-                var imp = p.ImportFileResult(tmp);
+                OperationResult<Unit> imp = p.ImportFileResult(tmp);
                 Assert.True(imp.IsSuccess);
 
                 List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();

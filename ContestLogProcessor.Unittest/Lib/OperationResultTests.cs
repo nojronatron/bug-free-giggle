@@ -1,5 +1,3 @@
-using System;
-
 using ContestLogProcessor.Lib;
 
 using Xunit;
