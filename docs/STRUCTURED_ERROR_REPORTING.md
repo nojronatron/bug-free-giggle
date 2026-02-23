@@ -39,6 +39,7 @@ The `SkippedEntryInfo` class now includes:
 - `RawLine`: The raw line that was skipped
 
 **New structured fields:**
+- `ErrorCode`: Hierarchical error code (e.g., "WFD.EXCHANGE.MALFORMED", "WFD.RULES.INVALID_MODE")
 - `Category`: Error category (defaults to General)
 - `Severity`: Error severity (defaults to Error)
 - `FieldName`: Specific field that caused the error (e.g., "Mode", "SentExchange")
@@ -47,9 +48,48 @@ The `SkippedEntryInfo` class now includes:
 - `Details`: List of additional diagnostic details
 - `RuleReference`: Contest-specific rule identifier (e.g., "WFD-ONE-CONTACT-PER-STATION-BAND-MODE")
 
+### Hierarchical Error Codes
+
+Error codes follow the pattern: `CONTEST.CATEGORY.SPECIFIC`
+
+**WFD Error Code Examples:**
+- `WFD.EXCLUDED.X_QSO` - Entry explicitly marked as excluded
+- `WFD.MISSING.FREQUENCY` - Missing frequency field
+- `WFD.MISSING.MODE` - Missing mode field
+- `WFD.MISSING.CALLSIGN` - Missing call sign
+- `WFD.MISSING.THEIRCALL` - Missing their call sign
+- `WFD.MISSING.SENT_EXCHANGE` - Missing sent exchange
+- `WFD.MISSING.RECEIVED_EXCHANGE` - Missing received exchange
+- `WFD.RULES.INVALID_MODE` - Mode not valid for WFD
+- `WFD.RULES.CALLSIGN_MISMATCH` - Call sign doesn't match header
+- `WFD.EXCHANGE.SENT_INVALID` - Sent exchange validation failed
+- `WFD.EXCHANGE.RECEIVED_INVALID` - Received exchange validation failed
+- `WFD.EXCHANGE.SENT_MALFORMED` - Sent exchange format is malformed
+- `WFD.EXCHANGE.RECEIVED_MALFORMED` - Received exchange format is malformed
+- `WFD.DUPLICATE.BAND_MODE_STATION` - Duplicate contact (same station, band, mode)
+
 ## WinterFieldDay Implementation
 
-The WinterFieldDayScoringService uses helper methods to create structured errors:
+The WinterFieldDayScoringService uses dependency injection and helper methods to create structured errors:
+
+### Dependency Injection
+
+The service now accepts `WfdExchangeStrategy` through constructor injection:
+
+```csharp
+public WinterFieldDayScoringService(WfdExchangeStrategy exchangeStrategy)
+{
+    _exchangeStrategy = exchangeStrategy ?? throw new ArgumentNullException(nameof(exchangeStrategy));
+    _exchangeParser = new WinterFieldDayExchangeParser();
+}
+
+// Legacy constructor for backward compatibility
+public WinterFieldDayScoringService() : this(new WfdExchangeStrategy())
+{
+}
+```
+
+The exchange strategy is used for validation instead of manual parsing, providing consistent error messages and better separation of concerns.
 
 ### Helper Methods
 
@@ -79,6 +119,32 @@ CreateExchangeError(LogEntry entry, string reason, bool isSentExchange,
 ```
 
 ## Usage Examples
+
+### Filtering by Error Code
+
+```csharp
+WinterFieldDayScoreResult result = scoringService.CalculateScore(log).Value;
+
+// Get all exchange-related errors
+var exchangeErrors = result.SkippedEntries
+    .Where(e => e.ErrorCode != null && e.ErrorCode.Contains(".EXCHANGE."))
+    .ToList();
+
+// Get all missing data errors
+var missingDataErrors = result.SkippedEntries
+    .Where(e => e.ErrorCode != null && e.ErrorCode.StartsWith("WFD.MISSING."))
+    .ToList();
+
+// Get specific error type
+var invalidModeErrors = result.SkippedEntries
+    .Where(e => e.ErrorCode == "WFD.RULES.INVALID_MODE")
+    .ToList();
+
+// Get all duplicate entries
+var duplicates = result.SkippedEntries
+    .Where(e => e.ErrorCode == "WFD.DUPLICATE.BAND_MODE_STATION")
+    .ToList();
+```
 
 ### Filtering Errors by Category
 
@@ -126,6 +192,10 @@ var actionable = result.SkippedEntries
 foreach (SkippedEntryInfo error in result.SkippedEntries)
 {
     Console.WriteLine($"Line {error.SourceLineNumber}: {error.Reason}");
+    
+    if (error.ErrorCode != null)
+        Console.WriteLine($"  Error Code: {error.ErrorCode}");
+    
     Console.WriteLine($"  Category: {error.Category}");
     Console.WriteLine($"  Severity: {error.Severity}");
     
@@ -147,6 +217,44 @@ foreach (SkippedEntryInfo error in result.SkippedEntries)
     
     if (error.RuleReference != null)
         Console.WriteLine($"  Rule: {error.RuleReference}");
+}
+```
+
+### Programmatic Error Handling
+
+Error codes enable automated error handling and correction:
+
+```csharp
+foreach (SkippedEntryInfo error in result.SkippedEntries)
+{
+    switch (error.ErrorCode)
+    {
+        case "WFD.MISSING.MODE":
+            // Attempt to infer mode from frequency
+            TryInferMode(error);
+            break;
+            
+        case "WFD.RULES.INVALID_MODE":
+            // Log mode translation suggestions
+            SuggestModeCorrection(error.InvalidValue);
+            break;
+            
+        case "WFD.EXCHANGE.SENT_MALFORMED":
+        case "WFD.EXCHANGE.RECEIVED_MALFORMED":
+            // Queue for manual review
+            QueueForManualReview(error);
+            break;
+            
+        case "WFD.DUPLICATE.BAND_MODE_STATION":
+            // Track duplicate patterns for analysis
+            TrackDuplicatePattern(error);
+            break;
+            
+        default:
+            // Generic error handling
+            LogError(error);
+            break;
+    }
 }
 ```
 
@@ -196,6 +304,10 @@ Potential areas for expansion:
 ## Implementation Notes
 
 - Helper methods in `WinterFieldDayScoringService` encapsulate error creation logic
-- `CreateEligibilityError` intelligently parses error messages to populate structured fields
+- `CreateEligibilityError` intelligently parses error messages (format: "CODE|Message") to populate structured fields
 - Duplicate errors include detailed breakdown (Station, Band, Mode) in Details collection
 - All error helpers are `private static` to emphasize they are service-specific factories
+- **Dependency Injection**: `WfdExchangeStrategy` is injected into `WinterFieldDayScoringService` for validation
+- **Exchange Strategy**: The service uses `IContestExchangeStrategy` methods instead of manual parsing
+- **Error Code Format**: `CONTEST.CATEGORY.SPECIFIC` enables hierarchical filtering and automated handling
+- **Backward Compatibility**: Legacy constructor without parameters still works for existing code

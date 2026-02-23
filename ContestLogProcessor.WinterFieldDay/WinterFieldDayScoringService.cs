@@ -15,12 +15,19 @@ namespace ContestLogProcessor.WinterFieldDay;
 public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDayScoreResult>
 {
     private readonly WinterFieldDayExchangeParser _exchangeParser;
+    private readonly WfdExchangeStrategy _exchangeStrategy;
 
     public string ContestId => "WFD";
 
-    public WinterFieldDayScoringService()
+    public WinterFieldDayScoringService(WfdExchangeStrategy exchangeStrategy)
     {
+        _exchangeStrategy = exchangeStrategy ?? throw new ArgumentNullException(nameof(exchangeStrategy));
         _exchangeParser = new WinterFieldDayExchangeParser();
+    }
+
+    // Legacy constructor for backward compatibility
+    public WinterFieldDayScoringService() : this(new WfdExchangeStrategy())
+    {
     }
 
     public OperationResult<WinterFieldDayScoreResult> CalculateScore(CabrilloLogFile log)
@@ -164,48 +171,75 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
     private OperationResult<Unit> ValidateEntryEligibility(LogEntry entry, HashSet<string> allowableCalls)
     {
         // Must not be empty or contain only whitespace
-        if (string.IsNullOrWhiteSpace(entry.Frequency) ||
-            string.IsNullOrWhiteSpace(entry.Mode) ||
-            string.IsNullOrWhiteSpace(entry.CallSign) ||
-            string.IsNullOrWhiteSpace(entry.TheirCall) ||
-            string.IsNullOrWhiteSpace(entry.SentExchange?.SentMsg) ||
-            string.IsNullOrWhiteSpace(entry.ReceivedExchange?.ReceivedMsg))
+        if (string.IsNullOrWhiteSpace(entry.Frequency))
         {
-            return OperationResult.Failure<Unit>("Missing required fields", ResponseStatus.BadFormat);
+            return OperationResult.Failure<Unit>("WFD.MISSING.FREQUENCY|Missing frequency", ResponseStatus.BadFormat);
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.Mode))
+        {
+            return OperationResult.Failure<Unit>("WFD.MISSING.MODE|Missing mode", ResponseStatus.BadFormat);
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.CallSign))
+        {
+            return OperationResult.Failure<Unit>("WFD.MISSING.CALLSIGN|Missing call sign", ResponseStatus.BadFormat);
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.TheirCall))
+        {
+            return OperationResult.Failure<Unit>("WFD.MISSING.THEIRCALL|Missing their call sign", ResponseStatus.BadFormat);
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.SentExchange?.SentMsg))
+        {
+            return OperationResult.Failure<Unit>("WFD.MISSING.SENT_EXCHANGE|Missing sent exchange", ResponseStatus.BadFormat);
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.ReceivedExchange?.ReceivedMsg))
+        {
+            return OperationResult.Failure<Unit>("WFD.MISSING.RECEIVED_EXCHANGE|Missing received exchange", ResponseStatus.BadFormat);
         }
 
         // Mode must be valid Winter Field Day mode
         string mode = entry.Mode.Trim().ToUpperInvariant();
         if (mode != "PH" && mode != "CW" && mode != "DG" && mode != "RY" && mode != "FM")
         {
-            return OperationResult.Failure<Unit>($"Unsupported mode: {mode}", ResponseStatus.BadFormat);
+            return OperationResult.Failure<Unit>($"WFD.RULES.INVALID_MODE|Unsupported mode: {mode}", ResponseStatus.BadFormat);
         }
 
         // Call must match header CALLSIGN
         string call = entry.CallSign.Trim().ToUpperInvariant();
         if (!allowableCalls.Contains(call))
         {
-            return OperationResult.Failure<Unit>("Call does not match CALLSIGN header", ResponseStatus.BadFormat);
+            return OperationResult.Failure<Unit>("WFD.RULES.CALLSIGN_MISMATCH|Call does not match CALLSIGN header", ResponseStatus.BadFormat);
         }
 
-        // Validate exchange format
+        // Validate exchange format using the exchange strategy
         // For WFD, parse the exchange directly from the raw line to handle the space-separated format correctly
         (string sentExchange, string receivedExchange) = ParseWfdExchangesFromRawLine(entry);
 
-        OperationResult<WfdInfoSent> sentResult = _exchangeParser.ParseSentExchange(
-            entry.SentExchange?.SentSig ?? "59", 
+        // Use the exchange strategy for validation
+        OperationResult<bool> sentResult = _exchangeStrategy.ValidateSentExchange(
+            entry.SentExchange?.SentSig ?? "59",
             sentExchange);
+        
         if (!sentResult.IsSuccess)
         {
-            return OperationResult.Failure<Unit>($"Invalid sent exchange: {sentResult.ErrorMessage}", ResponseStatus.BadFormat);
+            return OperationResult.Failure<Unit>(
+                $"WFD.EXCHANGE.SENT_INVALID|Invalid sent exchange: {sentResult.ErrorMessage}",
+                ResponseStatus.BadFormat);
         }
 
-        OperationResult<WfdInfoReceived> receivedResult = _exchangeParser.ParseReceivedExchange(
-            entry.ReceivedExchange?.ReceivedSig ?? "59", 
+        OperationResult<bool> receivedResult = _exchangeStrategy.ValidateReceivedExchange(
+            entry.ReceivedExchange?.ReceivedSig ?? "59",
             receivedExchange);
+        
         if (!receivedResult.IsSuccess)
         {
-            return OperationResult.Failure<Unit>($"Invalid received exchange: {receivedResult.ErrorMessage}", ResponseStatus.BadFormat);
+            return OperationResult.Failure<Unit>(
+                $"WFD.EXCHANGE.RECEIVED_INVALID|Invalid received exchange: {receivedResult.ErrorMessage}",
+                ResponseStatus.BadFormat);
         }
 
         return OperationResult.Success(Unit.Value);
@@ -429,6 +463,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             SourceLineNumber = entry.SourceLineNumber,
             Reason = "X-QSO (ignored)",
             RawLine = entry.RawLine,
+            ErrorCode = "WFD.EXCLUDED.X_QSO",
             Category = ErrorCategory.Excluded,
             Severity = ErrorSeverity.Info
         };
@@ -437,44 +472,97 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
     /// <summary>
     /// Create a structured error entry for eligibility validation failures.
     /// Parses the error message to determine the specific category and populate structured fields.
+    /// Error messages are expected in format: "ERROR_CODE|Human readable message"
     /// </summary>
     private static SkippedEntryInfo CreateEligibilityError(LogEntry entry, string? errorMessage)
     {
-        string reason = errorMessage ?? "Entry failed eligibility validation";
+        string fullMessage = errorMessage ?? "Entry failed eligibility validation";
+        string? errorCode = null;
+        string reason = fullMessage;
+
+        // Parse error code from message format "CODE|Message"
+        int pipeIndex = fullMessage.IndexOf('|');
+        if (pipeIndex > 0 && pipeIndex < fullMessage.Length - 1)
+        {
+            errorCode = fullMessage.Substring(0, pipeIndex);
+            reason = fullMessage.Substring(pipeIndex + 1);
+        }
+
         ErrorCategory category = ErrorCategory.Validation;
         string? fieldName = null;
         string? invalidValue = null;
         string? expectedFormat = null;
 
-        // Parse error message to determine category and extract structured information
-        if (reason.Contains("Missing required fields", StringComparison.OrdinalIgnoreCase))
+        // Parse error code to determine category and extract structured information
+        if (errorCode != null)
         {
-            category = ErrorCategory.MissingData;
-        }
-        else if (reason.Contains("Unsupported mode", StringComparison.OrdinalIgnoreCase))
-        {
-            category = ErrorCategory.Validation;
-            fieldName = "Mode";
-            // Extract mode from message like "Unsupported mode: XX"
-            int colonIndex = reason.IndexOf(':');
-            if (colonIndex >= 0 && colonIndex < reason.Length - 1)
+            if (errorCode.Contains(".MISSING."))
             {
-                invalidValue = reason.Substring(colonIndex + 1).Trim();
+                category = ErrorCategory.MissingData;
+                // Extract field name from error code like "WFD.MISSING.FREQUENCY"
+                string[] parts = errorCode.Split('.');
+                if (parts.Length >= 3)
+                {
+                    fieldName = parts[2].Replace("_", " ");
+                }
             }
-            expectedFormat = "Valid WFD modes: PH, CW, DG, RY, FM";
+            else if (errorCode.Contains(".RULES.INVALID_MODE"))
+            {
+                category = ErrorCategory.Validation;
+                fieldName = "Mode";
+                // Extract mode from message
+                int colonIndex = reason.IndexOf(':');
+                if (colonIndex >= 0 && colonIndex < reason.Length - 1)
+                {
+                    invalidValue = reason.Substring(colonIndex + 1).Trim();
+                }
+                expectedFormat = "Valid WFD modes: PH, CW, DG, RY, FM";
+            }
+            else if (errorCode.Contains(".RULES.CALLSIGN_MISMATCH"))
+            {
+                category = ErrorCategory.Validation;
+                fieldName = "CallSign";
+                invalidValue = entry.CallSign;
+            }
+            else if (errorCode.Contains(".EXCHANGE."))
+            {
+                category = ErrorCategory.Exchange;
+                bool isSent = errorCode.Contains("SENT");
+                fieldName = isSent ? "SentExchange" : "ReceivedExchange";
+                expectedFormat = "WFD format: <participants><category> <location> (e.g., '3O OR' or '1I NY')";
+            }
         }
-        else if (reason.Contains("Call does not match CALLSIGN header", StringComparison.OrdinalIgnoreCase))
+        else
         {
-            category = ErrorCategory.Validation;
-            fieldName = "CallSign";
-            invalidValue = entry.CallSign;
-        }
-        else if (reason.Contains("exchange", StringComparison.OrdinalIgnoreCase))
-        {
-            category = ErrorCategory.Exchange;
-            bool isSent = reason.Contains("sent", StringComparison.OrdinalIgnoreCase);
-            fieldName = isSent ? "SentExchange" : "ReceivedExchange";
-            expectedFormat = "WFD format: <participants><category> <location> (e.g., '3O OR' or '1I NY')";
+            // Legacy parsing for backward compatibility
+            if (reason.Contains("Missing required fields", StringComparison.OrdinalIgnoreCase))
+            {
+                category = ErrorCategory.MissingData;
+            }
+            else if (reason.Contains("Unsupported mode", StringComparison.OrdinalIgnoreCase))
+            {
+                category = ErrorCategory.Validation;
+                fieldName = "Mode";
+                int colonIndex = reason.IndexOf(':');
+                if (colonIndex >= 0 && colonIndex < reason.Length - 1)
+                {
+                    invalidValue = reason.Substring(colonIndex + 1).Trim();
+                }
+                expectedFormat = "Valid WFD modes: PH, CW, DG, RY, FM";
+            }
+            else if (reason.Contains("Call does not match CALLSIGN header", StringComparison.OrdinalIgnoreCase))
+            {
+                category = ErrorCategory.Validation;
+                fieldName = "CallSign";
+                invalidValue = entry.CallSign;
+            }
+            else if (reason.Contains("exchange", StringComparison.OrdinalIgnoreCase))
+            {
+                category = ErrorCategory.Exchange;
+                bool isSent = reason.Contains("sent", StringComparison.OrdinalIgnoreCase);
+                fieldName = isSent ? "SentExchange" : "ReceivedExchange";
+                expectedFormat = "WFD format: <participants><category> <location> (e.g., '3O OR' or '1I NY')";
+            }
         }
 
         return new SkippedEntryInfo
@@ -482,6 +570,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             SourceLineNumber = entry.SourceLineNumber,
             Reason = reason,
             RawLine = entry.RawLine,
+            ErrorCode = errorCode,
             Category = category,
             Severity = ErrorSeverity.Error,
             FieldName = fieldName,
@@ -493,13 +582,14 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
     /// <summary>
     /// Create a structured error entry for missing required fields.
     /// </summary>
-    private static SkippedEntryInfo CreateMissingDataError(LogEntry entry, string reason, string? fieldName = null)
+    private static SkippedEntryInfo CreateMissingDataError(LogEntry entry, string reason, string? fieldName = null, string? errorCode = null)
     {
         SkippedEntryInfo error = new SkippedEntryInfo
         {
             SourceLineNumber = entry.SourceLineNumber,
             Reason = reason,
             RawLine = entry.RawLine,
+            ErrorCode = errorCode ?? $"WFD.MISSING.{fieldName?.ToUpperInvariant().Replace(" ", "_")}",
             Category = ErrorCategory.MissingData,
             Severity = ErrorSeverity.Error,
             FieldName = fieldName
@@ -516,13 +606,15 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         string reason, 
         string? fieldName = null,
         string? invalidValue = null,
-        string? expectedFormat = null)
+        string? expectedFormat = null,
+        string? errorCode = null)
     {
         return new SkippedEntryInfo
         {
             SourceLineNumber = entry.SourceLineNumber,
             Reason = reason,
             RawLine = entry.RawLine,
+            ErrorCode = errorCode ?? $"WFD.VALIDATION.{fieldName?.ToUpperInvariant().Replace(" ", "_")}",
             Category = ErrorCategory.Validation,
             Severity = ErrorSeverity.Error,
             FieldName = fieldName,
@@ -539,13 +631,15 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         string reason,
         bool isSentExchange,
         string? invalidValue = null,
-        List<string>? details = null)
+        List<string>? details = null,
+        string? errorCode = null)
     {
         SkippedEntryInfo error = new SkippedEntryInfo
         {
             SourceLineNumber = entry.SourceLineNumber,
             Reason = reason,
             RawLine = entry.RawLine,
+            ErrorCode = errorCode ?? (isSentExchange ? "WFD.EXCHANGE.SENT_MALFORMED" : "WFD.EXCHANGE.RECEIVED_MALFORMED"),
             Category = ErrorCategory.Exchange,
             Severity = ErrorSeverity.Error,
             FieldName = isSentExchange ? "SentExchange" : "ReceivedExchange",
@@ -578,6 +672,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             SourceLineNumber = entry.SourceLineNumber,
             Reason = $"Duplicate contact with {theirCall} on {band} using {mode}",
             RawLine = entry.RawLine,
+            ErrorCode = "WFD.DUPLICATE.BAND_MODE_STATION",
             Category = ErrorCategory.Duplicate,
             Severity = ErrorSeverity.Warning,
             RuleReference = "WFD-ONE-CONTACT-PER-STATION-BAND-MODE"

@@ -29,6 +29,13 @@ public class SkippedEntryInfo
     public string? RawLine { get; set; }
 
     /// <summary>
+    /// Hierarchical error code for programmatic access and filtering.
+    /// Format: CONTEST.CATEGORY.SPECIFIC (e.g., "WFD.EXCHANGE.MALFORMED", "WFD.RULES.INVALID_CLASS")
+    /// Enables precise error handling and automated processing of validation failures.
+    /// </summary>
+    public string? ErrorCode { get; set; }
+
+    /// <summary>
     /// Category of the error for hierarchical grouping and filtering.
     /// Defaults to General for backward compatibility.
     /// </summary>
