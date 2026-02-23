@@ -54,6 +54,41 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
                 ResponseStatus.BadFormat);
         }
 
+        // Validate CONTEST header
+        if (!log.Headers.TryGetValue("CONTEST", out string? contestHeader) || string.IsNullOrWhiteSpace(contestHeader))
+        {
+            return OperationResult.Failure<WinterFieldDayScoreResult>(
+                "Missing or empty CONTEST header - log file must specify the contest name",
+                ResponseStatus.BadFormat);
+        }
+
+        // Check for placeholder contest name
+        string contestValue = contestHeader.Trim();
+        if (contestValue.Equals("[Contest Name]", StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult.Failure<WinterFieldDayScoreResult>(
+                "CONTEST header contains placeholder '[Contest Name]' - replace with actual contest name",
+                ResponseStatus.BadFormat);
+        }
+
+        // Validate contest matches expected contest ID
+        if (!contestValue.Equals(ContestId, StringComparison.OrdinalIgnoreCase) &&
+            !contestValue.Contains("Winter Field Day", StringComparison.OrdinalIgnoreCase) &&
+            !contestValue.Equals("WFD", StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult.Failure<WinterFieldDayScoreResult>(
+                $"CONTEST header '{contestValue}' does not match expected contest 'WFD' or 'Winter Field Day'",
+                ResponseStatus.BadFormat);
+        }
+
+        // Validate exchange strategy is registered and matches contest
+        if (_exchangeStrategy == null || !_exchangeStrategy.ContestId.Equals(ContestId, StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult.Failure<WinterFieldDayScoreResult>(
+                $"No registered exchange strategy found for contest '{ContestId}'",
+                ResponseStatus.Error);
+        }
+
         // Validate CALLSIGN header exists
         if (!log.Headers.TryGetValue("CALLSIGN", out string? headerCall) || string.IsNullOrWhiteSpace(headerCall))
         {

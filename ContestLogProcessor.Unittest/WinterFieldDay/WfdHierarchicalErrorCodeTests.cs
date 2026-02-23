@@ -152,6 +152,7 @@ public class WfdHierarchicalErrorCodeTests
         log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["END-OF-LOG"] = "";
         log.Headers["CALLSIGN"] = "K7RMZ";
+        log.Headers["CONTEST"] = "WFD";
         
         LogEntry entry = new LogEntry
         {
