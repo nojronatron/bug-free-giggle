@@ -24,7 +24,7 @@ public class WinterFieldDayExchangeParserTests
     [InlineData(null, "1O OH", 1, 'O', "OH")]
     [InlineData("INVALID_SIGNAL", "1O OH", 1, 'O', "OH")]
     public void ParseSentExchange_ValidExchangeWithVariousSignals_ExtractsCorrectWfdInfo(
-        string sentSig, string sentMsg, int expectedCategory, char expectedClass, string expectedLocation)
+        string? sentSig, string sentMsg, int expectedCategory, char expectedClass, string expectedLocation)
     {
         // Act
         OperationResult<WfdInfoSent> result = _parser.ParseSentExchange(sentSig, sentMsg);
@@ -62,7 +62,7 @@ public class WinterFieldDayExchangeParserTests
     [InlineData("5NN", "")]
     [InlineData("599", null)]
     [InlineData("", null)]
-    public void ParseSentExchange_EmptyOrNullMessage_ReturnsFailure(string sentSig, string sentMsg)
+    public void ParseSentExchange_EmptyOrNullMessage_ReturnsFailure(string sentSig, string? sentMsg)
     {
         // Act
         OperationResult<WfdInfoSent> result = _parser.ParseSentExchange(sentSig, sentMsg);
@@ -132,7 +132,7 @@ public class WinterFieldDayExchangeParserTests
     [InlineData(null, "1H GA", 1, 'H', "GA")]
     [InlineData("INVALID_SIGNAL", "3I CT", 3, 'I', "CT")]
     public void ParseReceivedExchange_ValidExchangeWithVariousSignals_ExtractsCorrectWfdInfo(
-        string receivedSig, string receivedMsg, int expectedCategory, char expectedClass, string expectedLocation)
+        string? receivedSig, string receivedMsg, int expectedCategory, char expectedClass, string expectedLocation)
     {
         // Act
         OperationResult<WfdInfoReceived> result = _parser.ParseReceivedExchange(receivedSig, receivedMsg);
@@ -170,7 +170,7 @@ public class WinterFieldDayExchangeParserTests
     [InlineData("5NN", "")]
     [InlineData("555", null)]
     [InlineData("", null)]
-    public void ParseReceivedExchange_EmptyOrNullMessage_ReturnsFailure(string receivedSig, string receivedMsg)
+    public void ParseReceivedExchange_EmptyOrNullMessage_ReturnsFailure(string receivedSig, string? receivedMsg)
     {
         // Act
         OperationResult<WfdInfoReceived> result = _parser.ParseReceivedExchange(receivedSig, receivedMsg);
@@ -239,7 +239,7 @@ public class WinterFieldDayExchangeParserTests
     [InlineData("COMPLETELY_INVALID", "1O OH")]
     [InlineData("123ABC", "1O OH")]
     [InlineData(null, "1O OH")]
-    public void ParseSentExchange_SignalFieldIndependence_SameResults(string sentSig, string sentMsg)
+    public void ParseSentExchange_SignalFieldIndependence_SameResults(string? sentSig, string sentMsg)
     {
         // Act
         OperationResult<WfdInfoSent> result = _parser.ParseSentExchange(sentSig, sentMsg);
@@ -260,7 +260,7 @@ public class WinterFieldDayExchangeParserTests
     [InlineData("COMPLETELY_INVALID", "14I LA")]
     [InlineData("123ABC", "14I LA")]
     [InlineData(null, "14I LA")]
-    public void ParseReceivedExchange_SignalFieldIndependence_SameResults(string receivedSig, string receivedMsg)
+    public void ParseReceivedExchange_SignalFieldIndependence_SameResults(string? receivedSig, string receivedMsg)
     {
         // Act
         OperationResult<WfdInfoReceived> result = _parser.ParseReceivedExchange(receivedSig, receivedMsg);

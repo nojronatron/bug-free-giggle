@@ -13,7 +13,7 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
     private static readonly Regex CategoryClassRegex = new Regex(@"^([0-9]{1,2})([HIOM])$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex LocationRegex = new Regex(@"^\w{1,5}$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    public OperationResult<WfdInfoSent> ParseSentExchange(string sentSig, string sentMsg)
+    public OperationResult<WfdInfoSent> ParseSentExchange(string? sentSig, string? sentMsg)
     {
         // Handle both combined format ("3O OR") and separated Cabrillo format where 
         // sentSig="59" sentMsg="3O OR", or sentMsg="3O" with location in next field
@@ -21,7 +21,7 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
             new WfdInfoSent(raw, category, classId, location));
     }
 
-    public OperationResult<WfdInfoReceived> ParseReceivedExchange(string receivedSig, string receivedMsg)
+    public OperationResult<WfdInfoReceived> ParseReceivedExchange(string? receivedSig, string? receivedMsg)
     {
         // Handle both combined format ("1A CT") and separated Cabrillo format where 
         // receivedSig="59" receivedMsg="1A CT", or receivedMsg="1A" with location in next field
@@ -29,17 +29,17 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
             new WfdInfoReceived(raw, category, classId, location));
     }
 
-    private OperationResult<WfdInfoSent> ParseSentExchange(string sig, string msg, Func<string, int, char, string, WfdInfoSent> factory)
+    private OperationResult<WfdInfoSent> ParseSentExchange(string? sig, string? msg, Func<string, int, char, string, WfdInfoSent> factory)
     {
         return ParseExchangeInternal(msg, factory);
     }
 
-    private OperationResult<WfdInfoReceived> ParseReceivedExchange(string sig, string msg, Func<string, int, char, string, WfdInfoReceived> factory)
+    private OperationResult<WfdInfoReceived> ParseReceivedExchange(string? sig, string? msg, Func<string, int, char, string, WfdInfoReceived> factory)
     {
         return ParseExchangeInternal(msg, factory);
     }
 
-    private OperationResult<T> ParseExchangeInternal<T>(string msg, Func<string, int, char, string, T> factory)
+    private OperationResult<T> ParseExchangeInternal<T>(string? msg, Func<string, int, char, string, T> factory)
     {
         if (string.IsNullOrWhiteSpace(msg))
         {

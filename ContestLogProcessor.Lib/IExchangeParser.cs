@@ -14,11 +14,11 @@ public interface IExchangeParser<TSent, TReceived>
     /// Parse the sent exchange information from raw exchange string.
     /// Returns OperationResult with parsed exchange or failure with validation errors.
     /// </summary>
-    OperationResult<TSent> ParseSentExchange(string sentSig, string sentMsg);
+    OperationResult<TSent> ParseSentExchange(string? sentSig, string? sentMsg);
 
     /// <summary>
     /// Parse the received exchange information from raw exchange string.
     /// Returns OperationResult with parsed exchange or failure with validation errors.
     /// </summary>
-    OperationResult<TReceived> ParseReceivedExchange(string receivedSig, string receivedMsg);
+    OperationResult<TReceived> ParseReceivedExchange(string? receivedSig, string? receivedMsg);
 }
