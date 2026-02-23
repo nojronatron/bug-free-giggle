@@ -8,5 +8,6 @@
   <Project Path="ContestLogProcessor.Console/ContestLogProcessor.Console.csproj" />
   <Project Path="ContestLogProcessor.Lib/ContestLogProcessor.Lib.csproj" />
   <Project Path="ContestLogProcessor.SalmonRun/ContestLogProcessor.SalmonRun.csproj" />
+  <Project Path="ContestLogProcessor.Unittest/ContestLogProcessor.Unittest.csproj" />
   <Project Path="ContestLogProcessor.WinterFieldDay/ContestLogProcessor.WinterFieldDay.csproj" />
 </Solution>
