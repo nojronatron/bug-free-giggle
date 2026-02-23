@@ -6,7 +6,7 @@ A vast majority of code was was written by GitHub Copilot in Agent mode, using G
 
 ## Features
 
-v2.0.0 (28 January 2026)
+v2.0.0 (23 Feb 2026)
 
 - Add ability to introduce other contests
 - Modularize contest log registration
@@ -15,6 +15,8 @@ v2.0.0 (28 January 2026)
 - Update README
 - Add full Cabrillo v3.x (late 2025) definition
 - Enable importing ADIF file (but is not validated or processed at all)
+- Implement parsing of Cabrillo v3.x files as part of validation process
+- Separate contest-specific scoring from log file validation to improve testing and simplify adding more contests in the future
 
 v1.0.0 (7 October 2025)
 
