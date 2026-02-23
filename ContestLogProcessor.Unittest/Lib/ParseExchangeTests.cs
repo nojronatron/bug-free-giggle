@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -24,7 +26,7 @@ public class ParseExchangeTests
         {
             File.WriteAllLines(filePath, lines);
 
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var imp = processor.ImportFileResult(filePath);
             Assert.True(imp.IsSuccess);
 
@@ -55,7 +57,7 @@ public class ParseExchangeTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
             var imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
@@ -86,7 +88,7 @@ public class ParseExchangeTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
             var imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 

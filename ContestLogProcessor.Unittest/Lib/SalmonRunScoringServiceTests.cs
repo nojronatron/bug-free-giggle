@@ -1,7 +1,9 @@
 using System;
-using Xunit;
+
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.SalmonRun;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -11,8 +13,8 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_MissingCallsignHeader_Throws()
     {
         // Arrange
-        var log = new CabrilloLogFile();
-        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        CabrilloLogFile log = new CabrilloLogFile();
+        SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act & Assert: expect a BadFormat failure via the new OperationResult wrapper
         var failed = svc.CalculateScore(log);
@@ -24,13 +26,13 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_BasicHappyPath_ReturnsResult()
     {
         // Arrange - small synthetic log
-        var log = new CabrilloLogFile();
+        CabrilloLogFile log = new CabrilloLogFile();
         log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["CALLSIGN"] = "K7XXX";
         log.Headers["END-OF-LOG"] = "";
 
         // Entry 1: 40m PH, TheirCall N7UK, ReceivedMsg ADA (WA)
-        var e1 = new LogEntry
+        LogEntry e1 = new LogEntry
         {
             Frequency = "7265",
             Mode = "PH",
@@ -44,7 +46,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Entry 2: 40m CW, same TheirCall N7UK -> different Mode so counts separately
-        var e2 = new LogEntry
+        LogEntry e2 = new LogEntry
         {
             Frequency = "7073",
             Mode = "CW",
@@ -58,7 +60,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Entry 3: 80m CW, TheirCall W7M, ReceivedMsg CA (US)
-        var e3 = new LogEntry
+        LogEntry e3 = new LogEntry
         {
             Frequency = "3655",
             Mode = "CW",
@@ -72,7 +74,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Entry 4: 20m PH, TheirCall W7DX (bonus), ReceivedMsg ON (Canada)
-        var e4 = new LogEntry
+        LogEntry e4 = new LogEntry
         {
             Frequency = "14000",
             Mode = "PH",
@@ -86,7 +88,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Entry 5: 10m PH, TheirCall K1ABC, ReceivedMsg F (DXCC)
-        var e5 = new LogEntry
+        LogEntry e5 = new LogEntry
         {
             Frequency = "28000",
             Mode = "PH",
@@ -105,7 +107,7 @@ public class SalmonRunScoringServiceTests
         log.Entries.Add(e4);
         log.Entries.Add(e5);
 
-        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
         var resultOp = svc.CalculateScore(log);
@@ -139,13 +141,13 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_W7DX_BonusRules()
     {
         // Arrange - create several W7DX entries to exercise bonus rules
-        var log = new CabrilloLogFile();
+        CabrilloLogFile log = new CabrilloLogFile();
         log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["CALLSIGN"] = "K7XXX";
         log.Headers["END-OF-LOG"] = "";
 
         // First W7DX PH - eligible and should count for PH
-        var w1 = new LogEntry
+        LogEntry w1 = new LogEntry
         {
             Frequency = "14000",
             Mode = "PH",
@@ -158,7 +160,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Second W7DX PH (same mode and same band) - should NOT count for bonus or QSO points
-        var w2 = new LogEntry
+        LogEntry w2 = new LogEntry
         {
             Frequency = "14050",
             Mode = "PH",
@@ -171,7 +173,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Third W7DX CW - eligible and should count for CW (different mode)
-        var w3 = new LogEntry
+        LogEntry w3 = new LogEntry
         {
             Frequency = "7073",
             Mode = "CW",
@@ -184,7 +186,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Fourth W7DX CW but missing ReceivedMsg -> ineligible and should be skipped
-        var w4 = new LogEntry
+        LogEntry w4 = new LogEntry
         {
             Frequency = "7075",
             Mode = "CW",
@@ -197,7 +199,7 @@ public class SalmonRunScoringServiceTests
         };
 
         // Fifth W7DX PH but marked X-QSO -> ignored/skipped
-        var w5 = new LogEntry
+        LogEntry w5 = new LogEntry
         {
             Frequency = "14020",
             Mode = "PH",
@@ -216,7 +218,7 @@ public class SalmonRunScoringServiceTests
         log.Entries.Add(w4);
         log.Entries.Add(w5);
 
-        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
         var resultOp = svc.CalculateScore(log);
@@ -244,7 +246,7 @@ public class SalmonRunScoringServiceTests
     public void CalculateScore_DxccCapOfTen_IsEnforced()
     {
         // Arrange - create 12 unique DXCC ReceivedMsg entries; only first 10 should be counted
-        var log = new CabrilloLogFile();
+        CabrilloLogFile log = new CabrilloLogFile();
         log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["CALLSIGN"] = "K7XXX";
         log.Headers["END-OF-LOG"] = "";
@@ -253,7 +255,7 @@ public class SalmonRunScoringServiceTests
 
         for (int i = 0; i < dxccs.Length; i++)
         {
-            var e = new LogEntry
+            LogEntry e = new LogEntry
             {
                 Frequency = "28000",
                 Mode = "PH",
@@ -268,7 +270,7 @@ public class SalmonRunScoringServiceTests
             log.Entries.Add(e);
         }
 
-        var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        SalmonRunScoringService svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
         // Act
         var resultOp = svc.CalculateScore(log);

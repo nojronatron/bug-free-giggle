@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Xunit;
+
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 

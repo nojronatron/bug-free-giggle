@@ -11,7 +11,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void Constructor_CreatesEmptyRegistry()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         Assert.Equal(0, registry.Count);
         Assert.Empty(registry.GetRegisteredContests());
@@ -20,7 +20,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void RegisterStrategy_WithValidData_RegistersSuccessfully()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         registry.RegisterStrategy("TEST", () => new SalmonRunExchangeStrategy());
 
@@ -31,7 +31,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void RegisterStrategy_WithNullContestId_ThrowsException()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         Assert.Throws<ArgumentException>(() =>
             registry.RegisterStrategy(null!, () => new SalmonRunExchangeStrategy()));
@@ -40,7 +40,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void RegisterStrategy_WithEmptyContestId_ThrowsException()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         Assert.Throws<ArgumentException>(() =>
             registry.RegisterStrategy("", () => new SalmonRunExchangeStrategy()));
@@ -49,7 +49,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void RegisterStrategy_WithNullFactory_ThrowsException()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         Assert.Throws<ArgumentNullException>(() =>
             registry.RegisterStrategy("TEST", null!));
@@ -58,7 +58,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void RegisterStrategy_CaseInsensitiveContestId()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         registry.RegisterStrategy("salmon-run", () => new SalmonRunExchangeStrategy());
 
@@ -70,7 +70,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void RegisterStrategy_OverwritesExistingStrategy()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         registry.RegisterStrategy("TEST", () => new SalmonRunExchangeStrategy());
         registry.RegisterStrategy("TEST", () => new WfdExchangeStrategy());
@@ -85,7 +85,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void ResolveStrategy_WithRegisteredContest_ReturnsStrategy()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
 
         var result = registry.ResolveStrategy("SALMON-RUN");
@@ -98,7 +98,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void ResolveStrategy_WithUnregisteredContest_ReturnsFailure()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         var result = registry.ResolveStrategy("UNKNOWN");
 
@@ -110,7 +110,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void ResolveStrategy_WithNullContestId_ReturnsFailure()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         var result = registry.ResolveStrategy(null!);
 
@@ -122,7 +122,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void ResolveStrategy_WithEmptyContestId_ReturnsFailure()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         var result = registry.ResolveStrategy("");
 
@@ -133,7 +133,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void ResolveStrategy_WhenFactoryThrows_ReturnsFailure()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("FAIL", () => throw new InvalidOperationException("Test error"));
 
         var result = registry.ResolveStrategy("FAIL");
@@ -147,7 +147,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void IsRegistered_WithRegisteredContest_ReturnsTrue()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
 
         Assert.True(registry.IsRegistered("SALMON-RUN"));
@@ -156,7 +156,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void IsRegistered_WithUnregisteredContest_ReturnsFalse()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         Assert.False(registry.IsRegistered("UNKNOWN"));
     }
@@ -164,7 +164,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void IsRegistered_WithNullContestId_ReturnsFalse()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         Assert.False(registry.IsRegistered(null!));
     }
@@ -172,7 +172,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void GetRegisteredContests_ReturnsAllContestIds()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
         registry.RegisterStrategy("WFD", () => new WfdExchangeStrategy());
 
@@ -186,7 +186,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void Clear_RemovesAllStrategies()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
         registry.RegisterStrategy("WFD", () => new WfdExchangeStrategy());
 
@@ -201,7 +201,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void MultipleResolves_CreatesSeparateInstances()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("TEST", () => new SalmonRunExchangeStrategy());
 
         var result1 = registry.ResolveStrategy("TEST");
@@ -218,7 +218,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void RegisterStrategy_WorksWithBothContestStrategies()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
 
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
         registry.RegisterStrategy("WFD", () => new WfdExchangeStrategy());
@@ -235,7 +235,7 @@ public class ContestExchangeStrategyRegistryTests
     [Fact]
     public void ResolveStrategy_TrimsWhitespaceFromContestId()
     {
-        var registry = new ContestExchangeStrategyRegistry();
+        ContestExchangeStrategyRegistry registry = new ContestExchangeStrategyRegistry();
         registry.RegisterStrategy("SALMON-RUN", () => new SalmonRunExchangeStrategy());
 
         var result = registry.ResolveStrategy("  SALMON-RUN  ");

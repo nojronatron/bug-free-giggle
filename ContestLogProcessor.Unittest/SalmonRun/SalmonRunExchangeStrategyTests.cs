@@ -119,7 +119,7 @@ public class SalmonRunExchangeStrategyTests
     [Fact]
     public void ValidateExchange_WithValidExchange_ReturnsSuccess()
     {
-        var exchange = new Exchange
+        Exchange exchange = new Exchange
         {
             SentSig = "59",
             SentMsg = "KING",
@@ -147,7 +147,7 @@ public class SalmonRunExchangeStrategyTests
     [Fact]
     public void ValidateExchange_WithInvalidSentData_ReturnsFailure()
     {
-        var exchange = new Exchange
+        Exchange exchange = new Exchange
         {
             SentSig = "INVALID",
             SentMsg = "KING",
@@ -165,7 +165,7 @@ public class SalmonRunExchangeStrategyTests
     [Fact]
     public void ValidateExchange_WithInvalidReceivedData_ReturnsFailure()
     {
-        var exchange = new Exchange
+        Exchange exchange = new Exchange
         {
             SentSig = "59",
             SentMsg = "KING",

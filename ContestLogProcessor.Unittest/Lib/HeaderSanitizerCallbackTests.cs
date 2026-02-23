@@ -30,7 +30,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 List<string> warnings = new List<string>();
                 Action<string> capture = msg => warnings.Add(msg);
 
-                var proc = new CabrilloLogProcessor(capture);
+                CabrilloLogProcessor proc = new CabrilloLogProcessor(capture);
 
                 // Act
                 var imp = proc.ImportFileResult(tempPath);

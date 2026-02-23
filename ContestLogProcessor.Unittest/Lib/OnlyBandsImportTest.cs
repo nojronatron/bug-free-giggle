@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -33,11 +35,11 @@ public class OnlyBandsImportTest
         try
         {
             File.Copy(source, tmp);
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             var imp = proc.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
-            var entries = proc.ReadEntriesResult().Value!.ToList();
+            List<LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
             Assert.NotEmpty(entries);
 
             // Check a few entries to ensure mapping

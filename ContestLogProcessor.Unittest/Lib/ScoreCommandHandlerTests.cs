@@ -1,9 +1,13 @@
 using System;
-using Xunit;
-using ContestLogProcessor.Console.Interactive.Handlers;
-using ContestLogProcessor.Console.Interactive;
-using ContestLogProcessor.Unittest.Lib;
 using System.Threading.Tasks;
+
+using ContestLogProcessor.Console.Interactive;
+using ContestLogProcessor.Console.Interactive.Handlers;
+using ContestLogProcessor.Lib;
+using ContestLogProcessor.SalmonRun;
+using ContestLogProcessor.Unittest.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -13,7 +17,7 @@ public class ScoreCommandHandlerTests
     public async Task ScoreHandler_HappyPath_PrintsReport()
     {
         // Arrange
-        var proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
         // Create a temp file with minimal Cabrillo content and import it
         string tmp = System.IO.Path.GetTempFileName();
         System.IO.File.WriteAllLines(tmp, new[] {
@@ -27,9 +31,9 @@ public class ScoreCommandHandlerTests
         var importRes = proc.ImportFileResult(tmp);
         Assert.True(importRes.IsSuccess);
 
-        var testConsole = new TestConsole(new string[0]);
-        var ctx = new CommandContext(proc, testConsole, debug: false);
-        var handler = new ScoreCommandHandler();
+        TestConsole testConsole = new TestConsole(new string[0]);
+        CommandContext ctx = new CommandContext(proc, testConsole, debug: false);
+        ScoreCommandHandler handler = new ScoreCommandHandler();
 
         // Act
         await handler.HandleAsync(new string[] { "score" }, ctx);
@@ -43,7 +47,7 @@ public class ScoreCommandHandlerTests
     [Fact]
     public async Task ScoreHandler_W7DxBonus_CountsPerMode()
     {
-        var proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
         string tmp2 = System.IO.Path.GetTempFileName();
         System.IO.File.WriteAllLines(tmp2, new[] {
             "START-OF-LOG: 3.0",
@@ -60,9 +64,9 @@ public class ScoreCommandHandlerTests
         var importRes2 = proc.ImportFileResult(tmp2);
         Assert.True(importRes2.IsSuccess);
 
-        var testConsole = new TestConsole(new string[0]);
-        var ctx = new CommandContext(proc, testConsole, debug: false);
-        var handler = new ScoreCommandHandler();
+        TestConsole testConsole = new TestConsole(new string[0]);
+        CommandContext ctx = new CommandContext(proc, testConsole, debug: false);
+        ScoreCommandHandler handler = new ScoreCommandHandler();
 
         await handler.HandleAsync(new string[] { "score" }, ctx);
 
@@ -75,7 +79,7 @@ public class ScoreCommandHandlerTests
     [Fact]
     public void ScoreHandler_MultiplierAndQsoCounts_AreCalculated()
     {
-        var proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new ContestLogProcessor.Lib.CabrilloLogProcessor();
         string tmp3 = System.IO.Path.GetTempFileName();
         System.IO.File.WriteAllLines(tmp3, new[] {
             "START-OF-LOG: 3.0",
@@ -91,8 +95,8 @@ public class ScoreCommandHandlerTests
         var importRes3 = proc.ImportFileResult(tmp3);
         Assert.True(importRes3.IsSuccess);
 
-        var svc = new ContestLogProcessor.SalmonRun.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
-        var log = new ContestLogProcessor.Lib.CabrilloLogFile();
+        SalmonRunScoringService svc = new ContestLogProcessor.SalmonRun.SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
+        CabrilloLogFile log = new ContestLogProcessor.Lib.CabrilloLogFile();
         log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["CALLSIGN"] = "K7XXX";
         log.Headers["END-OF-LOG"] = "";

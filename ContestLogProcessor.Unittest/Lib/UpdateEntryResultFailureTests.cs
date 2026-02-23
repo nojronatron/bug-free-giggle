@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
 {
@@ -10,7 +12,7 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_NonExistentId_ReturnsNotFound()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             // Attempt to update an id that does not exist
             string missing = Guid.NewGuid().ToString();
             var result = proc.UpdateEntryResult(missing, e => e.Band = "20m");
@@ -22,8 +24,8 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_EditActionThrowsArgumentException_ReturnsBadFormat()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",
@@ -46,8 +48,8 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_EditActionThrowsArgumentNullException_ReturnsBadFormat()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",
@@ -70,8 +72,8 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_EditActionThrowsOperationCanceledException_IsPropagated()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",
@@ -90,8 +92,8 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_EditActionThrowsGenericException_ReturnsErrorWithDiagnostic()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",

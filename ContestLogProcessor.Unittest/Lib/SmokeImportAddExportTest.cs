@@ -1,11 +1,13 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Xunit;
+
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
-using ContestLogProcessor.Unittest.Lib;
 using ContestLogProcessor.Lib;
+using ContestLogProcessor.Unittest.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -18,10 +20,10 @@ public class SmokeImportAddExportTest
         string path = LocateTestData("K7XXX_HeadersOnly_Smoke.txt");
 
         // Prepare processor and import via handler
-        var proc = new CabrilloLogProcessor();
-        var importConsole = new TestConsole(new string?[] { });
-        var importCtx = new CommandContext(proc, importConsole, debug: false);
-        var importShell = new InteractiveShell(importCtx);
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
+        TestConsole importConsole = new TestConsole(new string?[] { });
+        CommandContext importCtx = new CommandContext(proc, importConsole, debug: false);
+        InteractiveShell importShell = new InteractiveShell(importCtx);
         importShell.RegisterHandler(new ImportCommandHandler());
 
         await importShell.ExecuteCommandAsync(new[] { "import", path });
@@ -31,9 +33,9 @@ public class SmokeImportAddExportTest
         // It's acceptable for a headers-only file to have zero entries; we'll add one below before exporting.
 
         // Add an entry
-        var addConsole = new TestConsole(new string?[] { "2025-09-30", "1200", "20", "PH", "K7SMOKE", "N0SMK", "599", "RRR" });
-        var addCtx = new CommandContext(proc, addConsole, debug: false);
-        var addHandler = new AddCommandHandler();
+        TestConsole addConsole = new TestConsole(new string?[] { "2025-09-30", "1200", "20", "PH", "K7SMOKE", "N0SMK", "599", "RRR" });
+        CommandContext addCtx = new CommandContext(proc, addConsole, debug: false);
+        AddCommandHandler addHandler = new AddCommandHandler();
         await addHandler.HandleAsync(new[] { "add" }, addCtx);
 
         // Now export to a temp file
@@ -41,9 +43,9 @@ public class SmokeImportAddExportTest
         Directory.CreateDirectory(outDir);
         string outPath = Path.Combine(outDir, "smoke-export.log");
 
-        var exportConsole = new TestConsole(new string?[] { "y" });
-        var exportCtx = new CommandContext(proc, exportConsole, debug: false);
-        var exportHandler = new ExportCommandHandler();
+        TestConsole exportConsole = new TestConsole(new string?[] { "y" });
+        CommandContext exportCtx = new CommandContext(proc, exportConsole, debug: false);
+        ExportCommandHandler exportHandler = new ExportCommandHandler();
         await exportHandler.HandleAsync(new[] { "export", outPath }, exportCtx);
 
         string output = string.Join('\n', exportConsole.Outputs);
@@ -71,7 +73,7 @@ public class SmokeImportAddExportTest
         }
 
         // Walk up parents to find the repository root or the Unittest project folder
-        var dir = new System.IO.DirectoryInfo(baseDir);
+        DirectoryInfo? dir = new System.IO.DirectoryInfo(baseDir);
         int depth = 0;
         while (dir != null && depth < 10)
         {

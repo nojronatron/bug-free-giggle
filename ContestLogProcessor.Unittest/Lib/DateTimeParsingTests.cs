@@ -16,7 +16,7 @@ public class DateTimeParsingTests
         string tmp = Path.GetTempFileName();
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: Test\r\nQSO: 7265 PH 2025-09-20 1715 K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
-        var proc = new CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
         var imp = proc.ImportFileResult(tmp);
         Assert.True(imp.IsSuccess);
 
@@ -40,7 +40,7 @@ public class DateTimeParsingTests
         // malformed date/time
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: Test\r\nQSO: 7265 PH BADDATE BADTIME K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
-        var proc = new CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
         var imp2 = proc.ImportFileResult(tmp);
         Assert.True(imp2.IsSuccess);
 
@@ -69,7 +69,7 @@ public class DateTimeParsingTests
         // Use a format with colon in time which is listed in supported formats
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: Test\r\nQSO: 7265 PH 2025-09-20 17:15 K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
-        var proc = new CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
         var imp3 = proc.ImportFileResult(tmp);
         Assert.True(imp3.IsSuccess);
 

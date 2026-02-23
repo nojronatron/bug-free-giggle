@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -10,10 +12,10 @@ public class ReadEntriesByBandTests
     [Fact]
     public void ReadEntriesByBand_MatchesBandToken()
     {
-        var proc = new CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
         // Create entries with explicit Band set
-        var e1 = new LogEntry { CallSign = "A", TheirCall = "B", Band = "40m", QsoDateTime = DateTime.UtcNow };
-        var e2 = new LogEntry { CallSign = "C", TheirCall = "D", Band = "20m", QsoDateTime = DateTime.UtcNow };
+        LogEntry e1 = new LogEntry { CallSign = "A", TheirCall = "B", Band = "40m", QsoDateTime = DateTime.UtcNow };
+        LogEntry e2 = new LogEntry { CallSign = "C", TheirCall = "D", Band = "20m", QsoDateTime = DateTime.UtcNow };
         Assert.True(proc.CreateEntryResult(e1).IsSuccess);
         Assert.True(proc.CreateEntryResult(e2).IsSuccess);
 
@@ -26,10 +28,10 @@ public class ReadEntriesByBandTests
     [Fact]
     public void ReadEntriesByBand_MapsFrequencyToBand()
     {
-        var proc = new CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
         // Frequency numeric should map to 40m band (7000..7300)
-        var e1 = new LogEntry { CallSign = "X", TheirCall = "Y", Frequency = "7073", QsoDateTime = DateTime.UtcNow };
-        var e2 = new LogEntry { CallSign = "Z", TheirCall = "W", Frequency = "14000", QsoDateTime = DateTime.UtcNow };
+        LogEntry e1 = new LogEntry { CallSign = "X", TheirCall = "Y", Frequency = "7073", QsoDateTime = DateTime.UtcNow };
+        LogEntry e2 = new LogEntry { CallSign = "Z", TheirCall = "W", Frequency = "14000", QsoDateTime = DateTime.UtcNow };
         Assert.True(proc.CreateEntryResult(e1).IsSuccess);
         Assert.True(proc.CreateEntryResult(e2).IsSuccess);
 

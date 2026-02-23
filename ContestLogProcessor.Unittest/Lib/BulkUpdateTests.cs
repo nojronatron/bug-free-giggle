@@ -31,7 +31,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 var imp = proc.ImportFileResult(temp);
                 Assert.True(imp.IsSuccess);
 
-                var entries = proc.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
                 Assert.Equal(2, entries.Count);
 
                 // Act: update SentMsg in-place
@@ -53,7 +53,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 CabrilloLogProcessor verify = new CabrilloLogProcessor();
                 var impVerify = verify.ImportFileResult(outFile);
                 Assert.True(impVerify.IsSuccess);
-                var vEntries = verify.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> vEntries = verify.ReadEntriesResult().Value!.ToList();
                 Assert.Equal(entries.Count, vEntries.Count);
                 foreach (var ve in vEntries)
                 {
@@ -139,7 +139,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 var imp3 = proc.ImportFileResult(temp);
                 Assert.True(imp3.IsSuccess);
 
-                var entries = proc.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
                 int originalCount = entries.Count;
                 Assert.Equal(2, originalCount);
 
@@ -151,9 +151,9 @@ namespace ContestLogProcessor.Unittest.Lib
                 }
 
                 // Inspect in-memory entries to verify duplicates were added and had TheirCall updated
-                var allInMemory = proc.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> allInMemory = proc.ReadEntriesResult().Value!.ToList();
                 Assert.True(allInMemory.Count >= originalCount * 2, "Expected total entries to increase by at least the original count");
-                var changed = allInMemory.Where(x => string.Equals(x.TheirCall, "NEWCALL", StringComparison.OrdinalIgnoreCase)).ToList();
+                List<LogEntry> changed = allInMemory.Where(x => string.Equals(x.TheirCall, "NEWCALL", StringComparison.OrdinalIgnoreCase)).ToList();
                 Assert.True(changed.Count > 0, "Expected at least one changed entry with THEIRCALL set to NEWCALL");
             }
             finally

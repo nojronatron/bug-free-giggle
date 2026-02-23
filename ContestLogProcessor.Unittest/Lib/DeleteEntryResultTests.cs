@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
 {
@@ -10,7 +12,7 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void DeleteEntryResult_RemovesExistingEntry_ReturnsSuccess()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
             var createdResult = proc.CreateEntryResult(new LogEntry
             {
@@ -26,7 +28,7 @@ namespace ContestLogProcessor.Unittest.Lib
             var created = createdResult.Value;
             Assert.NotNull(created);
 
-            var deletedIds = new List<string>();
+            List<string> deletedIds = new List<string>();
             proc.EntryDeleted += (_, id) => deletedIds.Add(id);
 
             var result = proc.DeleteEntryResult(created.Id);
@@ -42,7 +44,7 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void DeleteEntryResult_NonexistentId_ReturnsNotFound()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
             string notFoundId = Guid.NewGuid().ToString();
             var result = proc.DeleteEntryResult(notFoundId);

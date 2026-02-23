@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
 {
@@ -11,7 +13,7 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void ReadEntriesResult_NullEntryInInternalList_ReturnsErrorWithDiagnostic()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
             // Seed with at least one valid entry so internal list is created by CreateEntry
             var created = proc.CreateEntryResult(new LogEntry { QsoDateTime = DateTime.UtcNow, Frequency = "7000", Mode = "PH", CallSign = "T", TheirCall = "K7X" });
@@ -20,7 +22,7 @@ namespace ContestLogProcessor.Unittest.Lib
             // Use reflection to obtain the private _entries list and inject a null element to force a NullReferenceException during cloning
             FieldInfo? f = typeof(CabrilloLogProcessor).GetField("_entries", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(f);
-            var list = (List<LogEntry>?)f.GetValue(proc);
+            List<LogEntry>? list = (List<LogEntry>?)f.GetValue(proc);
             Assert.NotNull(list);
 
             // Insert a null so result.Select(e => e.Clone()) will throw

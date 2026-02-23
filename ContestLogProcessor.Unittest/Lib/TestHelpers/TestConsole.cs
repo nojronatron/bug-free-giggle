@@ -1,7 +1,7 @@
-using ContestLogProcessor.Console.Interactive;
-
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
+using ContestLogProcessor.Console.Interactive;
 
 namespace ContestLogProcessor.Unittest.Lib;
 

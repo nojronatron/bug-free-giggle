@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -46,7 +48,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -96,7 +98,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -126,7 +128,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -162,7 +164,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -193,7 +195,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -227,7 +229,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -271,7 +273,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -316,7 +318,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -362,7 +364,7 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
@@ -411,12 +413,12 @@ public class CabrilloV3ComplianceTests
             return; // Skip test if we can't create temp file
         }
 
-        var processor = new CabrilloLogProcessor();
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
         var result = processor.ImportFileResult(tmp);
 
         Assert.True(result.IsSuccess);
 
-        var entries = processor.ReadEntriesResult().Value!.ToList();
+        List<LogEntry> entries = processor.ReadEntriesResult().Value!.ToList();
         Assert.NotEmpty(entries);
 
         // Verify first entry has valid structure
@@ -455,12 +457,12 @@ public class CabrilloV3ComplianceTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
 
             Assert.True(result.IsSuccess);
 
-            var entries = processor.ReadEntriesResult().Value!.ToList();
+            List<LogEntry> entries = processor.ReadEntriesResult().Value!.ToList();
             Assert.Equal(5, entries.Count);
 
             // Verify all frequencies are valid and bands are correctly assigned

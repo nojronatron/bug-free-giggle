@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -23,7 +25,7 @@ public class FrequencyParsingTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
             var imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
@@ -54,7 +56,7 @@ public class FrequencyParsingTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
             var imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
@@ -87,7 +89,7 @@ public class FrequencyParsingTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
             var imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
@@ -120,7 +122,7 @@ public class FrequencyParsingTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
             var imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
@@ -154,11 +156,11 @@ public class FrequencyParsingTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
             var imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
-            var entries = p.ReadEntriesResult().Value!.ToList();
+            List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
             Assert.Equal(2, entries.Count);
 
             Assert.False(entries[0].FrequencyIsValid, "Frequency 100 (in excluded low range) should be invalid");

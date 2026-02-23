@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -25,11 +27,11 @@ public class SourceLineNumberTests
         {
             File.WriteAllLines(tmp, lines);
 
-            var processor = new CabrilloLogProcessor();
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
             var imp = processor.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
-            var entries = processor.ReadEntriesResult().Value!.ToList();
+            List<LogEntry> entries = processor.ReadEntriesResult().Value!.ToList();
             Assert.Equal(2, entries.Count);
 
             // The first QSO was on line 3 (1-based), the second on line 4

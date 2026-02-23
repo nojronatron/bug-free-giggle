@@ -12,7 +12,7 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void ReadEntries_Returns_Defensive_Clones_And_GetEntryById_Returns_Clone()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
             // Create an entry and get the stored id
             var createdResult = proc.CreateEntryResult(new LogEntry { CallSign = "ORIGINAL", TheirCall = "T1" });
@@ -40,7 +40,7 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void EntryAdded_Event_Receives_Snapshot_Mutation_Does_Not_Affect_Stored()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
             LogEntry? eventEntry = null;
             proc.EntryAdded += (s, e) =>

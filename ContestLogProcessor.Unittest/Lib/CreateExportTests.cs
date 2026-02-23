@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -13,12 +15,12 @@ public class CreateExportTests
     [Fact]
     public void CreateEntry_AfterImport_IsVisibleInReadEntries()
     {
-        var processor = new CabrilloLogProcessor();
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
         var imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
 
         string uniqueCall = "UNITTEST_CREATE_" + Guid.NewGuid().ToString("N");
-        var newEntry = new LogEntry
+        LogEntry newEntry = new LogEntry
         {
             Frequency = "7000",
             Mode = "CW",
@@ -40,7 +42,7 @@ public class CreateExportTests
     [Fact]
     public void DuplicateEntry_CopiesAndAllowsSentMsgOverride()
     {
-        var processor = new CabrilloLogProcessor();
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
         var imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
 
@@ -69,12 +71,12 @@ public class CreateExportTests
     [Fact]
     public void ExportFile_AppendsLogExtension_And_IncludesCreatedEntry()
     {
-        var processor = new CabrilloLogProcessor();
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
         var imp2 = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp2.IsSuccess);
 
         string uniqueCall = "EXPORTTEST_" + Guid.NewGuid().ToString("N");
-        var newEntry = new LogEntry
+        LogEntry newEntry = new LogEntry
         {
             Frequency = "7000",
             Mode = "CW",
@@ -115,7 +117,7 @@ public class CreateExportTests
     [Fact]
     public void ExportFile_WithoutData_ThrowsInvalidOperationException()
     {
-        var processor = new CabrilloLogProcessor();
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
         string tmp = Path.Combine(Path.GetTempPath(), "clp_no_data_" + Guid.NewGuid().ToString("N") + ".log");
         try
         {

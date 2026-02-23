@@ -31,7 +31,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 var imp = p.ImportFileResult(tmp);
                 Assert.True(imp.IsSuccess);
 
-                var entries = p.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
                 Assert.Equal(2, entries.Count);
                 Assert.False(entries[0].IsXQso);
                 Assert.True(entries[1].IsXQso);
@@ -63,7 +63,7 @@ namespace ContestLogProcessor.Unittest.Lib
                 var imp = p.ImportFileResult(tmp);
                 Assert.True(imp.IsSuccess);
 
-                var entries = p.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> entries = p.ReadEntriesResult().Value!.ToList();
                 // only the first QSO should be present
                 Assert.Single(entries);
                 Assert.Equal("KD7JB", entries[0].TheirCall);

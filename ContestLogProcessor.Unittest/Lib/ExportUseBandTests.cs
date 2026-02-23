@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -11,9 +13,9 @@ public class ExportUseBandTests
     [Fact]
     public void Export_WithUseBand_IncludesBandTokenInFirstSlot()
     {
-        var proc = new CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
         // Entry has Band set explicitly
-        var e = new LogEntry { CallSign = "K1", TheirCall = "N1", Band = "40m", Mode = "PH", QsoDateTime = DateTime.UtcNow };
+        LogEntry e = new LogEntry { CallSign = "K1", TheirCall = "N1", Band = "40m", Mode = "PH", QsoDateTime = DateTime.UtcNow };
         Assert.True(proc.CreateEntryResult(e).IsSuccess);
 
         string temp = Path.Combine(Path.GetTempPath(), "clp_export_band_test_" + Guid.NewGuid().ToString("N"));
@@ -40,9 +42,9 @@ public class ExportUseBandTests
     [Fact]
     public void Export_WithoutUseBand_UsesFrequencySlot()
     {
-        var proc = new CabrilloLogProcessor();
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
         // Entry has Frequency set (numeric)
-        var e = new LogEntry { CallSign = "K2", TheirCall = "N2", Frequency = "7000", Mode = "PH", QsoDateTime = DateTime.UtcNow };
+        LogEntry e = new LogEntry { CallSign = "K2", TheirCall = "N2", Frequency = "7000", Mode = "PH", QsoDateTime = DateTime.UtcNow };
         Assert.True(proc.CreateEntryResult(e).IsSuccess);
 
         string temp = Path.Combine(Path.GetTempPath(), "clp_export_freq_test_" + Guid.NewGuid().ToString("N"));
