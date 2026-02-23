@@ -1,5 +1,6 @@
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.WinterFieldDay;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.WinterFieldDay;
@@ -28,7 +29,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }
@@ -42,7 +43,7 @@ public class WfdExchangeStrategyTests
     public void ValidateReceivedExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
         var result = _strategy.ValidateReceivedExchange(sig, msg);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }
@@ -55,7 +56,7 @@ public class WfdExchangeStrategyTests
     {
         // Signal reports are optional in WFD (not scored)
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }
@@ -67,7 +68,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithNullOrEmptyMessage_ReturnsFailure(string sig, string? msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("exchange message cannot be null or empty", result.ErrorMessage);
@@ -82,7 +83,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithInvalidSignalReport_ReturnsFailure(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("signal report", result.ErrorMessage);
@@ -96,7 +97,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithInvalidPartCount_ReturnsFailure(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("exactly 2 parts", result.ErrorMessage);
@@ -110,7 +111,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithInvalidCategoryClass_ReturnsFailure(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("category+class", result.ErrorMessage);
@@ -124,7 +125,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithInvalidLocation_ReturnsFailure(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
     }
@@ -142,7 +143,7 @@ public class WfdExchangeStrategyTests
         };
 
         var result = _strategy.ValidateExchange(exchange);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }
@@ -151,7 +152,7 @@ public class WfdExchangeStrategyTests
     public void ValidateExchange_WithNullExchange_ReturnsFailure()
     {
         var result = _strategy.ValidateExchange(null!);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("Exchange cannot be null", result.ErrorMessage);
@@ -170,7 +171,7 @@ public class WfdExchangeStrategyTests
         };
 
         var result = _strategy.ValidateExchange(exchange);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
     }
@@ -188,7 +189,7 @@ public class WfdExchangeStrategyTests
         };
 
         var result = _strategy.ValidateExchange(exchange);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
     }
@@ -197,7 +198,7 @@ public class WfdExchangeStrategyTests
     public void GetRequiredFields_ReturnsCorrectFields()
     {
         string[] fields = _strategy.GetRequiredFields();
-        
+
         Assert.Equal(4, fields.Length);
         Assert.Contains("Signal Report", fields);
         Assert.Contains("Category", fields);
@@ -209,7 +210,7 @@ public class WfdExchangeStrategyTests
     public void GetExchangeFormatDescription_ReturnsNonEmptyString()
     {
         string description = _strategy.GetExchangeFormatDescription();
-        
+
         Assert.False(string.IsNullOrWhiteSpace(description));
         Assert.Contains("Winter Field Day", description);
         Assert.Contains("3O", description);
@@ -225,7 +226,7 @@ public class WfdExchangeStrategyTests
     public void ValidateSentExchange_WithAllValidClasses_ReturnsSuccess(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }

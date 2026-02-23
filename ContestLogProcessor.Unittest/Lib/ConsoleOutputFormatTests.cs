@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib

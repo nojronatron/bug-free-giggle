@@ -48,9 +48,9 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.Equal(expectedValid, entry.FrequencyIsValid);
@@ -98,9 +98,9 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.False(entry.FrequencyIsValid);
@@ -128,9 +128,9 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.True(entry.FrequencyIsValid);
@@ -164,9 +164,9 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.NotNull(entry.TransmitterId);
@@ -195,9 +195,9 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.Null(entry.TransmitterId);
@@ -229,9 +229,9 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
             Assert.Null(entry.TransmitterId);
@@ -273,16 +273,16 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var logFile = processor.GetReadOnlyLogFile();
             Assert.NotNull(logFile);
-            
+
             if (!shouldBeValid)
             {
                 // Invalid signal reports should be recorded as skipped
-                Assert.Contains(logFile.SkippedEntries, s => 
+                Assert.Contains(logFile.SkippedEntries, s =>
                     s.Reason != null && s.Reason.Contains("Invalid SentSig"));
             }
         }
@@ -318,16 +318,16 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var logFile = processor.GetReadOnlyLogFile();
             Assert.NotNull(logFile);
-            
+
             if (!shouldBeValid && !string.IsNullOrEmpty(exchangeMsg))
             {
                 // Invalid exchange messages should be recorded as skipped
-                Assert.Contains(logFile.SkippedEntries, s => 
+                Assert.Contains(logFile.SkippedEntries, s =>
                     s.Reason != null && s.Reason.Contains("Invalid SentMsg"));
             }
         }
@@ -364,16 +364,16 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var logFile = processor.GetReadOnlyLogFile();
             Assert.NotNull(logFile);
-            
+
             if (!shouldBeValid)
             {
                 // Invalid callsigns should be recorded as skipped
-                Assert.Contains(logFile.SkippedEntries, s => 
+                Assert.Contains(logFile.SkippedEntries, s =>
                     s.Reason != null && s.Reason.Contains("Invalid TheirCall"));
             }
         }
@@ -401,7 +401,7 @@ public class CabrilloV3ComplianceTests
             "QSO: 7215 PH 2023-09-20 1711 K7XXX 59 OKA K7BA 59 KING",
             "END-OF-LOG:"
         };
-        
+
         try
         {
             File.WriteAllLines(tmp, lines);
@@ -413,12 +413,12 @@ public class CabrilloV3ComplianceTests
 
         var processor = new CabrilloLogProcessor();
         var result = processor.ImportFileResult(tmp);
-        
+
         Assert.True(result.IsSuccess);
-        
+
         var entries = processor.ReadEntriesResult().Value!.ToList();
         Assert.NotEmpty(entries);
-        
+
         // Verify first entry has valid structure
         var firstEntry = entries.First();
         Assert.NotNull(firstEntry.Frequency);
@@ -428,10 +428,10 @@ public class CabrilloV3ComplianceTests
         Assert.NotNull(firstEntry.TheirCall);
         Assert.NotNull(firstEntry.SentExchange);
         Assert.NotNull(firstEntry.ReceivedExchange);
-        
+
         // Verify no transmitter ID in this log (single-op)
         Assert.Null(firstEntry.TransmitterId);
-        
+
         // Cleanup temp file
         try { File.Delete(tmp); } catch { }
     }
@@ -457,12 +457,12 @@ public class CabrilloV3ComplianceTests
             File.WriteAllLines(tmp, lines);
             var processor = new CabrilloLogProcessor();
             var result = processor.ImportFileResult(tmp);
-            
+
             Assert.True(result.IsSuccess);
-            
+
             var entries = processor.ReadEntriesResult().Value!.ToList();
             Assert.Equal(5, entries.Count);
-            
+
             // Verify all frequencies are valid and bands are correctly assigned
             Assert.All(entries, entry => Assert.True(entry.FrequencyIsValid));
             Assert.Equal("80m", entries[0].Band);

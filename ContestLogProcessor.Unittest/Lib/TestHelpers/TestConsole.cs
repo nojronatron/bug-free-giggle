@@ -1,4 +1,5 @@
 using ContestLogProcessor.Console.Interactive;
+
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

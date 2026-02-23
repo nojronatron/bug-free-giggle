@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.SalmonRun;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.SalmonRun;
@@ -23,8 +25,8 @@ public class SalmonRunMarkerValidationTests
             },
             Entries = new List<LogEntry>
             {
-                new LogEntry 
-                { 
+                new LogEntry
+                {
                     CallSign = "K7XXX",
                     TheirCall = "W7TMT",
                     SentExchange = new Exchange { SentMsg = "OKA" },
@@ -56,8 +58,8 @@ public class SalmonRunMarkerValidationTests
             },
             Entries = new List<LogEntry>
             {
-                new LogEntry 
-                { 
+                new LogEntry
+                {
                     CallSign = "K7XXX",
                     TheirCall = "W7TMT",
                     SentExchange = new Exchange { SentMsg = "OKA" },
@@ -90,8 +92,8 @@ public class SalmonRunMarkerValidationTests
             },
             Entries = new List<LogEntry>
             {
-                new LogEntry 
-                { 
+                new LogEntry
+                {
                     CallSign = "K7XXX",
                     TheirCall = "W7TMT",
                     SentExchange = new Exchange { SentMsg = "OKA" },

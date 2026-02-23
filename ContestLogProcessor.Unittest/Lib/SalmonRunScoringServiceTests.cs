@@ -14,10 +14,10 @@ public class SalmonRunScoringServiceTests
         var log = new CabrilloLogFile();
         var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
-    // Act & Assert: expect a BadFormat failure via the new OperationResult wrapper
-    var failed = svc.CalculateScore(log);
-    Assert.False(failed.IsSuccess);
-    Assert.Equal(ResponseStatus.BadFormat, failed.Status);
+        // Act & Assert: expect a BadFormat failure via the new OperationResult wrapper
+        var failed = svc.CalculateScore(log);
+        Assert.False(failed.IsSuccess);
+        Assert.Equal(ResponseStatus.BadFormat, failed.Status);
     }
 
     [Fact]
@@ -107,10 +107,10 @@ public class SalmonRunScoringServiceTests
 
         var svc = new SalmonRunScoringService(new ContestLogProcessor.Lib.InMemoryLocationLookup());
 
-    // Act
-    var resultOp = svc.CalculateScore(log);
-    Assert.True(resultOp.IsSuccess);
-    var result = resultOp.Value!;
+        // Act
+        var resultOp = svc.CalculateScore(log);
+        Assert.True(resultOp.IsSuccess);
+        var result = resultOp.Value!;
 
         // Assert expected points:
         // QSO points: e1=2 (PH), e2=3 (CW), e3=3 (CW), e4=2 (PH), e5=2 (PH) => total 12
@@ -249,7 +249,7 @@ public class SalmonRunScoringServiceTests
         log.Headers["CALLSIGN"] = "K7XXX";
         log.Headers["END-OF-LOG"] = "";
 
-        string[] dxccs = new[] { "1A","3A","3B6","3B8","3B9","3C","3C0","3D2","3DA","3V","3W","3X" };
+        string[] dxccs = new[] { "1A", "3A", "3B6", "3B8", "3B9", "3C", "3C0", "3D2", "3DA", "3V", "3W", "3X" };
 
         for (int i = 0; i < dxccs.Length; i++)
         {

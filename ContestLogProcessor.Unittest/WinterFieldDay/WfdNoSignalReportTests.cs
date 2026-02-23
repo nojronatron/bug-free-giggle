@@ -1,5 +1,6 @@
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.WinterFieldDay;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.WinterFieldDay;

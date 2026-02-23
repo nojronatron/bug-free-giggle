@@ -28,10 +28,10 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
-    Assert.NotNull(created);
+        var createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        var created = createdResult.Value;
+        Assert.NotNull(created);
 
         var found = processor.ReadEntriesResult().Value!.Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
         Assert.True(found, "Created entry should be visible via ReadEntries after import.");
@@ -47,10 +47,10 @@ public class CreateExportTests
         var original = processor.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(original);
 
-    string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
-    var dupResult = processor.DuplicateEntryResult(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
-    Assert.True(dupResult.IsSuccess);
-    var dup = dupResult.Value;
+        string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
+        var dupResult = processor.DuplicateEntryResult(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
+        Assert.True(dupResult.IsSuccess);
+        var dup = dupResult.Value;
 
         Assert.NotNull(dup);
         Assert.NotEqual(original.Id, dup.Id);
@@ -84,9 +84,9 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
+        var createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        var created = createdResult.Value;
 
         string tempDir = Path.GetTempPath();
         string basePath = Path.Combine(tempDir, "clp_export_test_" + Guid.NewGuid().ToString("N"));

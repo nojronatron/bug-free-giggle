@@ -1,6 +1,8 @@
 using System;
+
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.Lib.Formatters;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
@@ -10,7 +12,7 @@ public class FormatterTests
     [Fact]
     public void AdifFormatter_FormatsBasicEntry()
     {
-        LogEntry e = new LogEntry { CallSign = "K7RMZ", Frequency = "14000", Mode = "CW", QsoDateTime = new DateTime(2025,9,26,21,0,0, DateTimeKind.Utc) };
+        LogEntry e = new LogEntry { CallSign = "K7RMZ", Frequency = "14000", Mode = "CW", QsoDateTime = new DateTime(2025, 9, 26, 21, 0, 0, DateTimeKind.Utc) };
         AdifFormatter f = new AdifFormatter();
         bool ok = f.TryFormat(e, out string s);
         Assert.True(ok);

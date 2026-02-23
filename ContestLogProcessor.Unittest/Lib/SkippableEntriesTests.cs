@@ -30,11 +30,11 @@ public class SkippableEntriesTests
         string source = FindTestDataPath("K7XXX_Test_Skippable_Entries.log");
         Assert.True(File.Exists(source), "Test data file must exist");
 
-    var p = new CabrilloLogProcessor();
-    var imp = p.ImportFileResult(source);
-    Assert.True(imp.IsSuccess);
+        var p = new CabrilloLogProcessor();
+        var imp = p.ImportFileResult(source);
+        Assert.True(imp.IsSuccess);
 
-    var entries = p.ReadEntriesResult().Value!.ToList();
+        var entries = p.ReadEntriesResult().Value!.ToList();
         // Expect 10 QSO/X-QSO entries recognized (one malformed X0QSO header line should not produce a QSO)
         Assert.Equal(10, entries.Count);
     }
@@ -45,9 +45,9 @@ public class SkippableEntriesTests
         string source = FindTestDataPath("K7XXX_Test_Skippable_Entries.log");
         Assert.True(File.Exists(source), "Test data file must exist");
 
-    var p = new CabrilloLogProcessor();
-    var imp = p.ImportFileResult(source);
-    Assert.True(imp.IsSuccess);
+        var p = new CabrilloLogProcessor();
+        var imp = p.ImportFileResult(source);
+        Assert.True(imp.IsSuccess);
 
         var log = new CabrilloLogFile();
         log.Headers["START-OF-LOG"] = "3.0";
@@ -62,12 +62,12 @@ public class SkippableEntriesTests
             if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
         }
 
-    log.Entries = p.ReadEntriesResult().Value!.ToList();
+        log.Entries = p.ReadEntriesResult().Value!.ToList();
 
-    SalmonRunScoringService svc = new();
-    var resOp = svc.CalculateScore(log);
-    Assert.True(resOp.IsSuccess);
-    SalmonRunScoreResult res = resOp.Value!;
+        SalmonRunScoringService svc = new();
+        var resOp = svc.CalculateScore(log);
+        Assert.True(resOp.IsSuccess);
+        SalmonRunScoreResult res = resOp.Value!;
 
         // We expect at least:
         // - X-QSO entries marked as skipped

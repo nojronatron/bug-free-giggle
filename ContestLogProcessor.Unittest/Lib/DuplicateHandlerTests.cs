@@ -74,7 +74,7 @@ namespace ContestLogProcessor.Unittest.Lib
 
             await shell.ExecuteCommandAsync(new[] { "duplicate", "--index", "9999" });
 
-            Assert.Contains(console.Outputs, o => o.Contains("Index out of range") );
+            Assert.Contains(console.Outputs, o => o.Contains("Index out of range"));
         }
 
         private static string FilterHandlerTests_LocateTestData(string fileName)

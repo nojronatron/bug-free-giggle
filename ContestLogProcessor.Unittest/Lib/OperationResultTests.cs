@@ -1,5 +1,7 @@
 using System;
+
 using ContestLogProcessor.Lib;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
@@ -24,8 +26,8 @@ public class OperationResultTests
         var ex = new InvalidOperationException("boom");
         var r = OperationResult.Failure<int>("bad", ResponseStatus.Error, ex);
 
-    Assert.False(r.IsSuccess);
-    Assert.Equal(default(int), r.Value);
+        Assert.False(r.IsSuccess);
+        Assert.Equal(default(int), r.Value);
         Assert.Equal(ResponseStatus.Error, r.Status);
         Assert.Equal("bad", r.ErrorMessage);
         Assert.Same(ex, r.Diagnostic);

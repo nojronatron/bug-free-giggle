@@ -26,9 +26,9 @@ public class SmokeImportAddExportTest
 
         await importShell.ExecuteCommandAsync(new[] { "import", path });
 
-    // Ensure imported (the sample file is headers-only and may contain no QSO entries)
-    Assert.Contains(importConsole.Outputs, o => o.Contains("Imported:"));
-    // It's acceptable for a headers-only file to have zero entries; we'll add one below before exporting.
+        // Ensure imported (the sample file is headers-only and may contain no QSO entries)
+        Assert.Contains(importConsole.Outputs, o => o.Contains("Imported:"));
+        // It's acceptable for a headers-only file to have zero entries; we'll add one below before exporting.
 
         // Add an entry
         var addConsole = new TestConsole(new string?[] { "2025-09-30", "1200", "20", "PH", "K7SMOKE", "N0SMK", "599", "RRR" });

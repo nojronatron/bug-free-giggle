@@ -60,10 +60,10 @@ public class FrequencyParsingTests
 
             var e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
-        // Band token placed into Frequency is now mapped to the band's low kHz and considered valid
-        Assert.True(e.FrequencyIsValid);
-        Assert.Equal("40m", e.Band);
-        Assert.Equal("7000", e.Frequency);
+            // Band token placed into Frequency is now mapped to the band's low kHz and considered valid
+            Assert.True(e.FrequencyIsValid);
+            Assert.Equal("40m", e.Band);
+            Assert.Equal("7000", e.Frequency);
         }
         finally
         {

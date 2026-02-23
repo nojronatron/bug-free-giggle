@@ -30,14 +30,14 @@ public class OnlyBandsImportTest
         // under bin/Debug won't automatically include the file. This ensures the test is hermetic.
         string source = Path.Combine(projectRoot.FullName, "Lib", "TestData", "K7XXX_Test_OnlyBands.log");
         string tmp = Path.Combine(Path.GetTempPath(), "clp_onlybands_" + Guid.NewGuid().ToString("N") + ".log");
-            try
-            {
-                File.Copy(source, tmp);
-                var proc = new CabrilloLogProcessor();
-                var imp = proc.ImportFileResult(tmp);
-                Assert.True(imp.IsSuccess);
+        try
+        {
+            File.Copy(source, tmp);
+            var proc = new CabrilloLogProcessor();
+            var imp = proc.ImportFileResult(tmp);
+            Assert.True(imp.IsSuccess);
 
-                var entries = proc.ReadEntriesResult().Value!.ToList();
+            var entries = proc.ReadEntriesResult().Value!.ToList();
             Assert.NotEmpty(entries);
 
             // Check a few entries to ensure mapping

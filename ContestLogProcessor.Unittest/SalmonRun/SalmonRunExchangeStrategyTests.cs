@@ -1,5 +1,6 @@
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.SalmonRun;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.SalmonRun;
@@ -28,7 +29,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateSentExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }
@@ -42,7 +43,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateReceivedExchange_WithValidData_ReturnsSuccess(string sig, string msg)
     {
         var result = _strategy.ValidateReceivedExchange(sig, msg);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }
@@ -54,7 +55,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateSentExchange_WithNullOrEmptySignal_ReturnsFailure(string? sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("signal report cannot be null or empty", result.ErrorMessage);
@@ -67,7 +68,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateSentExchange_WithNullOrEmptyLocation_ReturnsFailure(string sig, string? msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("location cannot be null or empty", result.ErrorMessage);
@@ -82,7 +83,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateSentExchange_WithInvalidSignalReport_ReturnsFailure(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("signal report", result.ErrorMessage);
@@ -96,7 +97,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateSentExchange_WithInvalidLocationLength_ReturnsFailure(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("location", result.ErrorMessage);
@@ -109,7 +110,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateSentExchange_WithInvalidLocationCharacters_ReturnsFailure(string sig, string msg)
     {
         var result = _strategy.ValidateSentExchange(sig, msg);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("invalid characters", result.ErrorMessage);
@@ -128,7 +129,7 @@ public class SalmonRunExchangeStrategyTests
         };
 
         var result = _strategy.ValidateExchange(exchange);
-        
+
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
     }
@@ -137,7 +138,7 @@ public class SalmonRunExchangeStrategyTests
     public void ValidateExchange_WithNullExchange_ReturnsFailure()
     {
         var result = _strategy.ValidateExchange(null!);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
         Assert.Contains("Exchange cannot be null", result.ErrorMessage);
@@ -156,7 +157,7 @@ public class SalmonRunExchangeStrategyTests
         };
 
         var result = _strategy.ValidateExchange(exchange);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
     }
@@ -174,7 +175,7 @@ public class SalmonRunExchangeStrategyTests
         };
 
         var result = _strategy.ValidateExchange(exchange);
-        
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ResponseStatus.BadFormat, result.Status);
     }
@@ -183,7 +184,7 @@ public class SalmonRunExchangeStrategyTests
     public void GetRequiredFields_ReturnsCorrectFields()
     {
         string[] fields = _strategy.GetRequiredFields();
-        
+
         Assert.Equal(2, fields.Length);
         Assert.Contains("Signal Report", fields);
         Assert.Contains("Location", fields);
@@ -193,7 +194,7 @@ public class SalmonRunExchangeStrategyTests
     public void GetExchangeFormatDescription_ReturnsNonEmptyString()
     {
         string description = _strategy.GetExchangeFormatDescription();
-        
+
         Assert.False(string.IsNullOrWhiteSpace(description));
         Assert.Contains("Salmon Run", description);
         Assert.Contains("59", description);

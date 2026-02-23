@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+
 using ContestLogProcessor.Lib;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib

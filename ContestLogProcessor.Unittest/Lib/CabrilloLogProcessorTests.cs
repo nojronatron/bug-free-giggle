@@ -63,28 +63,28 @@ public class CabrilloLogProcessorTests
             TheirCall = "K7XXX"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
-    Assert.NotNull(created);
-    Assert.False(string.IsNullOrWhiteSpace(created.Id));
-    Assert.Contains(added, a => a.Id == created.Id);
+        var createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        var created = createdResult.Value;
+        Assert.NotNull(created);
+        Assert.False(string.IsNullOrWhiteSpace(created.Id));
+        Assert.Contains(added, a => a.Id == created.Id);
 
-    // Read by id (OperationResult API)
-    var fetched = processor.GetEntryByIdResult(created.Id).Value;
-    Assert.NotNull(fetched);
-    Assert.Equal("UNITTEST", fetched.CallSign);
+        // Read by id (OperationResult API)
+        var fetched = processor.GetEntryByIdResult(created.Id).Value;
+        Assert.NotNull(fetched);
+        Assert.Equal("UNITTEST", fetched.CallSign);
 
         // Update
-    var updatedResult = processor.UpdateEntryResult(created.Id, e => e.Band = "20m");
-    Assert.True(updatedResult.IsSuccess);
+        var updatedResult = processor.UpdateEntryResult(created.Id, e => e.Band = "20m");
+        Assert.True(updatedResult.IsSuccess);
         Assert.Contains(updated, u => u.Id == created.Id && u.Band == "20m");
 
-    // Delete (migrated to OperationResult API)
-    var deletedResult = processor.DeleteEntryResult(created.Id);
-    Assert.True(deletedResult.IsSuccess);
+        // Delete (migrated to OperationResult API)
+        var deletedResult = processor.DeleteEntryResult(created.Id);
+        Assert.True(deletedResult.IsSuccess);
         Assert.Contains(deletedIds, id => id == created.Id);
-    Assert.False(processor.GetEntryByIdResult(created.Id).IsSuccess);
+        Assert.False(processor.GetEntryByIdResult(created.Id).IsSuccess);
     }
 
     [Fact]
@@ -111,18 +111,18 @@ public class CabrilloLogProcessorTests
             TheirCall = "INTEG"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
-    var updatedResult2 = processor.UpdateEntryResult(created.Id, e => e.Band = "40m");
-    Assert.True(updatedResult2.IsSuccess);
+        var createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        var created = createdResult.Value;
+        var updatedResult2 = processor.UpdateEntryResult(created.Id, e => e.Band = "40m");
+        Assert.True(updatedResult2.IsSuccess);
 
         var exportFile = ExportPath + "_crud_integ.log";
         if (File.Exists(exportFile)) File.Delete(exportFile);
 
-    var r = processor.ExportFileResult(ExportPath + "_crud_integ");
-    Assert.True(r.IsSuccess);
-    Assert.True(File.Exists(exportFile));
+        var r = processor.ExportFileResult(ExportPath + "_crud_integ");
+        Assert.True(r.IsSuccess);
+        Assert.True(File.Exists(exportFile));
 
         var lines = File.ReadAllLines(exportFile);
         Assert.Contains(lines, l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.WinterFieldDay;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.WinterFieldDay;
@@ -23,8 +25,8 @@ public class WinterFieldDayMarkerValidationTests
             },
             Entries = new List<LogEntry>
             {
-                new LogEntry 
-                { 
+                new LogEntry
+                {
                     CallSign = "K7XXX",
                     TheirCall = "W7TMT",
                     SentExchange = new Exchange { SentMsg = "1O WA" },
@@ -56,8 +58,8 @@ public class WinterFieldDayMarkerValidationTests
             },
             Entries = new List<LogEntry>
             {
-                new LogEntry 
-                { 
+                new LogEntry
+                {
                     CallSign = "K7XXX",
                     TheirCall = "W7TMT",
                     SentExchange = new Exchange { SentMsg = "1O WA" },
@@ -90,8 +92,8 @@ public class WinterFieldDayMarkerValidationTests
             },
             Entries = new List<LogEntry>
             {
-                new LogEntry 
-                { 
+                new LogEntry
+                {
                     CallSign = "K7XXX",
                     TheirCall = "W7TMT",
                     SentExchange = new Exchange { SentMsg = "1O WA" },

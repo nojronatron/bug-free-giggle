@@ -1,5 +1,6 @@
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.WinterFieldDay;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.WinterFieldDay;
@@ -15,7 +16,7 @@ public class WfdHierarchicalErrorCodeTests
         // Arrange
         CabrilloLogFile log = CreateMinimalValidLog();
         log.Entries[0].IsXQso = true;
-        
+
         WfdExchangeStrategy strategy = new WfdExchangeStrategy();
         WinterFieldDayScoringService service = new WinterFieldDayScoringService(strategy);
 
@@ -25,7 +26,7 @@ public class WfdHierarchicalErrorCodeTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.SkippedEntries);
-        
+
         SkippedEntryInfo error = result.Value.SkippedEntries[0];
         Assert.Equal("WFD.EXCLUDED.X_QSO", error.ErrorCode);
         Assert.Equal(ErrorCategory.Excluded, error.Category);
@@ -38,7 +39,7 @@ public class WfdHierarchicalErrorCodeTests
         // Arrange
         CabrilloLogFile log = CreateMinimalValidLog();
         log.Entries[0].Mode = null;
-        
+
         WfdExchangeStrategy strategy = new WfdExchangeStrategy();
         WinterFieldDayScoringService service = new WinterFieldDayScoringService(strategy);
 
@@ -48,7 +49,7 @@ public class WfdHierarchicalErrorCodeTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.SkippedEntries);
-        
+
         SkippedEntryInfo error = result.Value.SkippedEntries[0];
         Assert.Equal("WFD.MISSING.MODE", error.ErrorCode);
         Assert.Equal(ErrorCategory.MissingData, error.Category);
@@ -62,7 +63,7 @@ public class WfdHierarchicalErrorCodeTests
         // Arrange
         CabrilloLogFile log = CreateMinimalValidLog();
         log.Entries[0].Mode = "INVALID";
-        
+
         WfdExchangeStrategy strategy = new WfdExchangeStrategy();
         WinterFieldDayScoringService service = new WinterFieldDayScoringService(strategy);
 
@@ -72,7 +73,7 @@ public class WfdHierarchicalErrorCodeTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.SkippedEntries);
-        
+
         SkippedEntryInfo error = result.Value.SkippedEntries[0];
         Assert.Equal("WFD.RULES.INVALID_MODE", error.ErrorCode);
         Assert.Equal(ErrorCategory.Validation, error.Category);
@@ -86,7 +87,7 @@ public class WfdHierarchicalErrorCodeTests
     {
         // Arrange
         CabrilloLogFile log = CreateMinimalValidLog();
-        
+
         // Add duplicate entry (same call, same band, same mode)
         LogEntry duplicate = new LogEntry
         {
@@ -101,7 +102,7 @@ public class WfdHierarchicalErrorCodeTests
             ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "1O CT" }
         };
         log.Entries.Add(duplicate);
-        
+
         WfdExchangeStrategy strategy = new WfdExchangeStrategy();
         WinterFieldDayScoringService service = new WinterFieldDayScoringService(strategy);
 
@@ -111,7 +112,7 @@ public class WfdHierarchicalErrorCodeTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.SkippedEntries);
-        
+
         SkippedEntryInfo error = result.Value.SkippedEntries[0];
         Assert.Equal("WFD.DUPLICATE.BAND_MODE_STATION", error.ErrorCode);
         Assert.Equal(ErrorCategory.Duplicate, error.Category);
@@ -126,7 +127,7 @@ public class WfdHierarchicalErrorCodeTests
         // Arrange
         CabrilloLogFile log = CreateMinimalValidLog();
         log.Entries[0].SentExchange = new Exchange { SentSig = "59", SentMsg = "INVALID" };
-        
+
         WfdExchangeStrategy strategy = new WfdExchangeStrategy();
         WinterFieldDayScoringService service = new WinterFieldDayScoringService(strategy);
 
@@ -136,7 +137,7 @@ public class WfdHierarchicalErrorCodeTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.SkippedEntries);
-        
+
         SkippedEntryInfo error = result.Value.SkippedEntries[0];
         Assert.StartsWith("WFD.EXCHANGE.", error.ErrorCode);
         Assert.Equal(ErrorCategory.Exchange, error.Category);
@@ -147,13 +148,13 @@ public class WfdHierarchicalErrorCodeTests
     private static CabrilloLogFile CreateMinimalValidLog()
     {
         CabrilloLogFile log = new CabrilloLogFile();
-        
+
         // Set required headers
         log.Headers["START-OF-LOG"] = "3.0";
         log.Headers["END-OF-LOG"] = "";
         log.Headers["CALLSIGN"] = "K7RMZ";
         log.Headers["CONTEST"] = "WFD";
-        
+
         LogEntry entry = new LogEntry
         {
             SourceLineNumber = 99,
@@ -166,9 +167,9 @@ public class WfdHierarchicalErrorCodeTests
             TheirCall = "W1AW",
             ReceivedExchange = new Exchange { ReceivedSig = "59", ReceivedMsg = "1O CT" }
         };
-        
+
         log.Entries.Add(entry);
-        
+
         return log;
     }
 }

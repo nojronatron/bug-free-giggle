@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+
 using ContestLogProcessor.Lib;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
@@ -37,7 +39,7 @@ public class CabrilloMarkerValidationTests
             Assert.False(snapshot.HasStartOfLog);
             Assert.True(snapshot.HasEndOfLog);
 
-            bool hasSkippedMarker = snapshot.SkippedEntries.Any(s => 
+            bool hasSkippedMarker = snapshot.SkippedEntries.Any(s =>
                 s.Reason != null && s.Reason.Contains("START-OF-LOG", StringComparison.OrdinalIgnoreCase));
             Assert.True(hasSkippedMarker, "Expected skipped entry for missing START-OF-LOG marker");
         }
@@ -73,7 +75,7 @@ public class CabrilloMarkerValidationTests
             Assert.True(snapshot.HasStartOfLog);
             Assert.False(snapshot.HasEndOfLog);
 
-            bool hasSkippedMarker = snapshot.SkippedEntries.Any(s => 
+            bool hasSkippedMarker = snapshot.SkippedEntries.Any(s =>
                 s.Reason != null && s.Reason.Contains("END-OF-LOG", StringComparison.OrdinalIgnoreCase));
             Assert.True(hasSkippedMarker, "Expected skipped entry for missing END-OF-LOG marker");
         }
@@ -110,7 +112,7 @@ public class CabrilloMarkerValidationTests
             Assert.True(snapshot.HasStartOfLog);
             Assert.True(snapshot.HasEndOfLog);
 
-            bool hasSkippedMarker = snapshot.SkippedEntries.Any(s => 
+            bool hasSkippedMarker = snapshot.SkippedEntries.Any(s =>
                 s.Reason != null && (s.Reason.Contains("START-OF-LOG", StringComparison.OrdinalIgnoreCase) ||
                                      s.Reason.Contains("END-OF-LOG", StringComparison.OrdinalIgnoreCase)));
             Assert.False(hasSkippedMarker, "Expected no skipped entries for missing markers when both are present");
@@ -146,7 +148,7 @@ public class CabrilloMarkerValidationTests
             Assert.False(snapshot.HasStartOfLog);
             Assert.False(snapshot.HasEndOfLog);
 
-            int markerSkippedCount = snapshot.SkippedEntries.Count(s => 
+            int markerSkippedCount = snapshot.SkippedEntries.Count(s =>
                 s.Reason != null && (s.Reason.Contains("START-OF-LOG", StringComparison.OrdinalIgnoreCase) ||
                                      s.Reason.Contains("END-OF-LOG", StringComparison.OrdinalIgnoreCase)));
             Assert.Equal(2, markerSkippedCount);
