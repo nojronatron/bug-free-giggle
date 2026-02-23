@@ -33,6 +33,8 @@ Use explicit types instead of var: `Backpack EmptyGenericBackpack = new();` and 
 Lambdas should use descriptive naming conventions including any arguments:
 Avoid highly abbreviated or abstract naming conventions: `Entry entries.Where(e => e.Length >= 13)`
 Prefer representative argument naming: `public List<Entry> Get(string name)` and `Enumerable<Entry> redCars = cars.Where(car => car.Red)`
+When the compiler says a library is not used, remove it from the usings list
+Set top-level 'using' entries instead of canonical library prefixes to classes and methods
 
 ## Libraries and Frameworks
 Use .NET 10
@@ -105,6 +107,7 @@ Unit tests should be concise, focused on method functionality
 Focus unit tests on specific, basic functional goals
 Avoid writing extensive edge-case unit tests
 Use data in `./LogExamples` directory to derive realistic test case data but do not copy the data exactly
+If a called method could return a null follow the assignment call with `Assert.NotNull(arg)` to fail the test unless null return is expected in which case trust that a nullable type will be returned and handle it accordingly
 
 ## Build, Run, and Test
 
@@ -159,7 +162,7 @@ List<string> callsigns = ["K7XXX", "W7TMT"];
 LogEntry entry = new() { Call = "K7XXX" };
 
 // Preferred: Descriptive lambda parameters
-var validEntries = entries.Where(logEntry => logEntry.IsValid);
+LogEntry[] validEntries = entries.Where(logEntry => logEntry.IsValid);
 
 // Preferred: File-scoped namespace
 namespace ContestLogProcessor.Lib;
