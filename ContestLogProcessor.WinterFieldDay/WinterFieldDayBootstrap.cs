@@ -1,5 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using ContestLogProcessor.Lib;
+
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ContestLogProcessor.WinterFieldDay;
 
