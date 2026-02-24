@@ -8,10 +8,10 @@ public enum CategoryOperator
 {
     /// <summary>Single operator</summary>
     SingleOp,
-    
+
     /// <summary>Multiple operators</summary>
     MultiOp,
-    
+
     /// <summary>Check log (not for awards/competition)</summary>
     Checklog
 }

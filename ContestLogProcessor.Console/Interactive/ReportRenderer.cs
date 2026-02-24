@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Console.Interactive
@@ -39,7 +40,7 @@ namespace ContestLogProcessor.Console.Interactive
 
                 int cut = remaining.LastIndexOf(", ", available);
                 int take;
-                
+
                 if (cut == -1)
                 {
                     take = available;

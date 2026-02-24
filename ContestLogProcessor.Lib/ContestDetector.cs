@@ -12,7 +12,7 @@ public interface IContestDetector
     /// Returns OperationResult with the service or failure if contest is not registered.
     /// </summary>
     OperationResult<object> DetectAndResolveContestService(CabrilloLogFile logFile);
-    
+
     /// <summary>
     /// Detect contest type from log file headers and return the normalized contest type string.
     /// Returns OperationResult with the contest type string or failure if contest header is missing.

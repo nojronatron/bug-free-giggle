@@ -8,19 +8,19 @@ public enum CategoryOverlay
 {
     /// <summary>Classic category</summary>
     Classic,
-    
+
     /// <summary>Rookie category for new operators</summary>
     Rookie,
-    
+
     /// <summary>Tribander/Wires category</summary>
     TbWires,
-    
+
     /// <summary>Youth category for young operators</summary>
     Youth,
-    
+
     /// <summary>Novice/Technician category</summary>
     NoviceTech,
-    
+
     /// <summary>Young Ladies category</summary>
     YL
 }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Console.Interactive.Handlers;
@@ -22,7 +23,7 @@ public class ExportCommandHandler : ICommandHandler
         // in the frequency slot when exporting (for example "40m"). The flag may appear before
         // or after the path; remove it from the path construction when present.
         bool useBand = false;
-    System.Collections.Generic.List<string> pathParts = new System.Collections.Generic.List<string>();
+        System.Collections.Generic.List<string> pathParts = new System.Collections.Generic.List<string>();
         for (int i = 1; i < parts.Length; i++)
         {
             if (string.Equals(parts[i], "--use-band", StringComparison.OrdinalIgnoreCase))

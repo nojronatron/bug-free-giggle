@@ -8,10 +8,10 @@ public enum CategoryPower
 {
     /// <summary>High power (typically >150W)</summary>
     High,
-    
+
     /// <summary>Low power (typically 5W-150W)</summary>
     Low,
-    
+
     /// <summary>QRP (low power, typically ≤5W)</summary>
     QRP
 }

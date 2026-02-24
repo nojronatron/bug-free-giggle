@@ -18,15 +18,15 @@ public static class WinterFieldDayBootstrap
         // Register Winter Field Day exchange strategy first
         services.AddSingleton<WfdExchangeStrategy>();
         services.AddSingleton<IContestExchangeStrategy>(provider => provider.GetRequiredService<WfdExchangeStrategy>());
-        
+
         // Register Winter Field Day specific services
         services.AddSingleton<WinterFieldDayExchangeParser>();
-        services.AddSingleton<WinterFieldDayScoringService>(provider => 
+        services.AddSingleton<WinterFieldDayScoringService>(provider =>
         {
             WfdExchangeStrategy strategy = provider.GetRequiredService<WfdExchangeStrategy>();
             return new WinterFieldDayScoringService(strategy);
         });
-        services.AddSingleton<IContestScoringService<WinterFieldDayScoreResult>>(provider => 
+        services.AddSingleton<IContestScoringService<WinterFieldDayScoreResult>>(provider =>
             provider.GetRequiredService<WinterFieldDayScoringService>());
 
         return services;

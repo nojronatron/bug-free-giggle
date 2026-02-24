@@ -9,37 +9,37 @@ public enum SanitizableHeader
 {
     /// <summary>No headers</summary>
     None = 0,
-    
+
     /// <summary>LOCATION header</summary>
     Location = 1 << 0,
-    
+
     /// <summary>CALLSIGN header</summary>
     Callsign = 1 << 1,
-    
+
     /// <summary>CLUB header</summary>
     Club = 1 << 2,
-    
+
     /// <summary>NAME header</summary>
     Name = 1 << 3,
-    
+
     /// <summary>ADDRESS header</summary>
     Address = 1 << 4,
-    
+
     /// <summary>ADDRESS-CITY header</summary>
     AddressCity = 1 << 5,
-    
+
     /// <summary>ADDRESS-POSTALCODE header</summary>
     AddressPostalcode = 1 << 6,
-    
+
     /// <summary>ADDRESS-COUNTRY header</summary>
     AddressCountry = 1 << 7,
-    
+
     /// <summary>EMAIL header</summary>
     Email = 1 << 8,
-    
+
     /// <summary>CREATED-BY header</summary>
     CreatedBy = 1 << 9,
-    
+
     /// <summary>SOAPBOX header</summary>
     Soapbox = 1 << 10
 }

@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Console.Interactive.Handlers;
@@ -19,20 +20,20 @@ public class FilterDupeCommandHandler : ICommandHandler
 
         string filter = string.Join(' ', parts, 1, parts.Length - 1);
 
-            OperationResult<IEnumerable<LogEntry>> readOp = ctx.Processor.ReadEntriesResult();
-            if (!readOp.IsSuccess)
-            {
-                ctx.Console.WriteLine($"Operation failed: {readOp.ErrorMessage}");
-                if (ctx.Debug && readOp.Diagnostic != null) ctx.Console.WriteLine(readOp.Diagnostic.ToString());
-                return;
-            }
+        OperationResult<IEnumerable<LogEntry>> readOp = ctx.Processor.ReadEntriesResult();
+        if (!readOp.IsSuccess)
+        {
+            ctx.Console.WriteLine($"Operation failed: {readOp.ErrorMessage}");
+            if (ctx.Debug && readOp.Diagnostic != null) ctx.Console.WriteLine(readOp.Diagnostic.ToString());
+            return;
+        }
 
-            System.Collections.Generic.List<LogEntry> all = readOp.Value!.ToList();
-            System.Collections.Generic.List<LogEntry> matches = all.Where(e =>
-                (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-                (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
-                (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line) && line.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
-            ).ToList();
+        System.Collections.Generic.List<LogEntry> all = readOp.Value!.ToList();
+        System.Collections.Generic.List<LogEntry> matches = all.Where(e =>
+            (!string.IsNullOrWhiteSpace(e.CallSign) && e.CallSign.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
+            (!string.IsNullOrWhiteSpace(e.RawLine) && e.RawLine.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) ||
+            (ContestLogProcessor.Lib.Formatters.CabrilloFormatter.TrySafeToCabrillo(e, out string line) && line.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
+        ).ToList();
 
         if (matches.Count == 0)
         {
@@ -61,7 +62,7 @@ public class FilterDupeCommandHandler : ICommandHandler
             return;
         }
 
-    System.Collections.Generic.List<string> targets = new System.Collections.Generic.List<string>();
+        System.Collections.Generic.List<string> targets = new System.Collections.Generic.List<string>();
         if (choice.Equals("all", System.StringComparison.OrdinalIgnoreCase))
         {
             targets.AddRange(matches.Select(m => m.Id));

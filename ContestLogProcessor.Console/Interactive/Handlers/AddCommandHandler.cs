@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Console.Interactive.Handlers;
@@ -68,8 +69,8 @@ public class AddCommandHandler : ICommandHandler
             newEntry.ReceivedExchange = new Exchange { ReceivedMsg = recvEx };
         }
 
-    OperationResult<LogEntry> result = ctx.Processor.CreateEntryResult(newEntry);
-    if (result.IsSuccess && result.Value != null)
+        OperationResult<LogEntry> result = ctx.Processor.CreateEntryResult(newEntry);
+        if (result.IsSuccess && result.Value != null)
         {
             ctx.Console.WriteLine($"Added entry with Id: {result.Value.Id}");
         }

@@ -33,8 +33,8 @@ public partial class CabrilloLogProcessor : ILogProcessor
     {
         if (_logFile == null) return null;
 
-    // Clone headers into a new dictionary (strings are immutable so shallow copy is sufficient)
-    Dictionary<string, string> headersCopyMutable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // Clone headers into a new dictionary (strings are immutable so shallow copy is sufficient)
+        Dictionary<string, string> headersCopyMutable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, string> kvp in _logFile.Headers)
         {
             headersCopyMutable[kvp.Key] = kvp.Value;
@@ -285,7 +285,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
                             theirCall = SanitizeHeaderValue(theirCall!, "THEIRCALL");
                         }
                         entry.TheirCall = theirCall;
-                        
+
                         // Parse optional transmitter ID (Cabrillo v3 spec: 0 or 1)
                         entry.TransmitterId = ParseTransmitterId(parts);
 
@@ -311,35 +311,35 @@ public partial class CabrilloLogProcessor : ILogProcessor
                 else if (!string.IsNullOrWhiteSpace(line))
                 {
                     int idx = line.IndexOf(':');
-                        if (idx > 0)
+                    if (idx > 0)
+                    {
+                        string key = line.Substring(0, idx).Trim();
+                        string value = line.Substring(idx + 1).Trim();
+
+                        // Only apply sanitizer to a conservative list of header keys that may contain
+                        // long string values. The sanitizer itself is conservative and will no-op for
+                        // short values (<= 13 chars). Keys are compared case-insensitively.
+                        if (SanitizableHeaderExtensions.IsSanitizable(key))
                         {
-                            string key = line.Substring(0, idx).Trim();
-                            string value = line.Substring(idx + 1).Trim();
-
-                            // Only apply sanitizer to a conservative list of header keys that may contain
-                            // long string values. The sanitizer itself is conservative and will no-op for
-                            // short values (<= 13 chars). Keys are compared case-insensitively.
-                            if (SanitizableHeaderExtensions.IsSanitizable(key))
-                            {
-                                headers[key] = SanitizeHeaderValue(value, key);
-                            }
-                            else
-                            {
-                                headers[key] = value;
-                            }
-
-                            // Validate Cabrillo v3 enumerated header values
-                            OperationResult<Unit> validationResult = ValidateHeaderEnumeratedValue(key, value, lineIndex);
-                            if (!validationResult.IsSuccess)
-                            {
-                                skipped.Add(new SkippedEntryInfo
-                                {
-                                    SourceLineNumber = lineIndex,
-                                    Reason = $"Invalid header value: {validationResult.ErrorMessage}",
-                                    RawLine = line
-                                });
-                            }
+                            headers[key] = SanitizeHeaderValue(value, key);
                         }
+                        else
+                        {
+                            headers[key] = value;
+                        }
+
+                        // Validate Cabrillo v3 enumerated header values
+                        OperationResult<Unit> validationResult = ValidateHeaderEnumeratedValue(key, value, lineIndex);
+                        if (!validationResult.IsSuccess)
+                        {
+                            skipped.Add(new SkippedEntryInfo
+                            {
+                                SourceLineNumber = lineIndex,
+                                Reason = $"Invalid header value: {validationResult.ErrorMessage}",
+                                RawLine = line
+                            });
+                        }
+                    }
                 }
             }
 
@@ -396,13 +396,13 @@ public partial class CabrilloLogProcessor : ILogProcessor
     /// and then up to 5 tokens for the received exchange.
     /// </summary>
     private static (Exchange? sent, string? theirCall, Exchange? recv) ParseExchanges(string[] parts, int startIndex, List<SkippedEntryInfo> skipped, int sourceLineNumber, string rawLine)
-        {
+    {
         if (parts == null)
         {
             return (null, null, null);
         }
-    // Use source-generated Regex instances (GeneratedRegex) for best runtime performance
-    // and to avoid allocating/parsing patterns on every invocation.
+        // Use source-generated Regex instances (GeneratedRegex) for best runtime performance
+        // and to avoid allocating/parsing patterns on every invocation.
         // Collect remaining tokens after the fixed-position fields (freq, mode, date, time, mycall)
         int idx = startIndex;
         string[] tokens = parts.Skip(startIndex).ToArray();
@@ -541,16 +541,16 @@ public partial class CabrilloLogProcessor : ILogProcessor
         if (freqKHz >= 21000 && freqKHz <= 21450) return true; // 15m
         if (freqKHz >= 24890 && freqKHz <= 24990) return true; // 12m
         if (freqKHz >= 28000 && freqKHz <= 29700) return true; // 10m
-        
+
         // VHF Bands
         if (freqKHz >= 50000 && freqKHz <= 54000) return true;   // 6m
         if (freqKHz >= 144000 && freqKHz <= 148000) return true; // 2m
-        
+
         // UHF Bands
         if (freqKHz >= 222000 && freqKHz <= 225000) return true; // 1.25m
         if (freqKHz >= 420000 && freqKHz <= 450000) return true; // 70cm
         if (freqKHz >= 902000 && freqKHz <= 928000) return true; // 33cm
-        
+
         // Microwave Bands (in kHz)
         if (freqKHz >= 1240000 && freqKHz <= 1300000) return true;  // 23cm
         if (freqKHz >= 2300000 && freqKHz <= 2450000) return true;  // 13cm
@@ -558,7 +558,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
         if (freqKHz >= 5650000 && freqKHz <= 5925000) return true;  // 6cm
         if (freqKHz >= 10000000 && freqKHz <= 10500000) return true; // 3cm
         if (freqKHz >= 24000000 && freqKHz <= 24250000) return true; // 1.25cm
-        
+
         return false;
     }
 
@@ -1327,13 +1327,13 @@ public partial class CabrilloLogProcessor : ILogProcessor
 
         // Transmitter ID is always the last token when present
         string lastToken = parts[parts.Length - 1];
-        
+
         // Valid transmitter ID is exactly "0" or "1"
         if (int.TryParse(lastToken, out int transmitterId) && (transmitterId == 0 || transmitterId == 1))
         {
             return transmitterId;
         }
-        
+
         return null;
     }
 

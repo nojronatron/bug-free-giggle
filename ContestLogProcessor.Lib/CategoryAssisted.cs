@@ -8,7 +8,7 @@ public enum CategoryAssisted
 {
     /// <summary>Non-assisted operation (no spotting assistance)</summary>
     NonAssisted,
-    
+
     /// <summary>Assisted operation (spotting assistance allowed)</summary>
     Assisted
 }

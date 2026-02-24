@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.WinterFieldDay;
@@ -17,7 +18,7 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
     {
         // Handle both combined format ("3O OR") and separated Cabrillo format where 
         // sentSig="59" sentMsg="3O OR", or sentMsg="3O" with location in next field
-        return ParseSentExchange(sentSig, sentMsg, (raw, category, classId, location) => 
+        return ParseSentExchange(sentSig, sentMsg, (raw, category, classId, location) =>
             new WfdInfoSent(raw, category, classId, location));
     }
 
@@ -25,7 +26,7 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
     {
         // Handle both combined format ("1A CT") and separated Cabrillo format where 
         // receivedSig="59" receivedMsg="1A CT", or receivedMsg="1A" with location in next field
-        return ParseReceivedExchange(receivedSig, receivedMsg, (raw, category, classId, location) => 
+        return ParseReceivedExchange(receivedSig, receivedMsg, (raw, category, classId, location) =>
             new WfdInfoReceived(raw, category, classId, location));
     }
 
@@ -56,7 +57,7 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
 
         string categoryClassPart = parts[0];
         string locationPart = parts[1];
-        
+
         return ValidateAndCreateResult(factory, msg.Trim(), categoryClassPart, locationPart);
     }
 
@@ -91,7 +92,7 @@ public class WinterFieldDayExchangeParser : IExchangeParser<WfdInfoSent, WfdInfo
         char classId = char.ToUpper(categoryMatch.Groups[2].Value[0]);
 
         T result = factory(rawExchange, category, classId, locationPart.ToUpperInvariant());
-        
+
         return OperationResult.Success(result);
     }
 }

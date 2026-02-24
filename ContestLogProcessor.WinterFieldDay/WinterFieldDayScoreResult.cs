@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.WinterFieldDay;
@@ -14,11 +15,11 @@ public class WinterFieldDayScoreResult
     public int CwDigitalQsos { get; set; }
     public int TotalContacts { get; set; }
     public int DuplicateContacts { get; set; }
-    
+
     // Collections for reporting
     public List<string> UniqueStationCategories { get; } = new();
     public List<string> UniqueLocations { get; } = new();
-    
+
     // Band/Mode statistics for analysis
     public Dictionary<string, int> ContactsByBand { get; } = new();
     public Dictionary<string, int> ContactsByMode { get; } = new();

@@ -108,7 +108,7 @@ public class SmokeImportAddExportTest
         try
         {
             string? found = Directory.GetFiles(baseDir, fileName, SearchOption.AllDirectories).FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(found)) 
+            if (!string.IsNullOrWhiteSpace(found))
             {
                 return found;
             }

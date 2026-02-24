@@ -31,9 +31,9 @@ public class ExportUseBandTests
         }
         finally
         {
-            try 
+            try
             {
-                if (File.Exists(expected)) 
+                if (File.Exists(expected))
                 {
                     File.Delete(expected);
                 }
@@ -66,7 +66,7 @@ public class ExportUseBandTests
         }
         finally
         {
-            try 
+            try
             {
                 if (File.Exists(expected)) File.Delete(expected);
             }

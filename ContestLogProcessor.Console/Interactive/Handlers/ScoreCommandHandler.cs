@@ -35,7 +35,7 @@ public class ScoreCommandHandler : ICommandHandler
             }
 
             CabrilloLogFile log = new CabrilloLogFile();
-            
+
             // Try to access the full log file with headers if processor supports it
             if (processor is CabrilloLogProcessor cabrilloProcessor)
             {
@@ -49,7 +49,7 @@ public class ScoreCommandHandler : ICommandHandler
                     }
                 }
             }
-            
+
             // Fallback: Try to infer CALLSIGN from entries when header access isn't available
             if (!log.Headers.ContainsKey("CALLSIGN"))
             {
@@ -163,10 +163,10 @@ public class ScoreCommandHandler : ICommandHandler
         console.WriteLine($" Phone QSOs  : {res.PhoneQsos} x 1pt = {res.PhoneQsos}");
         console.WriteLine($" CW/Digital  : {res.CwDigitalQsos} x 2pts = {res.CwDigitalQsos * 2}");
         console.WriteLine("------------------------------------------");
-        
+
         console.WriteLine($" Station Categories : {res.UniqueStationCategories.Count}");
         console.WriteLine($" Locations          : {res.UniqueLocations.Count}");
-        
+
         console.WriteLine("------------------------------------------");
         console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
         int show = Math.Min(10, res.SkippedEntries.Count);

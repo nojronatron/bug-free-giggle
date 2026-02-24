@@ -23,7 +23,7 @@ public class ContestRegistry : IContestRegistry
         }
 
         string normalizedContestId = contestId.Trim().ToUpperInvariant();
-        
+
         if (!_contestServiceFactories.TryGetValue(normalizedContestId, out Func<object>? serviceFactory))
         {
             string[] registered = GetRegisteredContests();
@@ -60,7 +60,7 @@ public class ContestRegistry : IContestRegistry
         }
 
         string normalizedContestId = contestId.Trim().ToUpperInvariant();
-        
+
         _contestServiceFactories[normalizedContestId] = () => serviceFactory();
     }
 

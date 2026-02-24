@@ -116,8 +116,8 @@ public class LogEntry
     public string ToCabrilloLine(bool preferBandToken = false)
     {
         // Date/time formatting per spec: yyyy-MM-dd and HHmm in UTC.
-    string datePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("yyyy-MM-dd");
-    string timePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("HHmm");
+        string datePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("yyyy-MM-dd");
+        string timePart = QsoDateTime == DateTime.MinValue ? string.Empty : QsoDateTime.ToString("HHmm");
 
         string freq;
         if (preferBandToken)
@@ -137,7 +137,7 @@ public class LogEntry
 
         // Compose with single spaces and trim end. We don't include "theirCall" separately because the
         // parser does not currently store it as a separate field; if it is needed later we can add it.
-    List<string> tokens = new List<string> { "QSO:", freq, mode, datePart, timePart, call };
+        List<string> tokens = new List<string> { "QSO:", freq, mode, datePart, timePart, call };
 
         if (!string.IsNullOrEmpty(sent)) tokens.Add(sent);
         if (!string.IsNullOrEmpty(TheirCall)) tokens.Add(TheirCall);

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.SalmonRun;

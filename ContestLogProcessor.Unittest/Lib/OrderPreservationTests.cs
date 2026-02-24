@@ -177,17 +177,17 @@ public class OrderPreservationTests
         }
         finally
         {
-            if (File.Exists(tmp)) 
+            if (File.Exists(tmp))
             {
                 File.Delete(tmp);
             }
 
             foreach (string f in Directory.GetFiles(Path.GetTempPath(), "export_out_*.log"))
             {
-                try 
-                { 
-                    File.Delete(f); 
-                } 
+                try
+                {
+                    File.Delete(f);
+                }
                 catch { }
             }
         }

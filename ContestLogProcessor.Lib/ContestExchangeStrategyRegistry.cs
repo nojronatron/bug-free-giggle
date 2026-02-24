@@ -52,7 +52,7 @@ public class ContestExchangeStrategyRegistry
         }
 
         string key = contestId.Trim();
-        
+
         if (!_strategies.TryGetValue(key, out Func<IContestExchangeStrategy>? factory))
         {
             return OperationResult.Failure<IContestExchangeStrategy>(

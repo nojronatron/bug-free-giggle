@@ -73,7 +73,7 @@ public class InMemoryLocationLookup : ILocationLookup
         abbreviation = null!;
         if (string.IsNullOrWhiteSpace(token)) return false;
         string t = token.Trim();
-        
+
         // Check for exact matches preserving case for slashes
         foreach (string candidate in _dxcc)
         {

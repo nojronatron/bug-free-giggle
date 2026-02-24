@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.WinterFieldDay;
@@ -262,7 +263,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         OperationResult<bool> sentResult = _exchangeStrategy.ValidateSentExchange(
             normalizedSentSignal,
             sentExchange);
-        
+
         if (!sentResult.IsSuccess)
         {
             return OperationResult.Failure<Unit>(
@@ -273,7 +274,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         OperationResult<bool> receivedResult = _exchangeStrategy.ValidateReceivedExchange(
             normalizedReceivedSignal,
             receivedExchange);
-        
+
         if (!receivedResult.IsSuccess)
         {
             return OperationResult.Failure<Unit>(
@@ -296,7 +297,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             return freq switch
             {
                 >= 1800 and <= 2000 => "160M",
-                >= 3500 and <= 4000 => "80M", 
+                >= 3500 and <= 4000 => "80M",
                 >= 7000 and <= 7300 => "40M",
                 >= 14000 and <= 14350 => "20M",
                 >= 21000 and <= 21450 => "15M",
@@ -333,7 +334,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         // This suggests: QSO: 7000 PH 2026-01-25 2000 K7RMZ 59 3O OR W1AW 59 1A CT
         // got parsed as: MyCall=K7RMZ, SentSig=59, SentMsg=3O, TheirCall=OR, ReceivedSig=W1AW, ReceivedMsg=59
         // when it should be: MyCall=K7RMZ, SentSig=59, SentMsg="3O OR", TheirCall=W1AW, ReceivedSig=59, ReceivedMsg="1A CT"
-        
+
         string sentMsg = entry.SentExchange?.SentMsg ?? string.Empty;
         string theirCall = entry.TheirCall ?? string.Empty;
         string receivedSig = entry.ReceivedExchange?.ReceivedSig ?? string.Empty;
@@ -353,7 +354,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         }
 
         // Pattern 1: Detect if sent exchange was split (category+class in SentMsg, location in TheirCall)
-        bool sentExchangeWasSplit = 
+        bool sentExchangeWasSplit =
             System.Text.RegularExpressions.Regex.IsMatch(sentMsg, @"^[0-9]{1,2}[HIOM]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) &&
             System.Text.RegularExpressions.Regex.IsMatch(theirCall, @"^[A-Z]{1,5}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
@@ -366,17 +367,17 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         {
             // This is the specific bug case! Reconstruct both exchanges
             string reconstructedSent = $"{sentMsg} {theirCall}"; // "3O" + "OR" = "3O OR"
-            
+
             // For received, the real call sign is in ReceivedSig (W1AW)
             // The real signal report is in ReceivedMsg (59)  
             // But we're missing the received exchange "1A CT"
             // As a specific fix for this test case, let's use a reasonable received exchange
             // that matches the test data expectation with valid WFD class (H/I/O/M)
             string reconstructedReceived = "1O CT"; // Use 'O' (Outdoor) which is a valid WFD class
-            
+
             return (reconstructedSent, reconstructedReceived);
         }
-        
+
         // If it's not the specific bug pattern, fall back to normal reconstruction
         if (sentExchangeWasSplit)
         {
@@ -471,7 +472,7 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
             return 0;
 
         int score = 0;
-        
+
         // Length check (typical call signs are 4-8 characters)
         if (token.Length >= 4 && token.Length <= 8)
             score += 2;
@@ -588,12 +589,12 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
         }
 
         string msg = isSentExchange ? (exchange.SentMsg ?? string.Empty) : (exchange.ReceivedMsg ?? string.Empty);
-        
+
         // If msg contains just category+class and theirCall looks like a location, combine them
-        if (isSentExchange && 
+        if (isSentExchange &&
             !string.IsNullOrWhiteSpace(msg) &&
-            !string.IsNullOrWhiteSpace(theirCall) && 
-            System.Text.RegularExpressions.Regex.IsMatch(theirCall, @"^\w{1,5}$") && 
+            !string.IsNullOrWhiteSpace(theirCall) &&
+            System.Text.RegularExpressions.Regex.IsMatch(theirCall, @"^\w{1,5}$") &&
             System.Text.RegularExpressions.Regex.IsMatch(msg, @"^[0-9]{1,2}[HIOM]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
         {
             return $"{msg} {theirCall}";
@@ -753,8 +754,8 @@ public class WinterFieldDayScoringService : IContestScoringService<WinterFieldDa
     /// Create a structured error entry for validation failures.
     /// </summary>
     private static SkippedEntryInfo CreateValidationError(
-        LogEntry entry, 
-        string reason, 
+        LogEntry entry,
+        string reason,
         string? fieldName = null,
         string? invalidValue = null,
         string? expectedFormat = null,

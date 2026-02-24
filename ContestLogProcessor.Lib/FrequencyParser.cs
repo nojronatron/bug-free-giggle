@@ -12,7 +12,7 @@ public static class FrequencyParser
         string t = token.Trim();
 
         // Disallow tokens containing unit indicators or letters G/M etc.
-        if (t.IndexOfAny(new char[] { 'G','g','M','m','H','h','L','l' }) >= 0) return false;
+        if (t.IndexOfAny(new char[] { 'G', 'g', 'M', 'm', 'H', 'h', 'L', 'l' }) >= 0) return false;
 
         // Disallow the literal "LIGHT"
         if (string.Equals(t, "LIGHT", StringComparison.OrdinalIgnoreCase)) return false;

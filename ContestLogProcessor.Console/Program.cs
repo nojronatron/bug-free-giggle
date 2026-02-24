@@ -63,7 +63,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
             }
         }
 
-                if (!string.IsNullOrWhiteSpace(score))
+        if (!string.IsNullOrWhiteSpace(score))
         {
             if (!File.Exists(score))
             {
@@ -73,99 +73,99 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
             {
                 try
                 {
-                            ILogProcessor scProc = new CabrilloLogProcessor();
-                            OperationResult<Unit> importRes = scProc.ImportFileResult(score);
-                            if (!importRes.IsSuccess)
-                            {
-                                Console.WriteLine($"Import failed: {importRes.ErrorMessage}");
-                                if (debug && importRes.Diagnostic != null) Console.WriteLine(importRes.Diagnostic.ToString());
-                                return;
-                            }
+                    ILogProcessor scProc = new CabrilloLogProcessor();
+                    OperationResult<Unit> importRes = scProc.ImportFileResult(score);
+                    if (!importRes.IsSuccess)
+                    {
+                        Console.WriteLine($"Import failed: {importRes.ErrorMessage}");
+                        if (debug && importRes.Diagnostic != null) Console.WriteLine(importRes.Diagnostic.ToString());
+                        return;
+                    }
 
-                            CabrilloLogFile log = new CabrilloLogFile();
-                            OperationResult<IEnumerable<LogEntry>> readRes = scProc.ReadEntriesResult();
-                            if (!readRes.IsSuccess)
-                            {
-                                Console.WriteLine($"Failed to read entries: {readRes.ErrorMessage}");
-                                if (debug && readRes.Diagnostic != null) Console.WriteLine(readRes.Diagnostic.ToString());
-                                return;
-                            }
+                    CabrilloLogFile log = new CabrilloLogFile();
+                    OperationResult<IEnumerable<LogEntry>> readRes = scProc.ReadEntriesResult();
+                    if (!readRes.IsSuccess)
+                    {
+                        Console.WriteLine($"Failed to read entries: {readRes.ErrorMessage}");
+                        if (debug && readRes.Diagnostic != null) Console.WriteLine(readRes.Diagnostic.ToString());
+                        return;
+                    }
 
-                            List<LogEntry> entriesForScore = readRes.Value!.ToList();
-                            string? inferred = entriesForScore.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
-                            if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
+                    List<LogEntry> entriesForScore = readRes.Value!.ToList();
+                    string? inferred = entriesForScore.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+                    if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
 
-                            // Get headers from the processor for contest detection
-                            if (scProc is CabrilloLogProcessor cabrilloProc)
-                            {
-                                if (cabrilloProc.TryGetHeader("START-OF-LOG", out string? startOfLogHeader) && !string.IsNullOrWhiteSpace(startOfLogHeader))
-                                {
-                                    log.Headers["START-OF-LOG"] = startOfLogHeader!;
-                                }
-                                if (cabrilloProc.TryGetHeader("END-OF-LOG", out string? endOfLogHeader))
-                                {
-                                    log.Headers["END-OF-LOG"] = endOfLogHeader ?? string.Empty;
-                                }
-                                if (cabrilloProc.TryGetHeader("CONTEST", out string? contestHeader))
-                                {
-                                    log.Headers["CONTEST"] = contestHeader!;
-                                }
-                                if (cabrilloProc.TryGetHeader("CALLSIGN", out string? callsignHeader) && !string.IsNullOrWhiteSpace(callsignHeader))
-                                {
-                                    log.Headers["CALLSIGN"] = callsignHeader!;
-                                }
-                            }
+                    // Get headers from the processor for contest detection
+                    if (scProc is CabrilloLogProcessor cabrilloProc)
+                    {
+                        if (cabrilloProc.TryGetHeader("START-OF-LOG", out string? startOfLogHeader) && !string.IsNullOrWhiteSpace(startOfLogHeader))
+                        {
+                            log.Headers["START-OF-LOG"] = startOfLogHeader!;
+                        }
+                        if (cabrilloProc.TryGetHeader("END-OF-LOG", out string? endOfLogHeader))
+                        {
+                            log.Headers["END-OF-LOG"] = endOfLogHeader ?? string.Empty;
+                        }
+                        if (cabrilloProc.TryGetHeader("CONTEST", out string? contestHeader))
+                        {
+                            log.Headers["CONTEST"] = contestHeader!;
+                        }
+                        if (cabrilloProc.TryGetHeader("CALLSIGN", out string? callsignHeader) && !string.IsNullOrWhiteSpace(callsignHeader))
+                        {
+                            log.Headers["CALLSIGN"] = callsignHeader!;
+                        }
+                    }
 
-                            log.Entries = entriesForScore;
+                    log.Entries = entriesForScore;
 
-                            // Detect contest type and get appropriate scoring service
-                            IContestDetector detector = serviceProvider.GetRequiredService<IContestDetector>();
-                            IContestRegistry registry = serviceProvider.GetRequiredService<IContestRegistry>();
+                    // Detect contest type and get appropriate scoring service
+                    IContestDetector detector = serviceProvider.GetRequiredService<IContestDetector>();
+                    IContestRegistry registry = serviceProvider.GetRequiredService<IContestRegistry>();
 
-                            OperationResult<string> contestDetection = detector.DetectContestType(log);
-                            if (!contestDetection.IsSuccess)
-                            {
-                                Console.WriteLine($"Contest detection failed: {contestDetection.ErrorMessage}");
-                                if (debug && contestDetection.Diagnostic != null) Console.WriteLine(contestDetection.Diagnostic.ToString());
-                                return;
-                            }
+                    OperationResult<string> contestDetection = detector.DetectContestType(log);
+                    if (!contestDetection.IsSuccess)
+                    {
+                        Console.WriteLine($"Contest detection failed: {contestDetection.ErrorMessage}");
+                        if (debug && contestDetection.Diagnostic != null) Console.WriteLine(contestDetection.Diagnostic.ToString());
+                        return;
+                    }
 
-                            string contestType = contestDetection.Value!;
-                            Console.WriteLine($"Detected contest: {contestType}");
+                    string contestType = contestDetection.Value!;
+                    Console.WriteLine($"Detected contest: {contestType}");
 
-                            if (contestType == "SALMON-RUN")
-                            {
-                                SalmonRunScoringService svc = serviceProvider.GetRequiredService<SalmonRunScoringService>();
-                                OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScore(log);
-                                if (!scoreOp.IsSuccess)
-                                {
-                                    Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
-                                    if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
-                                    return;
-                                }
+                    if (contestType == "SALMON-RUN")
+                    {
+                        SalmonRunScoringService svc = serviceProvider.GetRequiredService<SalmonRunScoringService>();
+                        OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScore(log);
+                        if (!scoreOp.IsSuccess)
+                        {
+                            Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                            if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                            return;
+                        }
 
-                                SalmonRunScoreResult res = scoreOp.Value!;
-                                PrintSalmonRunScore(res);
-                            }
-                            else if (contestType == "WFD")
-                            {
-                                WinterFieldDayScoringService svc = serviceProvider.GetRequiredService<WinterFieldDayScoringService>();
-                                OperationResult<WinterFieldDayScoreResult> scoreOp = svc.CalculateScore(log);
-                                if (!scoreOp.IsSuccess)
-                                {
-                                    Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
-                                    if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
-                                    return;
-                                }
+                        SalmonRunScoreResult res = scoreOp.Value!;
+                        PrintSalmonRunScore(res);
+                    }
+                    else if (contestType == "WFD")
+                    {
+                        WinterFieldDayScoringService svc = serviceProvider.GetRequiredService<WinterFieldDayScoringService>();
+                        OperationResult<WinterFieldDayScoreResult> scoreOp = svc.CalculateScore(log);
+                        if (!scoreOp.IsSuccess)
+                        {
+                            Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                            if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                            return;
+                        }
 
-                                WinterFieldDayScoreResult res = scoreOp.Value!;
-                                PrintWinterFieldDayScore(res);
-                            }
-                            else
-                            {
-                                Console.WriteLine($"Scoring not implemented for contest type: {contestType}");
-                                return;
-                            }
+                        WinterFieldDayScoreResult res = scoreOp.Value!;
+                        PrintWinterFieldDayScore(res);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Scoring not implemented for contest type: {contestType}");
+                        return;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -326,11 +326,11 @@ static void PrintWinterFieldDayScore(WinterFieldDayScoreResult res)
     Console.WriteLine($" Phone QSOs  : {res.PhoneQsos} x 1pt = {res.PhoneQsos}");
     Console.WriteLine($" CW/Digital  : {res.CwDigitalQsos} x 2pts = {res.CwDigitalQsos * 2}");
     Console.WriteLine("------------------------------------------");
-    
+
     int innerWidth = Math.Max(10, headerBorder.Length - 2);
     ReportRenderer.PrintWrappedList("Station Categories", res.UniqueStationCategories, innerWidth, 2, false, res.UniqueStationCategories.Count.ToString());
     ReportRenderer.PrintWrappedList("Locations", res.UniqueLocations, innerWidth, 2, false, res.UniqueLocations.Count.ToString());
-    
+
     Console.WriteLine("------------------------------------------");
     Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
     int show = Math.Min(10, res.SkippedEntries.Count);
@@ -351,11 +351,11 @@ static void ConfigureServices(ServiceCollection services)
 {
     // Register core contest infrastructure (registry, detector, exchange strategy registry)
     services.RegisterContestInfrastructure();
-    
+
     // Register contest-specific services using their bootstrap extensions
     services.RegisterSalmonRunContest();
     services.RegisterWinterFieldDayContest();
-    
+
     // Configure exchange strategy registry with registered strategies
     services.ConfigureExchangeStrategyRegistry();
 }

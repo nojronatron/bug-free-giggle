@@ -8,19 +8,19 @@ public enum CategoryMode
 {
     /// <summary>CW (Continuous Wave/Morse code)</summary>
     CW,
-    
+
     /// <summary>Digital modes</summary>
     Digi,
-    
+
     /// <summary>FM (Frequency Modulation)</summary>
     FM,
-    
+
     /// <summary>RTTY (Radio Teletype)</summary>
     RTTY,
-    
+
     /// <summary>SSB (Single Sideband voice)</summary>
     SSB,
-    
+
     /// <summary>Mixed modes</summary>
     Mixed
 }

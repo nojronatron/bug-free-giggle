@@ -1,4 +1,5 @@
 using System;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.SalmonRun;
@@ -11,7 +12,7 @@ namespace ContestLogProcessor.SalmonRun;
 public class SalmonRunInfoSent : IInfoSent
 {
     public string RawExchange { get; }
-    
+
     /// <summary>
     /// Location identifier (county abbreviation or state/province code).
     /// Examples: "KING", "WHI", "OR", "BC"
@@ -32,7 +33,7 @@ public class SalmonRunInfoSent : IInfoSent
 public class SalmonRunInfoReceived : IInfoReceived
 {
     public string RawExchange { get; }
-    
+
     /// <summary>
     /// Location identifier (county abbreviation or state/province code).
     /// Examples: "KING", "WHI", "OR", "BC"

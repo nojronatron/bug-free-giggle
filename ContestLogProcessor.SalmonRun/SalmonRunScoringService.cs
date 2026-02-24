@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.SalmonRun;

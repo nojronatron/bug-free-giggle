@@ -19,7 +19,7 @@ public static class SalmonRunBootstrap
         services.AddSingleton<ILocationLookup, InMemoryLocationLookup>();
         services.AddSingleton<SalmonRunScoringService>();
         services.AddSingleton<IContestScoringService<SalmonRunScoreResult>, SalmonRunScoringService>();
-        
+
         // Register Salmon Run exchange strategy
         services.AddSingleton<SalmonRunExchangeStrategy>();
         services.AddSingleton<IContestExchangeStrategy>(provider => provider.GetRequiredService<SalmonRunExchangeStrategy>());
