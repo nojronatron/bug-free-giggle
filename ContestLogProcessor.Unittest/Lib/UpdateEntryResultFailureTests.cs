@@ -1,7 +1,6 @@
-using System;
-using System.Linq;
-using Xunit;
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
 {
@@ -10,10 +9,10 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_NonExistentId_ReturnsNotFound()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             // Attempt to update an id that does not exist
             string missing = Guid.NewGuid().ToString();
-            var result = proc.UpdateEntryResult(missing, e => e.Band = "20m");
+            OperationResult<Unit> result = proc.UpdateEntryResult(missing, e => e.Band = "20m");
             Assert.False(result.IsSuccess);
             Assert.Equal(ResponseStatus.NotFound, result.Status);
             Assert.Contains(missing, result.ErrorMessage ?? string.Empty, StringComparison.OrdinalIgnoreCase);
@@ -22,8 +21,8 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_EditActionThrowsArgumentException_ReturnsBadFormat()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",
@@ -33,10 +32,12 @@ namespace ContestLogProcessor.Unittest.Lib
                 TheirCall = "K7XXX"
             };
 
-            var created = proc.CreateEntryResult(entry);
+            OperationResult<LogEntry> created = proc.CreateEntryResult(entry);
+            Assert.NotNull(created);
             Assert.True(created.IsSuccess);
+            Assert.NotNull(created.Value);
 
-            var result = proc.UpdateEntryResult(created.Value.Id, e => throw new ArgumentException("bad"));
+            OperationResult<Unit> result = proc.UpdateEntryResult(created.Value.Id, e => throw new ArgumentException("bad"));
             Assert.False(result.IsSuccess);
             Assert.Equal(ResponseStatus.BadFormat, result.Status);
             Assert.NotNull(result.Diagnostic);
@@ -46,8 +47,8 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_EditActionThrowsArgumentNullException_ReturnsBadFormat()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",
@@ -57,10 +58,12 @@ namespace ContestLogProcessor.Unittest.Lib
                 TheirCall = "K7XXX"
             };
 
-            var created = proc.CreateEntryResult(entry);
+            OperationResult<LogEntry> created = proc.CreateEntryResult(entry);
             Assert.True(created.IsSuccess);
+            Assert.NotNull(created);
+            Assert.NotNull(created.Value);
 
-            var result = proc.UpdateEntryResult(created.Value.Id, e => throw new ArgumentNullException("x"));
+            OperationResult<Unit> result = proc.UpdateEntryResult(created.Value.Id, e => throw new ArgumentNullException("x"));
             Assert.False(result.IsSuccess);
             Assert.Equal(ResponseStatus.BadFormat, result.Status);
             Assert.NotNull(result.Diagnostic);
@@ -70,8 +73,8 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void UpdateEntryResult_EditActionThrowsOperationCanceledException_IsPropagated()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",
@@ -81,17 +84,19 @@ namespace ContestLogProcessor.Unittest.Lib
                 TheirCall = "K7XXX"
             };
 
-            var created = proc.CreateEntryResult(entry);
+            OperationResult<LogEntry> created = proc.CreateEntryResult(entry);
             Assert.True(created.IsSuccess);
+            Assert.NotNull(created);
+            Assert.NotNull(created.Value);
 
             Assert.Throws<OperationCanceledException>(() => proc.UpdateEntryResult(created.Value.Id, e => throw new OperationCanceledException()));
         }
 
         [Fact]
-        public void UpdateEntryResult_EditActionThrowsGenericException_ReturnsErrorWithDiagnostic()
+        public void UpdateEntryResult_EditActionThrowsGenericException_ReturnsErrorAndDiagnostic()
         {
-            var proc = new CabrilloLogProcessor();
-            var entry = new LogEntry
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            LogEntry entry = new LogEntry
             {
                 QsoDateTime = DateTime.UtcNow,
                 Frequency = "7000",
@@ -101,10 +106,12 @@ namespace ContestLogProcessor.Unittest.Lib
                 TheirCall = "K7XXX"
             };
 
-            var created = proc.CreateEntryResult(entry);
+            OperationResult<LogEntry> created = proc.CreateEntryResult(entry);
+            Assert.NotNull(created);
             Assert.True(created.IsSuccess);
+            Assert.NotNull(created.Value);
 
-            var result = proc.UpdateEntryResult(created.Value.Id, e => throw new InvalidOperationException("boom"));
+            OperationResult<Unit> result = proc.UpdateEntryResult(created.Value.Id, e => throw new InvalidOperationException("boom"));
             Assert.False(result.IsSuccess);
             Assert.Equal(ResponseStatus.Error, result.Status);
             Assert.NotNull(result.Diagnostic);

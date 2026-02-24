@@ -1,7 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
 using ContestLogProcessor.Lib;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
@@ -14,11 +12,11 @@ public class DateTimeParsingTests
         string tmp = Path.GetTempFileName();
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: Test\r\nQSO: 7265 PH 2025-09-20 1715 K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
-    var proc = new CabrilloLogProcessor();
-    var imp = proc.ImportFileResult(tmp);
-    Assert.True(imp.IsSuccess);
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
+        OperationResult<Unit> imp = proc.ImportFileResult(tmp);
+        Assert.True(imp.IsSuccess);
 
-    var entry = proc.ReadEntriesResult().Value!.FirstOrDefault();
+        LogEntry? entry = proc.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(entry);
         Assert.Equal(DateTimeKind.Utc, entry.QsoDateTime.Kind);
         Assert.Equal(2025, entry.QsoDateTime.Year);
@@ -38,23 +36,23 @@ public class DateTimeParsingTests
         // malformed date/time
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: Test\r\nQSO: 7265 PH BADDATE BADTIME K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
-    var proc = new CabrilloLogProcessor();
-    var imp2 = proc.ImportFileResult(tmp);
-    Assert.True(imp2.IsSuccess);
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
+        OperationResult<Unit> imp2 = proc.ImportFileResult(tmp);
+        Assert.True(imp2.IsSuccess);
 
-    // access internal log via TryGetHeader and entries; SkippedEntries are stored in the internal CabrilloLogFile which is not public.
+        // access internal log via TryGetHeader and entries; SkippedEntries are stored in the internal CabrilloLogFile which is not public.
         // However ImportFile stores the SkippedEntries in the internal _logFile and tests elsewhere rely on that via imports that check for missing headers.
         // We'll assert that a parsed entry exists but has DateTime.MinValue and that a skipped entry with reason exists in the exported file via ExportFile attempt.
 
-    var entry = proc.ReadEntriesResult().Value!.FirstOrDefault();
+        LogEntry? entry = proc.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(entry);
         Assert.Equal(DateTime.MinValue, entry.QsoDateTime);
 
-    // Verify that the processor recorded a skipped entry for the unparsable date/time via the public snapshot accessor
-    CabrilloLogFileSnapshot? snapshot = proc.GetReadOnlyLogFile();
-    Assert.NotNull(snapshot);
-    var skipped = snapshot!.SkippedEntries;
-    Assert.Contains(skipped, s => s.Reason == "Unparseable date/time" && s.SourceLineNumber == 3);
+        // Verify that the processor recorded a skipped entry for the unparsable date/time via the public snapshot accessor
+        CabrilloLogFileSnapshot? snapshot = proc.GetReadOnlyLogFile();
+        Assert.NotNull(snapshot);
+        IReadOnlyList<SkippedEntryInfo> skipped = snapshot!.SkippedEntries;
+        Assert.Contains(skipped, s => s.Reason == "Unparseable date/time" && s.SourceLineNumber == 3);
 
         // Since SkippedEntries are available, we can also verify that malformed QSO was not fatal by ensuring entry exists
         File.Delete(tmp);
@@ -67,11 +65,11 @@ public class DateTimeParsingTests
         // Use a format with colon in time which is listed in supported formats
         File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: Test\r\nQSO: 7265 PH 2025-09-20 17:15 K7XXX 59 OKA N7UK 59 KITT\r\nEND-OF-LOG:\r\n");
 
-    var proc = new CabrilloLogProcessor();
-    var imp3 = proc.ImportFileResult(tmp);
-    Assert.True(imp3.IsSuccess);
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
+        OperationResult<Unit> imp3 = proc.ImportFileResult(tmp);
+        Assert.True(imp3.IsSuccess);
 
-    var entry = proc.ReadEntriesResult().Value!.FirstOrDefault();
+        LogEntry? entry = proc.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(entry);
         Assert.Equal(DateTimeKind.Utc, entry.QsoDateTime.Kind);
         Assert.Equal(17, entry.QsoDateTime.Hour);

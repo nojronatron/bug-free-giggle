@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Xunit;
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -15,10 +12,10 @@ public class CabrilloLogProcessorTests
     [Fact]
     public void ImportFile_ParsesLogFileCorrectly()
     {
-        var processor = new CabrilloLogProcessor();
-        var imp = processor.ImportFileResult(SampleLogPath);
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        OperationResult<Unit> imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
-        var entries = processor.ReadEntriesResult().Value!.ToList();
+        List<LogEntry> entries = processor.ReadEntriesResult().Value!.ToList();
         Assert.NotEmpty(entries);
         Assert.All(entries, e => Assert.False(string.IsNullOrWhiteSpace(e.CallSign)));
     }
@@ -26,34 +23,34 @@ public class CabrilloLogProcessorTests
     [Fact]
     public void ReadEntries_FilterOrderPaging_Works()
     {
-        var processor = new CabrilloLogProcessor();
-        var imp = processor.ImportFileResult(SampleLogPath);
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        OperationResult<Unit> imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
-        var cw = processor.ReadEntriesResult(filter: e => e.Mode == "CW").Value!.ToList();
+        List<LogEntry> cw = processor.ReadEntriesResult(filter: e => e.Mode == "CW").Value!.ToList();
         Assert.All(cw, e => Assert.Equal("CW", e.Mode));
-        var ordered = processor.ReadEntriesResult(orderBy: e => e.QsoDateTime).Value!.ToList();
+        List<LogEntry> ordered = processor.ReadEntriesResult(orderBy: e => e.QsoDateTime).Value!.ToList();
         Assert.True(ordered.SequenceEqual(ordered.OrderBy(e => e.QsoDateTime)));
 
-        var paged = processor.ReadEntriesResult(orderBy: e => e.QsoDateTime, skip: 1, take: 1).Value!.ToList();
+        List<LogEntry> paged = processor.ReadEntriesResult(orderBy: e => e.QsoDateTime, skip: 1, take: 1).Value!.ToList();
         Assert.True(paged.Count <= 1);
     }
 
     [Fact]
     public void CreateGetUpdateDelete_AndEvents_Work()
     {
-        var processor = new CabrilloLogProcessor();
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
 
         // Track events
-        var added = new List<LogEntry>();
-        var updated = new List<LogEntry>();
-        var deletedIds = new List<string>();
+        List<LogEntry> added = new List<LogEntry>();
+        List<LogEntry> updated = new List<LogEntry>();
+        List<string> deletedIds = new List<string>();
 
         processor.EntryAdded += (_, e) => added.Add(e);
         processor.EntryUpdated += (_, e) => updated.Add(e);
         processor.EntryDeleted += (_, id) => deletedIds.Add(id);
 
         // Create
-        var newEntry = new LogEntry
+        LogEntry newEntry = new LogEntry
         {
             Frequency = "14000",
             Mode = "CW",
@@ -63,45 +60,45 @@ public class CabrilloLogProcessorTests
             TheirCall = "K7XXX"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
-    Assert.NotNull(created);
-    Assert.False(string.IsNullOrWhiteSpace(created.Id));
-    Assert.Contains(added, a => a.Id == created.Id);
+        OperationResult<LogEntry> createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        LogEntry? created = createdResult.Value;
+        Assert.NotNull(created);
+        Assert.False(string.IsNullOrWhiteSpace(created.Id));
+        Assert.Contains(added, a => a.Id == created.Id);
 
-    // Read by id (OperationResult API)
-    var fetched = processor.GetEntryByIdResult(created.Id).Value;
-    Assert.NotNull(fetched);
-    Assert.Equal("UNITTEST", fetched.CallSign);
+        // Read by id (OperationResult API)
+        LogEntry? fetched = processor.GetEntryByIdResult(created.Id).Value;
+        Assert.NotNull(fetched);
+        Assert.Equal("UNITTEST", fetched.CallSign);
 
         // Update
-    var updatedResult = processor.UpdateEntryResult(created.Id, e => e.Band = "20m");
-    Assert.True(updatedResult.IsSuccess);
+        OperationResult<Unit> updatedResult = processor.UpdateEntryResult(created.Id, e => e.Band = "20m");
+        Assert.True(updatedResult.IsSuccess);
         Assert.Contains(updated, u => u.Id == created.Id && u.Band == "20m");
 
-    // Delete (migrated to OperationResult API)
-    var deletedResult = processor.DeleteEntryResult(created.Id);
-    Assert.True(deletedResult.IsSuccess);
+        // Delete (migrated to OperationResult API)
+        OperationResult<Unit> deletedResult = processor.DeleteEntryResult(created.Id);
+        Assert.True(deletedResult.IsSuccess);
         Assert.Contains(deletedIds, id => id == created.Id);
-    Assert.False(processor.GetEntryByIdResult(created.Id).IsSuccess);
+        Assert.False(processor.GetEntryByIdResult(created.Id).IsSuccess);
     }
 
     [Fact]
     public void Integration_ImportModifyExport_CanonicalFormatting()
     {
-        var processor = new CabrilloLogProcessor();
-        var imp = processor.ImportFileResult(SampleLogPath);
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        OperationResult<Unit> imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
 
-        var entries = processor.ReadEntriesResult(orderBy: e => e.QsoDateTime).Value!.ToList();
+        List<LogEntry> entries = processor.ReadEntriesResult(orderBy: e => e.QsoDateTime).Value!.ToList();
         Assert.NotEmpty(entries);
 
         // pick a parsed token to check for in exported canonical output
-        var sentSig = entries.Select(e => e.SentExchange?.SentSig).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+        string? sentSig = entries.Select(e => e.SentExchange?.SentSig).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
 
         // Create a new entry to ensure CRUD is exercised before export
-        var newEntry = new LogEntry
+        LogEntry newEntry = new LogEntry
         {
             Frequency = "7000",
             Mode = "CW",
@@ -111,20 +108,21 @@ public class CabrilloLogProcessorTests
             TheirCall = "INTEG"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
-    var updatedResult2 = processor.UpdateEntryResult(created.Id, e => e.Band = "40m");
-    Assert.True(updatedResult2.IsSuccess);
+        OperationResult<LogEntry> createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        LogEntry? created = createdResult.Value;
+        Assert.NotNull(created);
+        OperationResult<Unit> updatedResult2 = processor.UpdateEntryResult(created.Id, e => e.Band = "40m");
+        Assert.True(updatedResult2.IsSuccess);
 
-        var exportFile = ExportPath + "_crud_integ.log";
+        string exportFile = ExportPath + "_crud_integ.log";
         if (File.Exists(exportFile)) File.Delete(exportFile);
 
-    var r = processor.ExportFileResult(ExportPath + "_crud_integ");
-    Assert.True(r.IsSuccess);
-    Assert.True(File.Exists(exportFile));
+        OperationResult<Unit> r = processor.ExportFileResult(ExportPath + "_crud_integ");
+        Assert.True(r.IsSuccess);
+        Assert.True(File.Exists(exportFile));
 
-        var lines = File.ReadAllLines(exportFile);
+        string[] lines = File.ReadAllLines(exportFile);
         Assert.Contains(lines, l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
 
         if (!string.IsNullOrWhiteSpace(sentSig))
@@ -139,9 +137,9 @@ public class CabrilloLogProcessorTests
     [Fact]
     public void ImportFile_ThrowsForMissingFile()
     {
-        var processor = new CabrilloLogProcessor();
-        var missing = Path.Combine(Path.GetTempPath(), "no-such-file-" + Guid.NewGuid() + ".log");
-        var res = processor.ImportFileResult(missing);
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        string missing = Path.Combine(Path.GetTempPath(), "no-such-file-" + Guid.NewGuid() + ".log");
+        OperationResult<Unit> res = processor.ImportFileResult(missing);
         Assert.False(res.IsSuccess);
         Assert.Equal(ResponseStatus.NotFound, res.Status);
     }
@@ -149,8 +147,8 @@ public class CabrilloLogProcessorTests
     [Fact]
     public void ImportFile_ToleratesMalformedLines()
     {
-        var processor = new CabrilloLogProcessor();
-        var tmp = Path.Combine(Path.GetTempPath(), "malformed_" + Guid.NewGuid() + ".log");
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        string tmp = Path.Combine(Path.GetTempPath(), "malformed_" + Guid.NewGuid() + ".log");
         try
         {
             File.WriteAllLines(tmp, new[]
@@ -167,10 +165,10 @@ public class CabrilloLogProcessorTests
             });
 
             // Should not fail
-            var imp2 = processor.ImportFileResult(tmp);
+            OperationResult<Unit> imp2 = processor.ImportFileResult(tmp);
             Assert.True(imp2.IsSuccess);
 
-            var entries = processor.ReadEntriesResult().Value!.ToList();
+            List<LogEntry> entries = processor.ReadEntriesResult().Value!.ToList();
             Assert.NotEmpty(entries);
             // Ensure at least the valid callsigns were parsed
             Assert.Contains(entries, e => string.Equals(e.CallSign, "K7RMZ", StringComparison.OrdinalIgnoreCase) || string.Equals(e.CallSign, "TEST", StringComparison.OrdinalIgnoreCase));

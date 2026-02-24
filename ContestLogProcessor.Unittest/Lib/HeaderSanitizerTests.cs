@@ -1,7 +1,6 @@
-using System;
-using System.IO;
-using Xunit;
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -17,8 +16,8 @@ public class HeaderSanitizerTests
             // Use a sanitizable header key (NAME) which our policy covers.
             File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: innocent\r\nNAME: select * from users where id=1\r\nEND-OF-LOG:\r\n");
 
-            var proc = new CabrilloLogProcessor();
-            var imp = proc.ImportFileResult(tmp);
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            OperationResult<Unit> imp = proc.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
             Assert.True(proc.TryGetHeader("NAME", out string? noteVal));
@@ -43,8 +42,8 @@ public class HeaderSanitizerTests
         {
             File.WriteAllText(tmp, "START-OF-LOG: 3.0\r\nCREATED-BY: ShortName\r\nEND-OF-LOG:\r\n");
 
-            var proc = new CabrilloLogProcessor();
-            var imp2 = proc.ImportFileResult(tmp);
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            OperationResult<Unit> imp2 = proc.ImportFileResult(tmp);
             Assert.True(imp2.IsSuccess);
 
             Assert.True(proc.TryGetHeader("CREATED-BY", out string? cb));

@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using System.Text.RegularExpressions;
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 
 namespace ContestLogProcessor.Lib;
 
@@ -33,8 +29,8 @@ public partial class CabrilloLogProcessor : ILogProcessor
     {
         if (_logFile == null) return null;
 
-    // Clone headers into a new dictionary (strings are immutable so shallow copy is sufficient)
-    Dictionary<string, string> headersCopyMutable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // Clone headers into a new dictionary (strings are immutable so shallow copy is sufficient)
+        Dictionary<string, string> headersCopyMutable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, string> kvp in _logFile.Headers)
         {
             headersCopyMutable[kvp.Key] = kvp.Value;
@@ -81,10 +77,8 @@ public partial class CabrilloLogProcessor : ILogProcessor
         if (trimmed.Length <= 13) return trimmed;
 
         // Patterns that are likely to indicate code or commands. Keep the patterns simple and case-insensitive.
-        string[] suspicious = new[] { "select * from", "drop table", "--", ";--", "exec ", "rm -rf", "curl ", "powershell -", "invoke-" };
-
         string lowered = trimmed.ToLowerInvariant();
-        foreach (string pat in suspicious)
+        foreach (string pat in CabrilloConstants.SuspiciousPatterns)
         {
             int idx = lowered.IndexOf(pat, StringComparison.Ordinal);
             if (idx >= 0)
@@ -192,9 +186,8 @@ public partial class CabrilloLogProcessor : ILogProcessor
                             string datePart = parts[3];
                             string timePart = parts[4];
                             string combined = datePart + " " + timePart;
-                            string[] formats = new[] { "yyyy-MM-dd HHmm", "yyyy-MM-dd HH:mm", "yyyy-MM-dd H:mm", "yyyy-MM-dd Hm", "yyyyMMdd HHmm" };
                             DateTime parsed = default;
-                            bool parsedOk = DateTime.TryParseExact(combined, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed);
+                            bool parsedOk = DateTime.TryParseExact(combined, CabrilloConstants.DateTimeFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out parsed);
                             if (!parsedOk)
                             {
                                 // Fallback to a permissive parse; ensure we treat parsed times as UTC
@@ -245,7 +238,15 @@ public partial class CabrilloLogProcessor : ILogProcessor
                                 // If the original token was a band mapping, we may have returned the mapped frequency
                                 entry.Band = MapFrequencyToBand(freqKHz.Value) ?? entry.Band;
                                 // Normalize Frequency string to the integer kHz representation so downstream code can rely on numeric values
-                                entry.Frequency = freqKHz.Value.ToString();
+                                // EXCEPTION: Special tokens like "LIGHT" should preserve their original form
+                                if (entry.Frequency.Equals("LIGHT", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    entry.Frequency = "LIGHT"; // Preserve special token
+                                }
+                                else
+                                {
+                                    entry.Frequency = freqKHz.Value.ToString();
+                                }
                             }
                             else
                             {
@@ -281,6 +282,9 @@ public partial class CabrilloLogProcessor : ILogProcessor
                         }
                         entry.TheirCall = theirCall;
 
+                        // Parse optional transmitter ID (Cabrillo v3 spec: 0 or 1)
+                        entry.TransmitterId = ParseTransmitterId(parts);
+
                         if (string.IsNullOrWhiteSpace(entry.Id))
                         {
                             entry.Id = Guid.NewGuid().ToString();
@@ -303,38 +307,35 @@ public partial class CabrilloLogProcessor : ILogProcessor
                 else if (!string.IsNullOrWhiteSpace(line))
                 {
                     int idx = line.IndexOf(':');
-                        if (idx > 0)
+                    if (idx > 0)
+                    {
+                        string key = line.Substring(0, idx).Trim();
+                        string value = line.Substring(idx + 1).Trim();
+
+                        // Only apply sanitizer to a conservative list of header keys that may contain
+                        // long string values. The sanitizer itself is conservative and will no-op for
+                        // short values (<= 13 chars). Keys are compared case-insensitively.
+                        if (SanitizableHeaderExtensions.IsSanitizable(key))
                         {
-                            string key = line.Substring(0, idx).Trim();
-                            string value = line.Substring(idx + 1).Trim();
-
-                            // Only apply sanitizer to a conservative list of header keys that may contain
-                            // long string values. The sanitizer itself is conservative and will no-op for
-                            // short values (<= 13 chars). Keys are compared case-insensitively.
-                            HashSet<string> sanitizable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                "LOCATION",
-                                "CALLSIGN",
-                                "CLUB",
-                                "NAME",
-                                "ADDRESS",
-                                "ADDRESS-CITY",
-                                "ADDRESS-POSTALCODE",
-                                "ADDRESS-COUNTRY",
-                                "EMAIL",
-                                "CREATED-BY",
-                                "SOAPBOX"
-                            };
-
-                            if (sanitizable.Contains(key))
-                            {
-                                headers[key] = SanitizeHeaderValue(value, key);
-                            }
-                            else
-                            {
-                                headers[key] = value;
-                            }
+                            headers[key] = SanitizeHeaderValue(value, key);
                         }
+                        else
+                        {
+                            headers[key] = value;
+                        }
+
+                        // Validate Cabrillo v3 enumerated header values
+                        OperationResult<Unit> validationResult = ValidateHeaderEnumeratedValue(key, value, lineIndex);
+                        if (!validationResult.IsSuccess)
+                        {
+                            skipped.Add(new SkippedEntryInfo
+                            {
+                                SourceLineNumber = lineIndex,
+                                Reason = $"Invalid header value: {validationResult.ErrorMessage}",
+                                RawLine = line
+                            });
+                        }
+                    }
                 }
             }
 
@@ -347,6 +348,17 @@ public partial class CabrilloLogProcessor : ILogProcessor
 
             _entries.Clear();
             _entries.AddRange(entries);
+
+            // Validate required Cabrillo v3 markers
+            if (!_logFile.HasStartOfLog)
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = null, Reason = "Missing required START-OF-LOG marker", RawLine = null });
+            }
+
+            if (!_logFile.HasEndOfLog)
+            {
+                skipped.Add(new SkippedEntryInfo { SourceLineNumber = null, Reason = "Missing required END-OF-LOG marker", RawLine = null });
+            }
 
             // If there are parsed QSO entries but no CALLSIGN header, record a skipped-header item so callers
             // can inspect problems. Do not throw here to keep import tolerant for unit tests and tools.
@@ -380,13 +392,13 @@ public partial class CabrilloLogProcessor : ILogProcessor
     /// and then up to 5 tokens for the received exchange.
     /// </summary>
     private static (Exchange? sent, string? theirCall, Exchange? recv) ParseExchanges(string[] parts, int startIndex, List<SkippedEntryInfo> skipped, int sourceLineNumber, string rawLine)
-        {
+    {
         if (parts == null)
         {
             return (null, null, null);
         }
-    // Use source-generated Regex instances (GeneratedRegex) for best runtime performance
-    // and to avoid allocating/parsing patterns on every invocation.
+        // Use source-generated Regex instances (GeneratedRegex) for best runtime performance
+        // and to avoid allocating/parsing patterns on every invocation.
         // Collect remaining tokens after the fixed-position fields (freq, mode, date, time, mycall)
         int idx = startIndex;
         string[] tokens = parts.Skip(startIndex).ToArray();
@@ -510,13 +522,58 @@ public partial class CabrilloLogProcessor : ILogProcessor
     }
 
     /// <summary>
-    /// Parse a frequency token into an integer kHz value when possible.
-    /// Accepts integer or floating values; truncates fractional part. Returns null when token is invalid per Salmon Run rules.
+    /// Validate that a frequency in kHz falls within defined amateur radio band ranges.
+    /// Returns true if the frequency is within a recognized amateur band; otherwise false.
     /// </summary>
+    private static bool IsValidAmateurFrequency(int freqKHz)
+    {
+        // HF Bands
+        if (freqKHz >= 1800 && freqKHz <= 2000) return true;   // 160m
+        if (freqKHz >= 3500 && freqKHz <= 4000) return true;   // 80m
+        if (freqKHz >= 7000 && freqKHz <= 7300) return true;   // 40m
+        if (freqKHz >= 10100 && freqKHz <= 10150) return true; // 30m
+        if (freqKHz >= 14000 && freqKHz <= 14350) return true; // 20m
+        if (freqKHz >= 18068 && freqKHz <= 18168) return true; // 17m
+        if (freqKHz >= 21000 && freqKHz <= 21450) return true; // 15m
+        if (freqKHz >= 24890 && freqKHz <= 24990) return true; // 12m
+        if (freqKHz >= 28000 && freqKHz <= 29700) return true; // 10m
+
+        // VHF Bands
+        if (freqKHz >= 50000 && freqKHz <= 54000) return true;   // 6m
+        if (freqKHz >= 144000 && freqKHz <= 148000) return true; // 2m
+
+        // UHF Bands
+        if (freqKHz >= 222000 && freqKHz <= 225000) return true; // 1.25m
+        if (freqKHz >= 420000 && freqKHz <= 450000) return true; // 70cm
+        if (freqKHz >= 902000 && freqKHz <= 928000) return true; // 33cm
+
+        // Microwave Bands (in kHz)
+        if (freqKHz >= 1240000 && freqKHz <= 1300000) return true;  // 23cm
+        if (freqKHz >= 2300000 && freqKHz <= 2450000) return true;  // 13cm
+        if (freqKHz >= 3300000 && freqKHz <= 3500000) return true;  // 9cm
+        if (freqKHz >= 5650000 && freqKHz <= 5925000) return true;  // 6cm
+        if (freqKHz >= 10000000 && freqKHz <= 10500000) return true; // 3cm
+        if (freqKHz >= 24000000 && freqKHz <= 24250000) return true; // 1.25cm
+
+        return false;
+    }
+
+    /// <summary>
+    /// Parse a frequency token to support both legacy and modern Cabrillo frequency patterns.
+    /// Supports official frequency values, integer kHz values, and band tokens.
+    /// Returns frequency in kHz when valid; otherwise null.
+    /// </summary>
+    /// <param name="token">The frequency token to parse</param>
     private static int? ParseFrequencyToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         token = token.Trim();
+
+        // Handle official Cabrillo frequency patterns (both legacy and v3)
+        if (CabrilloConstants.OfficialFrequencies.TryGetValue(token, out int officialFreq))
+        {
+            return officialFreq;
+        }
 
         // If token looks like a band token (e.g., "40m"), map to the band's lowest frequency kHz value
         Match m = Regex.Match(token, "^(\\d{1,3})m$", RegexOptions.IgnoreCase);
@@ -530,33 +587,17 @@ public partial class CabrilloLogProcessor : ILogProcessor
             return null;
         }
 
-        // Reject tokens containing letter 'G' or unit suffixes other than a trailing 'm' handled above
-        if (token.IndexOf('G', StringComparison.OrdinalIgnoreCase) >= 0)
-        {
-            return null;
-        }
-
-        // Reject the literal LIGHT
-        if (string.Equals(token, "LIGHT", StringComparison.OrdinalIgnoreCase)) return null;
-
-        // Try parse as double to support floating formats like 7.053
+        // Try parse as double for floating-point formats, then validate against band ranges
         if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d))
         {
-            // Only consider whole-number portion (truncate) per rules
             int whole = (int)Math.Truncate(d);
-            // Reject ranges outside allowed bounds
-            if (whole < 1800 || whole > 54000) return null;
-            // Also reject the 55..1000 range per rules
-            if (whole >= 55 && whole <= 1000) return null;
-            return whole;
+            return IsValidAmateurFrequency(whole) ? whole : null;
         }
 
-        // Try parse integer without decimals
+        // Try parse integer, then validate against band ranges
         if (int.TryParse(token, out int i))
         {
-            if (i < 1800 || i > 54000) return null;
-            if (i >= 55 && i <= 1000) return null;
-            return i;
+            return IsValidAmateurFrequency(i) ? i : null;
         }
 
         return null;
@@ -650,7 +691,7 @@ public partial class CabrilloLogProcessor : ILogProcessor
         // Otherwise, try to map frequency to band.
         if (!string.IsNullOrWhiteSpace(entry.Frequency))
         {
-            int? freq = ParseFrequencyToken(entry.Frequency);
+            int? freq = ParseFrequencyToken(entry.Frequency); // Use standard parsing for static method
             if (freq.HasValue)
             {
                 string? mapped = MapFrequencyToBand(freq.Value);
@@ -1266,13 +1307,99 @@ public partial class CabrilloLogProcessor : ILogProcessor
         }
     }
 
+    /// <summary>
+    /// Parse optional transmitter ID from QSO line tokens.
+    /// Per Cabrillo v3 spec, transmitter ID is 0 or 1 and appears at the end of the QSO line.
+    /// This is a basic/permissive parser - contest-specific scoring services should apply
+    /// stricter validation based on their rules (e.g., whether transmitter ID is expected).
+    /// Returns null if not present or invalid.
+    /// </summary>
+    private static int? ParseTransmitterId(string[] parts)
+    {
+        if (parts == null || parts.Length < 2)
+        {
+            return null;
+        }
+
+        // Transmitter ID is always the last token when present
+        string lastToken = parts[parts.Length - 1];
+
+        // Valid transmitter ID is exactly "0" or "1"
+        if (int.TryParse(lastToken, out int transmitterId) && (transmitterId == 0 || transmitterId == 1))
+        {
+            return transmitterId;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validate header value against Cabrillo v3 enumerated requirements.
+    /// Returns validation result with error message if invalid.
+    /// </summary>
+    private static OperationResult<Unit> ValidateHeaderEnumeratedValue(string key, string value, int lineNumber)
+    {
+        return key.ToUpperInvariant() switch
+        {
+            "CATEGORY-TIME" => ValidateCategoryTime(value),
+            "CATEGORY-OVERLAY" => ValidateCategoryOverlay(value),
+            "CATEGORY-ASSISTED" => ValidateFromSet(value, CategoryAssistedExtensions.GetAllValidValues(), "CATEGORY-ASSISTED"),
+            "CATEGORY-BAND" => ValidateFromSet(value, CabrilloConstants.CategoryBandValues, "CATEGORY-BAND"),
+            "CATEGORY-MODE" => ValidateFromSet(value, CategoryModeExtensions.GetAllValidValues(), "CATEGORY-MODE"),
+            "CATEGORY-OPERATOR" => ValidateFromSet(value, CategoryOperatorExtensions.GetAllValidValues(), "CATEGORY-OPERATOR"),
+            "CATEGORY-POWER" => ValidateFromSet(value, CategoryPowerExtensions.GetAllValidValues(), "CATEGORY-POWER"),
+            "CATEGORY-STATION" => ValidateCategoryStation(value),
+            "CATEGORY-TRANSMITTER" => ValidateCategoryTransmitter(value),
+            _ => OperationResult.Success(Unit.Value) // No validation required for other headers
+        };
+    }
+
+    private static OperationResult<Unit> ValidateCategoryTime(string value)
+    {
+        return CategoryTimeExtensions.TryParse(value, out CategoryTime _)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-TIME value '{value}'. Must be one of: {string.Join(", ", CategoryTimeExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateCategoryOverlay(string value)
+    {
+        return CategoryOverlayExtensions.TryParse(value, out CategoryOverlay _)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-OVERLAY value '{value}'. Must be one of: {string.Join(", ", CategoryOverlayExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateCategoryStation(string value)
+    {
+        return CategoryStationExtensions.TryParse(value, out CategoryStation _)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-STATION value '{value}'. Must be one of: {string.Join(", ", CategoryStationExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateCategoryTransmitter(string value)
+    {
+        return CategoryTransmitterExtensions.TryParse(value, out CategoryTransmitter _)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid CATEGORY-TRANSMITTER value '{value}'. Must be one of: {string.Join(", ", CategoryTransmitterExtensions.GetAllValidValues())}", ResponseStatus.BadFormat);
+    }
+
+    private static OperationResult<Unit> ValidateFromSet(string value, string[] validValues, string headerName)
+    {
+        HashSet<string> validSet = new HashSet<string>(validValues, StringComparer.OrdinalIgnoreCase);
+        return validSet.Contains(value)
+            ? OperationResult.Success(Unit.Value)
+            : OperationResult.Failure<Unit>($"Invalid {headerName} value '{value}'. Must be one of: {string.Join(", ", validValues)}", ResponseStatus.BadFormat);
+    }
+
     // Source-generated regex helpers (faster at runtime and AOT/trimming friendly)
+    // Per Cabrillo v3 spec: RST is 2-3 characters
     [System.Text.RegularExpressions.GeneratedRegex("^(?:[1-5][0-9]{1,2}|[1-5][nN]{1,2})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex SigRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex("^[A-Za-z0-9]{1,5}(?:/[A-Za-z0-9]{1,5})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    // Per Cabrillo v3 spec: Exchange is 1-6 characters (with optional slash but total <= 6)
+    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{1,6}|[A-Za-z0-9]{1,2}/[A-Za-z0-9]{1,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex MsgRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{1,5}/)?[A-Za-z0-9]{1,5}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    // Per Cabrillo v3 spec: Callsign is 3-13 characters with possible '/' (max total 13 with all parts)
+    [System.Text.RegularExpressions.GeneratedRegex("^(?:[A-Za-z0-9]{2,3}/)?[A-Za-z0-9]{3,5}(?:/[A-Za-z0-9]{2,3})?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex CallRegex();
 }

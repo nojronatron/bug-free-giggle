@@ -1,7 +1,7 @@
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
-using ContestLogProcessor.Unittest.Lib;
 using ContestLogProcessor.Lib;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
@@ -9,13 +9,13 @@ namespace ContestLogProcessor.Unittest.Lib
     public class ExitHandlerTests
     {
         [Fact]
-        public async System.Threading.Tasks.Task ExitHandler_RequestsExit()
+        public async Task ExitHandler_RequestsExit()
         {
-            var proc = new CabrilloLogProcessor();
-            var console = new TestConsole(new string?[] { });
-            var ctx = new CommandContext(proc, console, false);
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            TestConsole console = new TestConsole(new string?[] { });
+            CommandContext ctx = new CommandContext(proc, console, false);
 
-            var handler = new ExitCommandHandler();
+            ExitCommandHandler handler = new ExitCommandHandler();
             await handler.HandleAsync(new[] { "exit" }, ctx);
 
             Assert.True(ctx.ExitRequested);
@@ -23,11 +23,11 @@ namespace ContestLogProcessor.Unittest.Lib
         }
 
         [Fact]
-        public async System.Threading.Tasks.Task Shell_Stops_On_ExitHandler()
+        public async Task Shell_Stops_On_ExitHandler()
         {
-            var proc = new CabrilloLogProcessor();
-            var console = new TestConsole(new string?[] { });
-            var ctx = new CommandContext(proc, console, false);
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            TestConsole console = new TestConsole(new string?[] { });
+            CommandContext ctx = new CommandContext(proc, console, false);
 
             InteractiveShell shell = new InteractiveShell(ctx);
             shell.RegisterHandler(new ExitCommandHandler());

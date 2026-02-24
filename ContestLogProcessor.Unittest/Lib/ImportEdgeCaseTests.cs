@@ -1,6 +1,6 @@
 using ContestLogProcessor.Lib;
+
 using Xunit;
-using System.IO;
 
 namespace ContestLogProcessor.Unittest.Lib
 {
@@ -9,9 +9,9 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void Import_NonExistentFile_Throws()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string fake = Path.Combine(Path.GetTempPath(), "this-file-does-not-exist-xyz.log");
-            var res = proc.ImportFileResult(fake);
+            OperationResult<Unit> res = proc.ImportFileResult(fake);
             Assert.False(res.IsSuccess);
             Assert.Equal(ResponseStatus.NotFound, res.Status);
         }
@@ -19,14 +19,14 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void Import_EmptyFile_LoadsNoEntries()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string tmp = Path.GetTempFileName();
             try
             {
                 File.WriteAllText(tmp, string.Empty);
-                var res = proc.ImportFileResult(tmp);
+                OperationResult<Unit> res = proc.ImportFileResult(tmp);
                 Assert.True(res.IsSuccess);
-                var read = proc.ReadEntriesResult();
+                OperationResult<IEnumerable<LogEntry>> read = proc.ReadEntriesResult();
                 Assert.True(read.IsSuccess);
                 Assert.Empty(read.Value!.ToList());
             }

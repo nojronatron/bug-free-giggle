@@ -1,9 +1,8 @@
-using System.IO;
-using System.Threading.Tasks;
-using Xunit;
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -18,14 +17,14 @@ public class ExportHandlerTests
 
         try
         {
-            var console = new TestConsole(new string?[] { });
-            var proc = new CabrilloLogProcessor();
+            TestConsole console = new TestConsole(new string?[] { });
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             // add a sample entry so export writes something
-            var r = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            OperationResult<LogEntry> r = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
             Assert.True(r.IsSuccess);
 
-            var ctx = new CommandContext(proc, console, debug: false);
-            var handler = new ExportCommandHandler();
+            CommandContext ctx = new CommandContext(proc, console, debug: false);
+            ExportCommandHandler handler = new ExportCommandHandler();
 
             await handler.HandleAsync(new[] { "export", outPath }, ctx);
 
@@ -48,12 +47,12 @@ public class ExportHandlerTests
 
         try
         {
-            var console = new TestConsole(new string?[] { });
-            var proc = new CabrilloLogProcessor();
-            var _created = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            TestConsole console = new TestConsole(new string?[] { });
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            OperationResult<LogEntry> _created = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
             Assert.True(_created.IsSuccess);
-            var ctx = new CommandContext(proc, console, debug: false);
-            var handler = new ExportCommandHandler();
+            CommandContext ctx = new CommandContext(proc, console, debug: false);
+            ExportCommandHandler handler = new ExportCommandHandler();
 
             await handler.HandleAsync(new[] { "export", outPath }, ctx);
 
@@ -79,12 +78,12 @@ public class ExportHandlerTests
 
         try
         {
-            var console = new TestConsole(new string?[] { "n" });
-            var proc = new CabrilloLogProcessor();
-            var _created2 = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            TestConsole console = new TestConsole(new string?[] { "n" });
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            OperationResult<LogEntry> _created2 = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
             Assert.True(_created2.IsSuccess);
-            var ctx = new CommandContext(proc, console, debug: false);
-            var handler = new ExportCommandHandler();
+            CommandContext ctx = new CommandContext(proc, console, debug: false);
+            ExportCommandHandler handler = new ExportCommandHandler();
 
             await handler.HandleAsync(new[] { "export", Path.Combine(tmpDir, "dupfile") }, ctx);
 
@@ -107,12 +106,12 @@ public class ExportHandlerTests
 
         try
         {
-            var console = new TestConsole(new string?[] { "y" });
-            var proc = new CabrilloLogProcessor();
-            var _created2 = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
+            TestConsole console = new TestConsole(new string?[] { "y" });
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
+            OperationResult<LogEntry> _created2 = proc.CreateEntryResult(new LogEntry { CallSign = "K7TEST", TheirCall = "N0CALL" });
             Assert.True(_created2.IsSuccess);
-            var ctx = new CommandContext(proc, console, debug: false);
-            var handler = new ExportCommandHandler();
+            CommandContext ctx = new CommandContext(proc, console, debug: false);
+            ExportCommandHandler handler = new ExportCommandHandler();
 
             await handler.HandleAsync(new[] { "export", Path.Combine(tmpDir, "dupfile") }, ctx);
 
@@ -132,10 +131,10 @@ public class ExportHandlerTests
     {
         string badPath = "?:\\\0\"<>|";
 
-        var console = new TestConsole(new string?[] { });
-        var proc = new CabrilloLogProcessor();
-        var ctx = new CommandContext(proc, console, debug: false);
-        var handler = new ExportCommandHandler();
+        TestConsole console = new TestConsole(new string?[] { });
+        CabrilloLogProcessor proc = new CabrilloLogProcessor();
+        CommandContext ctx = new CommandContext(proc, console, debug: false);
+        ExportCommandHandler handler = new ExportCommandHandler();
 
         await handler.HandleAsync(new[] { "export", badPath }, ctx);
 

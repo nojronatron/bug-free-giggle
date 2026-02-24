@@ -45,7 +45,7 @@ public interface ILogProcessor
     /// </summary>
     OperationResult<LogEntry> CreateEntryResult(LogEntry entry);
 
-    
+
     /// <summary>
     /// Duplicate an existing entry identified by id and return the stored duplicate as an OperationResult.
     /// The duplicate will copy all fields except for Id (new GUID) and may replace a SentExchange field
@@ -53,13 +53,13 @@ public interface ILogProcessor
     /// </summary>
     OperationResult<LogEntry> DuplicateEntryResult(string id, DuplicateField field = DuplicateField.None, string? newValue = null);
 
-    
+
     /// <summary>
     /// OperationResult-based variant of ReadEntries. Returns a success OperationResult with the enumerable of defensive clones,
     /// or a failure OperationResult with Diagnostic populated when an unexpected error occurs.
     /// </summary>
     OperationResult<IEnumerable<LogEntry>> ReadEntriesResult(Func<LogEntry, bool>? filter = null, Func<LogEntry, object>? orderBy = null, int? skip = null, int? take = null);
-    
+
     /// <summary>
     /// OperationResult-based variant of GetEntryById. Returns Success with the found entry (defensive clone)
     /// or a Failure with ResponseStatus.NotFound when no entry exists for the provided id.
@@ -71,7 +71,7 @@ public interface ILogProcessor
     /// </summary>
     OperationResult<Unit> UpdateEntryResult(string id, Action<LogEntry> editAction);
 
-    
+
     /// <summary>
     /// OperationResult-based variant of DeleteEntry. Returns Success when the entry was removed,
     /// NotFound when no entry exists for the provided id, or BadFormat when id is null/whitespace.

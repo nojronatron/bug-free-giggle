@@ -1,7 +1,7 @@
-using ContestLogProcessor.Console.Interactive.Handlers;
-using ContestLogProcessor.Unittest.Lib;
 using ContestLogProcessor.Console.Interactive;
+using ContestLogProcessor.Console.Interactive.Handlers;
 using ContestLogProcessor.Lib;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
@@ -11,14 +11,14 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public async System.Threading.Tasks.Task Filter_ReturnsMatches()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = LocateTestData("K7XXX_Test_WithDX.log");
-            var imp = proc.ImportFileResult(path);
+            OperationResult<Unit> imp = proc.ImportFileResult(path);
             Assert.True(imp.IsSuccess);
 
-            var console = new TestConsole(new string?[] { });
-            var ctx = new CommandContext(proc, console, false);
-            var handler = new FilterCommandHandler();
+            TestConsole console = new TestConsole(new string?[] { });
+            CommandContext ctx = new CommandContext(proc, console, false);
+            FilterCommandHandler handler = new FilterCommandHandler();
 
             await handler.HandleAsync(new[] { "filter", "W7DX" }, ctx);
 
@@ -29,14 +29,14 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public async System.Threading.Tasks.Task FilterDupe_DuplicatesOnAll()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = LocateTestData("K7XXX_Test_WithDX.log");
-            var imp2 = proc.ImportFileResult(path);
+            OperationResult<Unit> imp2 = proc.ImportFileResult(path);
             Assert.True(imp2.IsSuccess);
             // Provide inputs: 'all' then choose '3' (TheirCall) then value 'ZZZ'
-            var console = new TestConsole(new string?[] { "all", "3", "ZZZ" });
-            var ctx = new CommandContext(proc, console, false);
-            var handler = new FilterDupeCommandHandler();
+            TestConsole console = new TestConsole(new string?[] { "all", "3", "ZZZ" });
+            CommandContext ctx = new CommandContext(proc, console, false);
+            FilterDupeCommandHandler handler = new FilterDupeCommandHandler();
 
             await handler.HandleAsync(new[] { "filter-dupe", "AC7DC" }, ctx);
 

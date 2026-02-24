@@ -1,4 +1,5 @@
 using System;
+
 using ContestLogProcessor.Lib;
 
 namespace ContestLogProcessor.Lib.Formatters;

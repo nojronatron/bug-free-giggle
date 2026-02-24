@@ -1,8 +1,8 @@
-using System;
-using System.IO;
-using System.Linq;
-using Xunit;
+using System.Reflection;
+
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -24,11 +24,11 @@ public class ParseExchangeTests
         {
             File.WriteAllLines(filePath, lines);
 
-            var processor = new CabrilloLogProcessor();
-            var imp = processor.ImportFileResult(filePath);
+            CabrilloLogProcessor processor = new CabrilloLogProcessor();
+            OperationResult<Unit> imp = processor.ImportFileResult(filePath);
             Assert.True(imp.IsSuccess);
 
-            var entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? entry = processor.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(entry);
 
             // Verify the sent exchange SentMsg parsed as "OKA" and TheirCall parsed as "AC7DC"
@@ -55,11 +55,11 @@ public class ParseExchangeTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
-            var imp = p.ImportFileResult(tmp);
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
+            OperationResult<Unit> imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
             Assert.NotNull(e.SentExchange);
             Assert.Equal("59", e.SentExchange.SentSig);
@@ -86,15 +86,15 @@ public class ParseExchangeTests
         try
         {
             File.WriteAllLines(tmp, lines);
-            var p = new CabrilloLogProcessor();
-            var imp = p.ImportFileResult(tmp);
+            CabrilloLogProcessor p = new CabrilloLogProcessor();
+            OperationResult<Unit> imp = p.ImportFileResult(tmp);
             Assert.True(imp.IsSuccess);
 
-            var e = p.ReadEntriesResult().Value!.FirstOrDefault();
+            LogEntry? e = p.ReadEntriesResult().Value!.FirstOrDefault();
             Assert.NotNull(e);
 
             // The processor should have recorded skipped entries for invalid tokens
-            var logFile = GetPrivateCabrilloLogFile(p);
+            CabrilloLogFile? logFile = GetPrivateCabrilloLogFile(p);
             Assert.NotNull(logFile);
             Assert.NotEmpty(logFile.SkippedEntries);
             Assert.Contains(logFile.SkippedEntries, s => s.Reason != null && s.Reason.Contains("Invalid SentSig"));
@@ -108,7 +108,7 @@ public class ParseExchangeTests
     // Helper to obtain the internal CabrilloLogFile via reflection (tests may access for diagnostics)
     private static CabrilloLogFile? GetPrivateCabrilloLogFile(CabrilloLogProcessor p)
     {
-        var fi = typeof(CabrilloLogProcessor).GetField("_logFile", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        FieldInfo? fi = typeof(CabrilloLogProcessor).GetField("_logFile", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         return fi?.GetValue(p) as CabrilloLogFile;
     }
 }

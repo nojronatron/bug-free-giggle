@@ -1,6 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Text;
 
 namespace ContestLogProcessor.Console.Interactive;
 
@@ -26,7 +24,7 @@ public class InteractiveShell
 
     // Execute a single command (by splitting args outside) using the registered handlers.
     // Returns true if a handler was found and executed, false otherwise.
-    public async System.Threading.Tasks.Task<bool> ExecuteCommandAsync(string[] parts)
+    public async Task<bool> ExecuteCommandAsync(string[] parts)
     {
         if (parts == null || parts.Length == 0)
         {
@@ -57,7 +55,7 @@ public class InteractiveShell
     }
 
     // Expose registered handlers for helpers such as help command
-    public System.Collections.Generic.IReadOnlyCollection<ICommandHandler> GetRegisteredHandlers()
+    public IReadOnlyCollection<ICommandHandler> GetRegisteredHandlers()
     {
         return _handlers.Values;
     }
@@ -115,8 +113,8 @@ public class InteractiveShell
     private static string[] SplitArgs(string line)
     {
         // Very small splitter: split on spaces, respecting double quotes
-    System.Collections.Generic.List<string> parts = new System.Collections.Generic.List<string>();
-    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        List<string> parts = new List<string>();
+        StringBuilder sb = new StringBuilder();
         bool inQuote = false;
         foreach (char c in line)
         {
@@ -124,7 +122,7 @@ public class InteractiveShell
             {
                 inQuote = !inQuote; continue;
             }
-            
+
             if (!inQuote && char.IsWhiteSpace(c))
             {
                 if (sb.Length > 0) { parts.Add(sb.ToString()); sb.Clear(); }

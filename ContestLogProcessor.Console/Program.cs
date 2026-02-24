@@ -3,15 +3,22 @@ using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 using ContestLogProcessor.Lib;
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
+using ContestLogProcessor.SalmonRun;
+using ContestLogProcessor.WinterFieldDay;
 
 // Minimal CLI entrypoint. Command implementations live in handler classes under
 // ContestLogProcessor.Console.Interactive. Program.cs only wires up the root command
 // and provides a simple interactive bootstrap that forwards input to the interactive
 // shell handlers.
+
+ServiceCollection services = new ServiceCollection();
+ConfigureServices(services);
+ServiceProvider serviceProvider = services.BuildServiceProvider();
 
 Option<bool> debugOption = new Option<bool>("--debug", description: "Enable debug output");
 Option<string?> importOption = new Option<string?>(new[] { "-i", "--import" }, description: "Import a Cabrillo .log file") { ArgumentHelpName = "logfile" };
@@ -36,7 +43,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
     if (interactive)
     {
-        await RunInteractive(processor, debug);
+        await RunInteractive(processor, debug, serviceProvider);
         return;
     }
 
@@ -56,7 +63,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
             }
         }
 
-                if (!string.IsNullOrWhiteSpace(score))
+        if (!string.IsNullOrWhiteSpace(score))
         {
             if (!File.Exists(score))
             {
@@ -66,72 +73,99 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
             {
                 try
                 {
-                            ILogProcessor scProc = new CabrilloLogProcessor();
-                            OperationResult<Unit> importRes = scProc.ImportFileResult(score);
-                            if (!importRes.IsSuccess)
-                            {
-                                Console.WriteLine($"Import failed: {importRes.ErrorMessage}");
-                                if (debug && importRes.Diagnostic != null) Console.WriteLine(importRes.Diagnostic.ToString());
-                                return;
-                            }
-
-                            CabrilloLogFile log = new CabrilloLogFile();
-                            OperationResult<IEnumerable<LogEntry>> readRes = scProc.ReadEntriesResult();
-                            if (!readRes.IsSuccess)
-                            {
-                                Console.WriteLine($"Failed to read entries: {readRes.ErrorMessage}");
-                                if (debug && readRes.Diagnostic != null) Console.WriteLine(readRes.Diagnostic.ToString());
-                                return;
-                            }
-
-                            List<LogEntry> entriesForScore = readRes.Value!.ToList();
-                            string? inferred = entriesForScore.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
-                            if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
-
-                            log.Entries = entriesForScore;
-
-                    SalmonRunScoringService svc = new SalmonRunScoringService();
-                    OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScoreResult(log);
-                    if (!scoreOp.IsSuccess)
+                    ILogProcessor scProc = new CabrilloLogProcessor();
+                    OperationResult<Unit> importRes = scProc.ImportFileResult(score);
+                    if (!importRes.IsSuccess)
                     {
-                        Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
-                        if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                        Console.WriteLine($"Import failed: {importRes.ErrorMessage}");
+                        if (debug && importRes.Diagnostic != null) Console.WriteLine(importRes.Diagnostic.ToString());
                         return;
                     }
 
-                    SalmonRunScoreResult res = scoreOp.Value!;
-
-                    string headerBorder = "+----------------------------------------+";
-                    string headerTitle = "|          Salmon Run Score Report      |";
-                    Console.WriteLine(headerBorder);
-                    Console.WriteLine(headerTitle);
-                    Console.WriteLine(headerBorder);
-                    Console.WriteLine($" Final score : {res.FinalScore}");
-                    Console.WriteLine($" QSO points  : {res.QsoPoints}");
-                    Console.WriteLine($" Multiplier   : {res.Multiplier}");
-                    Console.WriteLine($" W7DX bonus   : {res.W7DxBonusPoints}");
-                    Console.WriteLine("------------------------------------------");
-
-                    int innerWidth = Math.Max(10, headerBorder.Length - 2);
-                    ReportRenderer.PrintWrappedList("Washington Counties", res.UniqueWashingtonCounties, innerWidth, 2, false, res.UniqueWashingtonCounties.Count.ToString());
-                    ReportRenderer.PrintWrappedList("US States", res.UniqueUSStates, innerWidth, 2, false, res.UniqueUSStates.Count.ToString());
-                    ReportRenderer.PrintWrappedList("Canadian Provinces", res.UniqueCanadianProvinces, innerWidth, 2, false, res.UniqueCanadianProvinces.Count.ToString());
-                    ReportRenderer.PrintWrappedList("DXCC Entities", res.UniqueDxccEntities, innerWidth, 2, false, $"{res.UniqueDxccEntities.Count} / 10");
-
-                    Console.WriteLine("------------------------------------------");
-                    Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
-                    int show = Math.Min(10, res.SkippedEntries.Count);
-                    for (int i = 0; i < show; i++)
+                    CabrilloLogFile log = new CabrilloLogFile();
+                    OperationResult<IEnumerable<LogEntry>> readRes = scProc.ReadEntriesResult();
+                    if (!readRes.IsSuccess)
                     {
-                        SkippedEntryInfo s = res.SkippedEntries[i];
-                        foreach (string outLine in ReportRenderer.FormatSkippedEntry(s)) Console.WriteLine(outLine);
-                    }
-                    if (res.SkippedEntries.Count > show)
-                    {
-                        Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
+                        Console.WriteLine($"Failed to read entries: {readRes.ErrorMessage}");
+                        if (debug && readRes.Diagnostic != null) Console.WriteLine(readRes.Diagnostic.ToString());
+                        return;
                     }
 
-                    Console.WriteLine(headerBorder);
+                    List<LogEntry> entriesForScore = readRes.Value!.ToList();
+                    string? inferred = entriesForScore.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.CallSign))?.CallSign;
+                    if (!string.IsNullOrWhiteSpace(inferred)) log.Headers["CALLSIGN"] = inferred!;
+
+                    // Get headers from the processor for contest detection
+                    if (scProc is CabrilloLogProcessor cabrilloProc)
+                    {
+                        if (cabrilloProc.TryGetHeader("START-OF-LOG", out string? startOfLogHeader) && !string.IsNullOrWhiteSpace(startOfLogHeader))
+                        {
+                            log.Headers["START-OF-LOG"] = startOfLogHeader!;
+                        }
+                        if (cabrilloProc.TryGetHeader("END-OF-LOG", out string? endOfLogHeader))
+                        {
+                            log.Headers["END-OF-LOG"] = endOfLogHeader ?? string.Empty;
+                        }
+                        if (cabrilloProc.TryGetHeader("CONTEST", out string? contestHeader))
+                        {
+                            log.Headers["CONTEST"] = contestHeader!;
+                        }
+                        if (cabrilloProc.TryGetHeader("CALLSIGN", out string? callsignHeader) && !string.IsNullOrWhiteSpace(callsignHeader))
+                        {
+                            log.Headers["CALLSIGN"] = callsignHeader!;
+                        }
+                    }
+
+                    log.Entries = entriesForScore;
+
+                    // Detect contest type and get appropriate scoring service
+                    IContestDetector detector = serviceProvider.GetRequiredService<IContestDetector>();
+                    IContestRegistry registry = serviceProvider.GetRequiredService<IContestRegistry>();
+
+                    OperationResult<string> contestDetection = detector.DetectContestType(log);
+                    if (!contestDetection.IsSuccess)
+                    {
+                        Console.WriteLine($"Contest detection failed: {contestDetection.ErrorMessage}");
+                        if (debug && contestDetection.Diagnostic != null) Console.WriteLine(contestDetection.Diagnostic.ToString());
+                        return;
+                    }
+
+                    string contestType = contestDetection.Value!;
+                    Console.WriteLine($"Detected contest: {contestType}");
+
+                    if (contestType == "SALMON-RUN")
+                    {
+                        SalmonRunScoringService svc = serviceProvider.GetRequiredService<SalmonRunScoringService>();
+                        OperationResult<SalmonRunScoreResult> scoreOp = svc.CalculateScore(log);
+                        if (!scoreOp.IsSuccess)
+                        {
+                            Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                            if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                            return;
+                        }
+
+                        SalmonRunScoreResult res = scoreOp.Value!;
+                        PrintSalmonRunScore(res);
+                    }
+                    else if (contestType == "WFD")
+                    {
+                        WinterFieldDayScoringService svc = serviceProvider.GetRequiredService<WinterFieldDayScoringService>();
+                        OperationResult<WinterFieldDayScoreResult> scoreOp = svc.CalculateScore(log);
+                        if (!scoreOp.IsSuccess)
+                        {
+                            Console.WriteLine($"Scoring failed: {scoreOp.ErrorMessage}");
+                            if (debug && scoreOp.Diagnostic != null) Console.WriteLine(scoreOp.Diagnostic.ToString());
+                            return;
+                        }
+
+                        WinterFieldDayScoreResult res = scoreOp.Value!;
+                        PrintWinterFieldDayScore(res);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Scoring not implemented for contest type: {contestType}");
+                        return;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -186,7 +220,7 @@ root.SetHandler(async (bool debug, string? import, string? export, bool list, bo
 
 return await root.InvokeAsync(args);
 
-static async Task RunInteractive(ILogProcessor processor, bool debug)
+static async Task RunInteractive(ILogProcessor processor, bool debug, ServiceProvider serviceProvider)
 {
     Console.WriteLine("Entering interactive mode. Type 'help' for available commands.");
 
@@ -243,4 +277,85 @@ static async Task RunInteractive(ILogProcessor processor, bool debug)
             }
         }
     }
+}
+
+static void PrintSalmonRunScore(SalmonRunScoreResult res)
+{
+    string headerBorder = "+----------------------------------------+";
+    string headerTitle = "|          Salmon Run Score Report      |";
+    Console.WriteLine(headerBorder);
+    Console.WriteLine(headerTitle);
+    Console.WriteLine(headerBorder);
+    Console.WriteLine($" Final score : {res.FinalScore}");
+    Console.WriteLine($" QSO points  : {res.QsoPoints}");
+    Console.WriteLine($" Multiplier   : {res.Multiplier}");
+    Console.WriteLine($" W7DX bonus   : {res.W7DxBonusPoints}");
+    Console.WriteLine("------------------------------------------");
+
+    int innerWidth = Math.Max(10, headerBorder.Length - 2);
+    ReportRenderer.PrintWrappedList("Washington Counties", res.UniqueWashingtonCounties, innerWidth, 2, false, res.UniqueWashingtonCounties.Count.ToString());
+    ReportRenderer.PrintWrappedList("US States", res.UniqueUSStates, innerWidth, 2, false, res.UniqueUSStates.Count.ToString());
+    ReportRenderer.PrintWrappedList("Canadian Provinces", res.UniqueCanadianProvinces, innerWidth, 2, false, res.UniqueCanadianProvinces.Count.ToString());
+    ReportRenderer.PrintWrappedList("DXCC Entities", res.UniqueDxccEntities, innerWidth, 2, false, $"{res.UniqueDxccEntities.Count} / 10");
+
+    Console.WriteLine("------------------------------------------");
+    Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
+    int show = Math.Min(10, res.SkippedEntries.Count);
+    for (int i = 0; i < show; i++)
+    {
+        SkippedEntryInfo s = res.SkippedEntries[i];
+        foreach (string outLine in ReportRenderer.FormatSkippedEntry(s)) Console.WriteLine(outLine);
+    }
+    if (res.SkippedEntries.Count > show)
+    {
+        Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
+    }
+
+    Console.WriteLine(headerBorder);
+}
+
+static void PrintWinterFieldDayScore(WinterFieldDayScoreResult res)
+{
+    string headerBorder = "+----------------------------------------+";
+    string headerTitle = "|       Winter Field Day Score Report   |";
+    Console.WriteLine(headerBorder);
+    Console.WriteLine(headerTitle);
+    Console.WriteLine(headerBorder);
+    Console.WriteLine($" Final score : {res.FinalScore}");
+    Console.WriteLine($" QSO points  : {res.QsoPoints}");
+    Console.WriteLine($" Phone QSOs  : {res.PhoneQsos} x 1pt = {res.PhoneQsos}");
+    Console.WriteLine($" CW/Digital  : {res.CwDigitalQsos} x 2pts = {res.CwDigitalQsos * 2}");
+    Console.WriteLine("------------------------------------------");
+
+    int innerWidth = Math.Max(10, headerBorder.Length - 2);
+    ReportRenderer.PrintWrappedList("Station Categories", res.UniqueStationCategories, innerWidth, 2, false, res.UniqueStationCategories.Count.ToString());
+    ReportRenderer.PrintWrappedList("Locations", res.UniqueLocations, innerWidth, 2, false, res.UniqueLocations.Count.ToString());
+
+    Console.WriteLine("------------------------------------------");
+    Console.WriteLine($" Skipped entries: {res.SkippedEntries.Count}");
+    int show = Math.Min(10, res.SkippedEntries.Count);
+    for (int i = 0; i < show; i++)
+    {
+        SkippedEntryInfo s = res.SkippedEntries[i];
+        foreach (string outLine in ReportRenderer.FormatSkippedEntry(s)) Console.WriteLine(outLine);
+    }
+    if (res.SkippedEntries.Count > show)
+    {
+        Console.WriteLine($"  ...and {res.SkippedEntries.Count - show} more skipped entries (not shown)");
+    }
+
+    Console.WriteLine(headerBorder);
+}
+
+static void ConfigureServices(ServiceCollection services)
+{
+    // Register core contest infrastructure (registry, detector, exchange strategy registry)
+    services.RegisterContestInfrastructure();
+
+    // Register contest-specific services using their bootstrap extensions
+    services.RegisterSalmonRunContest();
+    services.RegisterWinterFieldDayContest();
+
+    // Configure exchange strategy registry with registered strategies
+    services.ConfigureExchangeStrategyRegistry();
 }

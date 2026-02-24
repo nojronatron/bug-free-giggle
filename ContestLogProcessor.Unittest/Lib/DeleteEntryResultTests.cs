@@ -1,7 +1,6 @@
-using System;
-using System.Collections.Generic;
-using Xunit;
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
 {
@@ -10,9 +9,9 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void DeleteEntryResult_RemovesExistingEntry_ReturnsSuccess()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
-            var createdResult = proc.CreateEntryResult(new LogEntry
+            OperationResult<LogEntry> createdResult = proc.CreateEntryResult(new LogEntry
             {
                 Frequency = "7000",
                 Mode = "PH",
@@ -23,13 +22,13 @@ namespace ContestLogProcessor.Unittest.Lib
             });
 
             Assert.True(createdResult.IsSuccess);
-            var created = createdResult.Value;
+            LogEntry? created = createdResult.Value;
             Assert.NotNull(created);
 
-            var deletedIds = new List<string>();
+            List<string> deletedIds = new List<string>();
             proc.EntryDeleted += (_, id) => deletedIds.Add(id);
 
-            var result = proc.DeleteEntryResult(created.Id);
+            OperationResult<Unit> result = proc.DeleteEntryResult(created.Id);
             Assert.True(result.IsSuccess);
 
             // Event should have been raised
@@ -42,10 +41,10 @@ namespace ContestLogProcessor.Unittest.Lib
         [Fact]
         public void DeleteEntryResult_NonexistentId_ReturnsNotFound()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
 
             string notFoundId = Guid.NewGuid().ToString();
-            var result = proc.DeleteEntryResult(notFoundId);
+            OperationResult<Unit> result = proc.DeleteEntryResult(notFoundId);
 
             Assert.False(result.IsSuccess);
             Assert.Equal(ResponseStatus.NotFound, result.Status);

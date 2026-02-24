@@ -1,28 +1,27 @@
 using ContestLogProcessor.Console.Interactive;
 using ContestLogProcessor.Console.Interactive.Handlers;
-using ContestLogProcessor.Unittest.Lib;
 using ContestLogProcessor.Lib;
+
 using Xunit;
-using System.Linq;
 
 namespace ContestLogProcessor.Unittest.Lib
 {
     public class DuplicateHandlerTests
     {
         [Fact]
-        public async System.Threading.Tasks.Task Duplicate_ByIndex_HappyPath()
+        public async Task Duplicate_ByIndex_HappyPath()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            var imp = proc.ImportFileResult(path);
+            OperationResult<Unit> imp = proc.ImportFileResult(path);
             Assert.True(imp.IsSuccess);
 
             // Before count
             int before = proc.ReadEntriesResult().Value!.ToList().Count;
 
             // Provide empty string to skip changing any field
-            var console = new TestConsole(new string?[] { "" });
-            var ctx = new CommandContext(proc, console, false);
+            TestConsole console = new TestConsole(new string?[] { "" });
+            CommandContext ctx = new CommandContext(proc, console, false);
 
             InteractiveShell shell = new InteractiveShell(ctx);
             shell.RegisterHandler(new DuplicateCommandHandler());
@@ -35,18 +34,18 @@ namespace ContestLogProcessor.Unittest.Lib
         }
 
         [Fact]
-        public async System.Threading.Tasks.Task Duplicate_ByFilter_All_HappyPath()
+        public async Task Duplicate_ByFilter_All_HappyPath()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            var imp2 = proc.ImportFileResult(path);
+            OperationResult<Unit> imp2 = proc.ImportFileResult(path);
             Assert.True(imp2.IsSuccess);
 
             int before = proc.ReadEntriesResult().Value!.ToList().Count;
 
             // Provide 'all' to duplicate all matches and '' to skip field change
-            var console = new TestConsole(new string?[] { "all", "" });
-            var ctx = new CommandContext(proc, console, false);
+            TestConsole console = new TestConsole(new string?[] { "all", "" });
+            CommandContext ctx = new CommandContext(proc, console, false);
 
             InteractiveShell shell = new InteractiveShell(ctx);
             shell.RegisterHandler(new DuplicateCommandHandler());
@@ -59,22 +58,22 @@ namespace ContestLogProcessor.Unittest.Lib
         }
 
         [Fact]
-        public async System.Threading.Tasks.Task Duplicate_Index_OutOfRange()
+        public async Task Duplicate_Index_OutOfRange()
         {
-            var proc = new CabrilloLogProcessor();
+            CabrilloLogProcessor proc = new CabrilloLogProcessor();
             string path = FilterHandlerTests_LocateTestData("K7XXX_Test_WithDX.log");
-            var imp3 = proc.ImportFileResult(path);
+            OperationResult<Unit> imp3 = proc.ImportFileResult(path);
             Assert.True(imp3.IsSuccess);
 
-            var console = new TestConsole(new string?[] { });
-            var ctx = new CommandContext(proc, console, false);
+            TestConsole console = new TestConsole(new string?[] { });
+            CommandContext ctx = new CommandContext(proc, console, false);
 
             InteractiveShell shell = new InteractiveShell(ctx);
             shell.RegisterHandler(new DuplicateCommandHandler());
 
             await shell.ExecuteCommandAsync(new[] { "duplicate", "--index", "9999" });
 
-            Assert.Contains(console.Outputs, o => o.Contains("Index out of range") );
+            Assert.Contains(console.Outputs, o => o.Contains("Index out of range"));
         }
 
         private static string FilterHandlerTests_LocateTestData(string fileName)

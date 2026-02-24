@@ -1,7 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
 using ContestLogProcessor.Lib;
+
 using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib
@@ -26,16 +24,16 @@ namespace ContestLogProcessor.Unittest.Lib
             try
             {
                 CabrilloLogProcessor proc = new CabrilloLogProcessor();
-                var imp = proc.ImportFileResult(temp);
+                OperationResult<Unit> imp = proc.ImportFileResult(temp);
                 Assert.True(imp.IsSuccess);
 
-                var entries = proc.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
                 Assert.Equal(2, entries.Count);
 
                 // Act: update SentMsg in-place
-                foreach (var e in entries)
+                foreach (LogEntry e in entries)
                 {
-                    var r = proc.UpdateEntryResult(e.Id, entry =>
+                    OperationResult<Unit> r = proc.UpdateEntryResult(e.Id, entry =>
                     {
                         if (entry.SentExchange == null) entry.SentExchange = new Exchange();
                         entry.SentExchange.SentMsg = "ZZZ";
@@ -45,15 +43,15 @@ namespace ContestLogProcessor.Unittest.Lib
 
                 // Export to a temp output and re-import to verify
                 string outFile = Path.Combine(Path.GetTempPath(), "bulk-inplace-test.log");
-                var exportResult = proc.ExportFileResult(outFile);
+                OperationResult<Unit> exportResult = proc.ExportFileResult(outFile);
                 Assert.True(exportResult.IsSuccess);
 
                 CabrilloLogProcessor verify = new CabrilloLogProcessor();
-                var impVerify = verify.ImportFileResult(outFile);
+                OperationResult<Unit> impVerify = verify.ImportFileResult(outFile);
                 Assert.True(impVerify.IsSuccess);
-                var vEntries = verify.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> vEntries = verify.ReadEntriesResult().Value!.ToList();
                 Assert.Equal(entries.Count, vEntries.Count);
-                foreach (var ve in vEntries)
+                foreach (LogEntry ve in vEntries)
                 {
                     Assert.NotNull(ve.SentExchange);
                     Assert.Equal("ZZZ", ve.SentExchange.SentMsg);
@@ -85,9 +83,9 @@ namespace ContestLogProcessor.Unittest.Lib
                 if (File.Exists(outFile)) File.Delete(outFile);
 
                 CabrilloLogProcessor proc = new CabrilloLogProcessor();
-                var imp2 = proc.ImportFileResult(temp);
+                OperationResult<Unit> imp2 = proc.ImportFileResult(temp);
                 Assert.True(imp2.IsSuccess);
-                var exportRes = proc.ExportFileResult(outFile);
+                OperationResult<Unit> exportRes = proc.ExportFileResult(outFile);
                 Assert.True(exportRes.IsSuccess);
 
                 byte[] data = File.ReadAllBytes(outFile);
@@ -134,24 +132,24 @@ namespace ContestLogProcessor.Unittest.Lib
             try
             {
                 CabrilloLogProcessor proc = new CabrilloLogProcessor();
-                var imp3 = proc.ImportFileResult(temp);
+                OperationResult<Unit> imp3 = proc.ImportFileResult(temp);
                 Assert.True(imp3.IsSuccess);
 
-                var entries = proc.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> entries = proc.ReadEntriesResult().Value!.ToList();
                 int originalCount = entries.Count;
                 Assert.Equal(2, originalCount);
 
                 // Act: duplicate every entry and change TheirCall to NEWCALL
-                foreach (var e in entries)
+                foreach (LogEntry e in entries)
                 {
-                    var r = proc.DuplicateEntryResult(e.Id, ILogProcessor.DuplicateField.TheirCall, "NEWCALL");
+                    OperationResult<LogEntry> r = proc.DuplicateEntryResult(e.Id, ILogProcessor.DuplicateField.TheirCall, "NEWCALL");
                     Assert.True(r.IsSuccess);
                 }
 
                 // Inspect in-memory entries to verify duplicates were added and had TheirCall updated
-                var allInMemory = proc.ReadEntriesResult().Value!.ToList();
+                List<LogEntry> allInMemory = proc.ReadEntriesResult().Value!.ToList();
                 Assert.True(allInMemory.Count >= originalCount * 2, "Expected total entries to increase by at least the original count");
-                var changed = allInMemory.Where(x => string.Equals(x.TheirCall, "NEWCALL", StringComparison.OrdinalIgnoreCase)).ToList();
+                List<LogEntry> changed = allInMemory.Where(x => string.Equals(x.TheirCall, "NEWCALL", StringComparison.OrdinalIgnoreCase)).ToList();
                 Assert.True(changed.Count > 0, "Expected at least one changed entry with THEIRCALL set to NEWCALL");
             }
             finally

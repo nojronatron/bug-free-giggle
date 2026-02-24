@@ -2,36 +2,40 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ContestLogProcessor.Lib;
+using ContestLogProcessor.Lib;
 
-public class SalmonRunScoringService
+namespace ContestLogProcessor.SalmonRun;
+
+public class SalmonRunScoringService : IContestScoringService<SalmonRunScoreResult>
 {
-    private readonly ILocationLookup _lookup;
+    private readonly ContestLogProcessor.Lib.ILocationLookup _lookup;
 
-    public SalmonRunScoringService(ILocationLookup? lookup = null)
+    public string ContestId => "SALMON-RUN";
+
+    public SalmonRunScoringService(ContestLogProcessor.Lib.ILocationLookup? lookup = null)
     {
-        _lookup = lookup ?? new InMemoryLocationLookup();
+        _lookup = lookup ?? new ContestLogProcessor.Lib.InMemoryLocationLookup();
     }
 
-    [Obsolete("Use CalculateScoreResult(CabrilloLogFile) which returns an OperationResult<SalmonRunScoreResult> for recoverable failures.")]
-    public SalmonRunScoreResult CalculateScore(CabrilloLogFile log)
+    [Obsolete("Use CalculateScore(CabrilloLogFile) which returns an OperationResult<SalmonRunScoreResult> for recoverable failures.")]
+    public SalmonRunScoreResult CalculateScoreInternal(CabrilloLogFile log)
     {
         if (log == null) throw new ArgumentNullException(nameof(log));
 
-    SalmonRunScoreResult result = new SalmonRunScoreResult();
+        SalmonRunScoreResult result = new SalmonRunScoreResult();
 
         // Validate CALLSIGN header exists and that at least one entry matches a header CALLSIGN
-    if (!log.Headers.TryGetValue("CALLSIGN", out string? headerCall) || string.IsNullOrWhiteSpace(headerCall))
+        if (!log.Headers.TryGetValue("CALLSIGN", out string? headerCall) || string.IsNullOrWhiteSpace(headerCall))
         {
             throw new InvalidOperationException("Missing CALLSIGN header - update the header so at least one CALLSIGN matches at least one LogEntry Call field");
         }
 
         // Build set of allowable call signs from header (support multiple CALLSIGN lines separated by commas)
-        System.Collections.Generic.HashSet<string> allowableCalls = headerCall.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+        HashSet<string> allowableCalls = headerCall.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.ToUpperInvariant()).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         // Preprocess entries: ensure ordering by QsoDateTime ascending, then original SourceLineNumber
-        System.Collections.Generic.List<LogEntry> ordered = log.Entries
+        List<LogEntry> ordered = log.Entries
             .OrderBy(e => e.QsoDateTime)
             .ThenBy(e => e.SourceLineNumber ?? int.MaxValue)
             .ToList();
@@ -44,20 +48,20 @@ public class SalmonRunScoringService
         }
 
         // Track seen (TheirCall, Mode, Band) to award QSO points only once per combination
-    System.Collections.Generic.HashSet<string> seenQso = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> seenQso = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    // Track unique ReceivedMsg tokens for multiplier per category
-    System.Collections.Generic.HashSet<string> seenRecv = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    System.Collections.Generic.List<LogEntry> uniqueWa = new System.Collections.Generic.List<LogEntry>();
-    System.Collections.Generic.List<LogEntry> uniqueUs = new System.Collections.Generic.List<LogEntry>();
-    System.Collections.Generic.List<LogEntry> uniqueCa = new System.Collections.Generic.List<LogEntry>();
-    System.Collections.Generic.List<LogEntry> uniqueDx = new System.Collections.Generic.List<LogEntry>();
+        // Track unique ReceivedMsg tokens for multiplier per category
+        HashSet<string> seenRecv = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        List<LogEntry> uniqueWa = new List<LogEntry>();
+        List<LogEntry> uniqueUs = new List<LogEntry>();
+        List<LogEntry> uniqueCa = new List<LogEntry>();
+        List<LogEntry> uniqueDx = new List<LogEntry>();
 
-    int qsoPoints = 0;
-    int w7dxPoints = 0;
-    System.Collections.Generic.HashSet<string> w7dxModesSeen = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int qsoPoints = 0;
+        int w7dxPoints = 0;
+        HashSet<string> w7dxModesSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    foreach (LogEntry entry in ordered)
+        foreach (LogEntry entry in ordered)
         {
             // Skip X-QSO
             if (entry.IsXQso)
@@ -208,13 +212,24 @@ public class SalmonRunScoringService
     /// with ResponseStatus.BadFormat. Unexpected exceptions are returned with ResponseStatus.Error and Diagnostic populated.
     /// OperationCanceledException is rethrown.
     /// </summary>
-    public OperationResult<SalmonRunScoreResult> CalculateScoreResult(CabrilloLogFile log)
+    public OperationResult<SalmonRunScoreResult> CalculateScore(CabrilloLogFile log)
     {
         try
         {
             if (log == null)
             {
                 return OperationResult.Failure<SalmonRunScoreResult>("Log file is null", ResponseStatus.BadFormat);
+            }
+
+            // Validate required Cabrillo v3 markers
+            if (!log.HasStartOfLog)
+            {
+                return OperationResult.Failure<SalmonRunScoreResult>("Missing required START-OF-LOG marker", ResponseStatus.BadFormat);
+            }
+
+            if (!log.HasEndOfLog)
+            {
+                return OperationResult.Failure<SalmonRunScoreResult>("Missing required END-OF-LOG marker", ResponseStatus.BadFormat);
             }
 
             // Validate CALLSIGN header exists and that at least one entry matches a header CALLSIGN
@@ -224,11 +239,11 @@ public class SalmonRunScoringService
             }
 
             // Build set of allowable call signs from header (support multiple CALLSIGN lines separated by commas)
-            System.Collections.Generic.HashSet<string> allowableCalls = headerCall.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            HashSet<string> allowableCalls = headerCall.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.ToUpperInvariant()).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // Preprocess entries: ensure ordering by QsoDateTime ascending, then original SourceLineNumber
-            System.Collections.Generic.List<LogEntry> ordered = log.Entries
+            List<LogEntry> ordered = log.Entries
                 .OrderBy(e => e.QsoDateTime)
                 .ThenBy(e => e.SourceLineNumber ?? int.MaxValue)
                 .ToList();
@@ -242,7 +257,7 @@ public class SalmonRunScoringService
 
             // Now reuse existing implementation by calling the obsolete method to compute the result. This keeps behavior identical.
 #pragma warning disable CS0618 // Suppress obsolete warning for internal compatibility shim
-            SalmonRunScoreResult computed = CalculateScore(log);
+            SalmonRunScoreResult computed = CalculateScoreInternal(log);
 #pragma warning restore CS0618
             return OperationResult.Success(computed);
         }

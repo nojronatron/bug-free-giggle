@@ -1,8 +1,6 @@
-using System;
-using System.IO;
-using System.Linq;
-using Xunit;
 using ContestLogProcessor.Lib;
+
+using Xunit;
 
 namespace ContestLogProcessor.Unittest.Lib;
 
@@ -13,12 +11,12 @@ public class CreateExportTests
     [Fact]
     public void CreateEntry_AfterImport_IsVisibleInReadEntries()
     {
-        var processor = new CabrilloLogProcessor();
-        var imp = processor.ImportFileResult(SampleLogPath);
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        OperationResult<Unit> imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
 
         string uniqueCall = "UNITTEST_CREATE_" + Guid.NewGuid().ToString("N");
-        var newEntry = new LogEntry
+        LogEntry newEntry = new LogEntry
         {
             Frequency = "7000",
             Mode = "CW",
@@ -28,29 +26,29 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
-    Assert.NotNull(created);
+        OperationResult<LogEntry> createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        LogEntry? created = createdResult.Value;
+        Assert.NotNull(created);
 
-        var found = processor.ReadEntriesResult().Value!.Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
+        bool found = processor.ReadEntriesResult().Value!.Any(e => string.Equals(e.CallSign, uniqueCall, StringComparison.OrdinalIgnoreCase));
         Assert.True(found, "Created entry should be visible via ReadEntries after import.");
     }
 
     [Fact]
     public void DuplicateEntry_CopiesAndAllowsSentMsgOverride()
     {
-        var processor = new CabrilloLogProcessor();
-        var imp = processor.ImportFileResult(SampleLogPath);
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        OperationResult<Unit> imp = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp.IsSuccess);
 
-        var original = processor.ReadEntriesResult().Value!.FirstOrDefault();
+        LogEntry? original = processor.ReadEntriesResult().Value!.FirstOrDefault();
         Assert.NotNull(original);
 
-    string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
-    var dupResult = processor.DuplicateEntryResult(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
-    Assert.True(dupResult.IsSuccess);
-    var dup = dupResult.Value;
+        string newMsg = "ALTLOC" + Guid.NewGuid().ToString("N");
+        OperationResult<LogEntry> dupResult = processor.DuplicateEntryResult(original.Id, ILogProcessor.DuplicateField.SentMsg, newMsg);
+        Assert.True(dupResult.IsSuccess);
+        LogEntry? dup = dupResult.Value;
 
         Assert.NotNull(dup);
         Assert.NotEqual(original.Id, dup.Id);
@@ -69,12 +67,12 @@ public class CreateExportTests
     [Fact]
     public void ExportFile_AppendsLogExtension_And_IncludesCreatedEntry()
     {
-        var processor = new CabrilloLogProcessor();
-        var imp2 = processor.ImportFileResult(SampleLogPath);
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
+        OperationResult<Unit> imp2 = processor.ImportFileResult(SampleLogPath);
         Assert.True(imp2.IsSuccess);
 
         string uniqueCall = "EXPORTTEST_" + Guid.NewGuid().ToString("N");
-        var newEntry = new LogEntry
+        LogEntry newEntry = new LogEntry
         {
             Frequency = "7000",
             Mode = "CW",
@@ -84,9 +82,9 @@ public class CreateExportTests
             TheirCall = "TEST"
         };
 
-    var createdResult = processor.CreateEntryResult(newEntry);
-    Assert.True(createdResult.IsSuccess);
-    var created = createdResult.Value;
+        OperationResult<LogEntry> createdResult = processor.CreateEntryResult(newEntry);
+        Assert.True(createdResult.IsSuccess);
+        LogEntry? created = createdResult.Value;
 
         string tempDir = Path.GetTempPath();
         string basePath = Path.Combine(tempDir, "clp_export_test_" + Guid.NewGuid().ToString("N"));
@@ -97,12 +95,12 @@ public class CreateExportTests
             if (File.Exists(expectedFile)) File.Delete(expectedFile);
 
             // Call ExportFile with a path that lacks the .log extension
-            var r = processor.ExportFileResult(basePath);
+            OperationResult<Unit> r = processor.ExportFileResult(basePath);
             Assert.True(r.IsSuccess);
 
             Assert.True(File.Exists(expectedFile), "ExportFile should append .log when writing files.");
 
-            var lines = File.ReadAllLines(expectedFile);
+            string[] lines = File.ReadAllLines(expectedFile);
             Assert.Contains(lines, l => l.StartsWith("QSO:", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(lines, l => l.IndexOf(uniqueCall, StringComparison.OrdinalIgnoreCase) >= 0);
         }
@@ -115,12 +113,12 @@ public class CreateExportTests
     [Fact]
     public void ExportFile_WithoutData_ThrowsInvalidOperationException()
     {
-        var processor = new CabrilloLogProcessor();
+        CabrilloLogProcessor processor = new CabrilloLogProcessor();
         string tmp = Path.Combine(Path.GetTempPath(), "clp_no_data_" + Guid.NewGuid().ToString("N") + ".log");
         try
         {
             if (File.Exists(tmp)) File.Delete(tmp);
-            var fail = processor.ExportFileResult(tmp);
+            OperationResult<Unit> fail = processor.ExportFileResult(tmp);
             Assert.False(fail.IsSuccess);
             Assert.Equal(ResponseStatus.Error, fail.Status);
         }

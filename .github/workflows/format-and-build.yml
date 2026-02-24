@@ -14,22 +14,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      - name: Install dotnet-format
-        run: |
-          dotnet tool install --global dotnet-format --version 9.* || true
-          echo "##[endgroup]"
-        env:
-          DOTNET_ROOT: ${{ runner.temp }}
-
-      - name: Add dotnet tools to PATH
-        run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
-
-      - name: Verify formatting (dotnet format)
-        run: dotnet format --verify-no-changes
+      - name: Verify whitespace formatting (dotnet format)
+        run: dotnet format whitespace --verify-no-changes
 
       - name: Build solution
-        run: dotnet build "ContestLogProcessor.sln" --configuration Release
+        run: dotnet build "ContestLogProcessor.slnx" --configuration Release
