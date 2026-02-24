@@ -3,3 +3,5 @@
 LogExamples/
 .vs/
 **/TestResults/*
+test_output.txt
+docs/README_ADIF-Spec-v3.1.6.md
