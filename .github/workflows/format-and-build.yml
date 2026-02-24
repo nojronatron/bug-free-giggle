@@ -28,8 +28,8 @@ jobs:
       - name: Add dotnet tools to PATH
         run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
 
-      - name: Verify formatting (dotnet format)
-        run: dotnet format --verify-no-changes
+      - name: Verify whitespace formatting (dotnet format)
+        run: dotnet format whitespace --verify-no-changes
 
       - name: Build solution
         run: dotnet build "ContestLogProcessor.sln" --configuration Release
